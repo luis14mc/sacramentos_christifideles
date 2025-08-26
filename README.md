@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏛️ ChristiFideles
 
-## Getting Started
+Sistema de registro de sacramentos para parroquias católicas. Aplicación web moderna, escalable y multi-tenant construida con **Next.js 15**, **TypeScript**, **Prisma** y **PostgreSQL**.
 
-First, run the development server:
+## 🚀 Características
 
+- ✅ **Multi-tenant**: Soporte para múltiples parroquias
+- ✅ **Sacramentos completos**: Bautismo, Primera Comunión, Confirmación, Matrimonio
+- ✅ **Sistema de usuarios**: Roles y permisos granulares
+- ✅ **Bitácora completa**: Auditoría de todas las acciones
+- ✅ **Certificados digitales**: Generación automática de constancias
+- ✅ **Búsqueda avanzada**: Por persona, fecha, sacramento
+- ✅ **Dashboard estadístico**: Reportes y métricas
+
+## 🛠️ Stack Tecnológico
+
+- **Framework**: Next.js 15 (App Router)
+- **Lenguaje**: TypeScript
+- **Base de datos**: PostgreSQL
+- **ORM**: Prisma
+- **Estilos**: Tailwind CSS
+- **Autenticación**: NextAuth.js
+- **Deploy**: Vercel + Neon
+
+## 📋 Instalación
+
+### 1. Clonar el repositorio
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/tu-usuario/sacramentos-christifideles.git
+cd sacramentos-christifideles
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Instalar dependencias
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configurar variables de entorno
+```bash
+cp .env.example .env
+```
+Edita `.env` con tu configuración de base de datos.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Configurar base de datos
+```bash
+# Generar cliente Prisma
+npx prisma generate
 
-## Learn More
+# Migrar esquema
+npx prisma db push
 
-To learn more about Next.js, take a look at the following resources:
+# (Opcional) Sembrar datos de prueba
+npx prisma db seed
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Ejecutar en desarrollo
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-## Deploy on Vercel
+## 📁 Estructura del Proyecto
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+sacramentos_christifideles/
+├── docs/                    # Documentación y scripts SQL
+├── prisma/                  # Schema y migraciones
+├── src/
+│   ├── app/                # App Router (Next.js 15)
+│   ├── components/         # Componentes React
+│   ├── lib/               # Utilidades y configuración
+│   └── types/             # Tipos TypeScript
+├── public/                # Archivos estáticos
+└── BD_antecedente/        # Scripts SQL de referencia
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🗄️ Base de Datos
+
+La base de datos incluye:
+
+- **Catálogos**: Departamentos, Municipios, Órdenes Religiosas
+- **Entidades principales**: Parroquias, Personas, Sacerdotes
+- **Sacramentos**: Bautismo, Primera Comunión, Confirmación, Matrimonio
+- **Sistema de usuarios**: Roles, Permisos, Bitácoras
+- **Configuración**: Por parroquia, flexible con JSON
+
+## 🚀 Deploy
+
+### Producción con Vercel + Neon
+1. Conecta tu repo a Vercel
+2. Configura la base de datos en Neon
+3. Añade las variables de entorno en Vercel
+4. Deploy automático ✨
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama: `git checkout -b mi-nueva-funcionalidad`
+3. Commit: `git commit -m 'Agregar nueva funcionalidad'`
+4. Push: `git push origin mi-nueva-funcionalidad`
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la licencia MIT.
+
+---
+
+**Desarrollado con ❤️ para la comunidad católica**
