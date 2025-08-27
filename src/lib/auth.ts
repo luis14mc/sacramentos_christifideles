@@ -57,11 +57,17 @@ export const authOptions: NextAuthOptions = {
             }
           });
 
+          console.log('Usuario autenticado:', {
+            nombre: user.nombre,
+            rol: user.rol.nombre,
+            rolId: user.rol.id_rol
+          });
+
           return {
             id: user.id_usuario.toString(),
             email: user.email,
             name: user.nombre,
-            role: user.rol.nombre,
+            role: user.rol.nombre.toLowerCase(), // Convertir a minúsculas para consistencia
             parish: user.parroquia.nombre,
             parishId: user.id_parroquia.toString()
           };
@@ -84,7 +90,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
+        token.rol = user.role; // Cambiar 'role' a 'rol' para consistencia
         token.parish = user.parish;
         token.parishId = user.parishId;
       }
@@ -93,7 +99,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.sub!;
-        session.user.role = token.role;
+        session.user.rol = token.rol; // Cambiar 'role' a 'rol' para consistencia
         session.user.parish = token.parish;
         session.user.parishId = token.parishId;
       }
@@ -108,8 +114,8 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith(baseUrl)) {
         return url;
       }
-      // Por defecto, redirigir al dashboard
-      return `${baseUrl}/dashboard`;
+      // Por defecto, redirigir al dashboard (página principal)
+      return `${baseUrl}/`;
     }
   }
 };

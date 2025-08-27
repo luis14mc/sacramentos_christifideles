@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { signOut, useSession } from 'next-auth/react';
+import useTheme from '@/hooks/useTheme';
 import {
     Bars3Icon,
     UserCircleIcon,
@@ -17,6 +18,7 @@ interface HeaderProps {
 export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps) {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const { data: session } = useSession();
+    const { theme, toggleTheme } = useTheme();
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Cerrar menú al hacer click fuera
@@ -63,7 +65,12 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
                     {/* Theme toggle con DaisyUI */}
                     <label className="swap swap-rotate">
                         {/* checkbox oculto que controla el estado */}
-                        <input type="checkbox" className="theme-controller" value="dark" />
+                        <input 
+                            type="checkbox" 
+                            className="theme-controller" 
+                            onChange={toggleTheme}
+                            checked={theme === 'dark'}
+                        />
                         
                         {/* ícono del sol */}
                         <svg className="swap-off h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -91,8 +98,8 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
                                 <p className="text-sm font-medium text-base-content">
                                     {session?.user?.name || 'Usuario'}
                                 </p>
-                                <p className="text-xs text-base-content/60">
-                                    {session?.user?.role || 'Usuario'}
+                                <p className="text-xs text-base-content/60 capitalize">
+                                    {(session?.user as { rol?: string })?.rol || 'Sin rol'}
                                 </p>
                             </div>
                         </button>
@@ -109,8 +116,8 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
                                         <p className="text-xs text-base-content/60">
                                             {session?.user?.email}
                                         </p>
-                                        <p className="text-xs text-base-content/60">
-                                            {session?.user?.role}
+                                        <p className="text-xs text-primary font-medium capitalize">
+                                            Rol: {(session?.user as { rol?: string })?.rol || 'Sin rol'}
                                         </p>
                                     </div>
 

@@ -57,7 +57,9 @@ export async function getDashboardStats(parroquiaId: number) {
       totalBautismos,
       totalPrimerasComuniones,
       totalConfirmaciones,
-      totalMatrimonios
+      totalMatrimonios,
+      totalUsuarios,
+      usuariosActivos
     ] = await Promise.all([
       prisma.persona.count({
         where: { id_parroquia: parroquiaId }
@@ -73,6 +75,15 @@ export async function getDashboardStats(parroquiaId: number) {
       }),
       prisma.matrimonio.count({
         where: { id_parroquia: parroquiaId }
+      }),
+      prisma.usuario.count({
+        where: { id_parroquia: parroquiaId }
+      }),
+      prisma.usuario.count({
+        where: { 
+          id_parroquia: parroquiaId,
+          estado: 1
+        }
       })
     ]);
 
@@ -81,7 +92,9 @@ export async function getDashboardStats(parroquiaId: number) {
       totalBautismos,
       totalPrimerasComuniones,
       totalConfirmaciones,
-      totalMatrimonios
+      totalMatrimonios,
+      totalUsuarios,
+      usuariosActivos
     };
   } catch (error) {
     console.error('Error getting dashboard stats:', error);
@@ -90,7 +103,9 @@ export async function getDashboardStats(parroquiaId: number) {
       totalBautismos: 0,
       totalPrimerasComuniones: 0,
       totalConfirmaciones: 0,
-      totalMatrimonios: 0
+      totalMatrimonios: 0,
+      totalUsuarios: 0,
+      usuariosActivos: 0
     };
   }
 }

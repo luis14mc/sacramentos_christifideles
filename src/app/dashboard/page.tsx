@@ -8,10 +8,10 @@ import {
   DocumentCheckIcon, 
   HeartIcon, 
   BookOpenIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 
 interface ParroquiaData {
   parroquia: {
@@ -42,19 +42,22 @@ interface DashboardStats {
   totalPrimerasComuniones: number;
   totalConfirmaciones: number;
   totalMatrimonios: number;
+  totalUsuarios: number;
+  usuariosActivos: number;
 }
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [parroquiaData, setParroquiaData] = useState<ParroquiaData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalPersonas: 0,
     totalBautismos: 0,
     totalPrimerasComuniones: 0,
     totalConfirmaciones: 0,
-    totalMatrimonios: 0
+    totalMatrimonios: 0,
+    totalUsuarios: 0,
+    usuariosActivos: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -63,18 +66,6 @@ export default function DashboardPage() {
       router.push('/login');
     }
   }, [status, router]);
-
-  // Cerrar sidebar en desktop cuando se redimensiona la ventana
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024 && sidebarOpen) {
-        setSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarOpen, setSidebarOpen]);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -146,6 +137,13 @@ export default function DashboardPage() {
       icon: HeartIcon,
       color: 'text-accent',
       bgColor: 'bg-accent/10'
+    },
+    {
+      name: 'Usuarios del Sistema',
+      value: stats.totalUsuarios,
+      icon: ShieldCheckIcon,
+      color: 'text-primary',
+      bgColor: 'bg-primary/10'
     }
   ];
 
@@ -177,6 +175,13 @@ export default function DashboardPage() {
       href: '/constancias/nueva',
       icon: ClipboardDocumentListIcon,
       color: 'bg-secondary hover:bg-secondary/80'
+    },
+    {
+      name: 'Gestionar Usuarios',
+      description: 'Administrar usuarios del sistema',
+      href: '/usuarios',
+      icon: ShieldCheckIcon,
+      color: 'bg-primary hover:bg-primary/80'
     }
   ];
 
