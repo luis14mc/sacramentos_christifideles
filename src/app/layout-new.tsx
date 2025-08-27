@@ -17,9 +17,9 @@ export const metadata: Metadata = {
   title: "ChristiFideles - Sistema de Gestión Parroquial",
   description: "Sistema integral para la gestión de sacramentos y administración parroquial",
   icons: {
-    icon: '/assets/logos/CF_LOGO_IMG.png',
-    shortcut: '/assets/logos/CF_LOGO_IMG.png',
-    apple: '/assets/logos/CF_LOGO_IMG.png',
+    icon: '/logo-christifideles.svg',
+    shortcut: '/logo-christifideles.svg',
+    apple: '/logo-christifideles.svg',
   },
 };
 
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" data-theme="light">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

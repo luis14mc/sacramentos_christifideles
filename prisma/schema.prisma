@@ -1,16 +1,488 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext]
 }
 
-model Test {
-  id Int @id @default(autoincrement())
-  name String
+model Departamento {
+  codigo_departamento String      @id @db.Char(2)
+  nombre_departamento String      @db.VarChar(55)
+  municipios          Municipio[]
+
+  @@map("departamento")
+}
+
+model Municipio {
+  codigo_municipio    String       @id @db.Char(4)
+  codigo_departamento String       @db.Char(2)
+  nombre_municipio    String       @db.VarChar(55)
+  departamento        Departamento @relation(fields: [codigo_departamento], references: [codigo_departamento], onUpdate: Restrict)
+  parroquias          Parroquia[]
+  personas            Persona[]
+
+  @@map("municipio")
+}
+
+model Parroquia {
+  id_parroquia        Int                        @id @default(autoincrement()) @db.SmallInt
+  nombre              String                     @db.VarChar(100)
+  ubicacion           String                     @db.Char(4)
+  direccion           String                     @db.VarChar(1000)
+  telefono            String                     @db.VarChar(100)
+  email               String?                    @db.VarChar(255)
+  bautismos           Bautismo[]
+  bitacora_crud       BitacoraCrud[]
+  bitacora_persona    BitacoraPersonaParroquia[]
+  confirmaciones      Confirmacion[]
+  matrimonios         Matrimonio[]
+  numeradores         Numeradores[]
+  orden_sacerdotal    OrdenSacerdotal[]
+  municipio           Municipio                  @relation(fields: [ubicacion], references: [codigo_municipio], onUpdate: Restrict, map: "fk_parroquia_muni")
+  config              ParroquiaConfig?
+  parametros          ParroquiaParametro[]
+  personas            Persona[]
+  plantillas          PlantillaConstancia[]
+  primeras_comuniones PrimeraComunion[]
+  sectores            SectorParroquial[]
+  usuarios            Usuario[]
+
+  @@map("parroquia")
+}
+
+model ParroquiaConfig {
+  id_parroquia      Int       @id @db.SmallInt
+  alias_liturgico   String?   @db.VarChar(150)
+  logo_url          String?
+  sello_digital_url String?
+  tz                String?   @default("America/Tegucigalpa")
+  idioma            String?   @default("es") @db.Char(2)
+  opciones          Json      @default("{}")
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  parroquia         Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onDelete: Cascade)
+
+  @@map("parroquia_config")
+}
+
+model PlantillaConstancia {
+  id           BigInt    @id @default(autoincrement())
+  id_parroquia Int       @db.SmallInt
+  sacramento   String
+  nombre       String    @db.VarChar(100)
+  contenido    String
+  activo       Boolean   @default(true)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  parroquia    Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onDelete: Cascade)
+
+  @@unique([id_parroquia, sacramento, nombre])
+  @@map("plantilla_constancia")
+}
+
+model ParroquiaParametro {
+  id           BigInt    @id @default(autoincrement())
+  id_parroquia Int       @db.SmallInt
+  clave        String
+  valor        Json      @default("{}")
+  parroquia    Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onDelete: Cascade)
+
+  @@unique([id_parroquia, clave])
+  @@map("parroquia_parametro")
+}
+
+model Numeradores {
+  id              BigInt    @id @default(autoincrement())
+  id_parroquia    Int       @db.SmallInt
+  modulo          String
+  scope           String    @default("general")
+  ultimo_libro    Int?      @default(0)
+  ultimo_folio    Int?      @default(0)
+  ultimo_acta     Int?      @default(0)
+  ultimo_registro Int?      @default(0)
+  parroquia       Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onDelete: Cascade)
+
+  @@unique([id_parroquia, modulo, scope])
+  @@map("numeradores")
+}
+
+model RolUsuario {
+  id_rol              Int           @id @default(autoincrement()) @db.SmallInt
+  nombre              String        @db.VarChar(55)
+  descripcion         String?       @db.VarChar(500)
+  estado              Int           @default(1) @db.SmallInt
+  fecha_creacion      DateTime      @default(now()) @db.Timestamptz(6)
+  id_usuario_creacion BigInt
+  paginas             TrRolPagina[]
+  usuarios            Usuario[]
+
+  @@map("rol_usuario")
+}
+
+model Pagina {
+  id_pagina           Int           @id @default(autoincrement()) @db.SmallInt
+  nombre              String        @db.VarChar(100)
+  descripcion         String?       @db.VarChar(1000)
+  url                 String
+  estado              Int           @default(1) @db.SmallInt
+  fecha_creacion      DateTime      @default(now()) @db.Timestamptz(6)
+  id_usuario_creacion BigInt
+  roles               TrRolPagina[]
+
+  @@map("pagina")
+}
+
+model TrRolPagina {
+  id_rol           Int        @db.SmallInt
+  id_pagina        Int        @db.SmallInt
+  puede_ver        Int        @default(1) @db.SmallInt
+  puede_crear      Int        @default(0) @db.SmallInt
+  puede_actualizar Int        @default(0) @db.SmallInt
+  puede_borrar     Int        @default(0) @db.SmallInt
+  pagina           Pagina     @relation(fields: [id_pagina], references: [id_pagina], onUpdate: Restrict)
+  rol              RolUsuario @relation(fields: [id_rol], references: [id_rol], onUpdate: Restrict)
+
+  @@id([id_rol, id_pagina])
+  @@map("tr_rol_pagina")
+}
+
+model Usuario {
+  id_usuario          BigInt          @id @default(autoincrement())
+  id_parroquia        Int             @db.SmallInt
+  id_rol              Int             @db.SmallInt
+  nombre              String          @db.VarChar(100)
+  email               String          @unique @db.Citext
+  contrasena          Bytes
+  telefono            String?         @db.VarChar(100)
+  estado              Int             @default(1) @db.SmallInt
+  fecha_creacion      DateTime        @default(now()) @db.Timestamptz(6)
+  id_usuario_creacion BigInt
+  bitacora_login      BitacoraLogin[]
+  parroquia           Parroquia       @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  rol                 RolUsuario      @relation(fields: [id_rol], references: [id_rol], onUpdate: Restrict)
+
+  @@map("usuario")
+}
+
+model OrdenReligiosa {
+  id_orden_religiosa Int               @id @default(autoincrement()) @db.SmallInt
+  nombre             String            @db.VarChar(200)
+  nombre_latin       String?           @db.VarChar(100)
+  abreviatura        String?           @db.VarChar(15)
+  descripcion        String?           @db.VarChar(1000)
+  rama               String            @db.Char(1)
+  orden_sacerdotal   OrdenSacerdotal[]
+  personas           Persona[]
+
+  @@map("orden_religiosa")
+}
+
+model RangoOrdenSacerdotal {
+  id_rango_sacerdotal Int               @id @default(autoincrement()) @db.SmallInt
+  nombre              String            @db.VarChar(55)
+  descripcion         String?           @db.VarChar(200)
+  orden_sacerdotal    OrdenSacerdotal[]
+
+  @@map("rango_orden_sacerdotal")
+}
+
+model OrdenSacerdotal {
+  numero_identidad      String               @id @db.VarChar(20)
+  id_rango_sacerdotal   Int                  @db.SmallInt
+  id_parroquia          Int                  @db.SmallInt
+  id_orden_religiosa    Int                  @db.SmallInt
+  nombres               String               @db.VarChar(55)
+  apellidos             String               @db.VarChar(55)
+  fecha_nacimiento      DateTime?            @db.Date
+  lugar_nacimiento      String?              @db.Char(4)
+  telefono              String?              @db.VarChar(100)
+  email                 String?              @db.VarChar(255)
+  otra_orden_religiosa  String?              @db.VarChar(255)
+  es_parroco            Int                  @default(0) @db.SmallInt
+  estado_vital          Int                  @default(1) @db.SmallInt
+  imagen                String?              @db.VarChar(300)
+  bautismos_sacerdote   Bautismo[]
+  confirmaciones_obispo Confirmacion[]
+  matrimonios_sacerdote Matrimonio[]
+  orden_religiosa       OrdenReligiosa       @relation(fields: [id_orden_religiosa], references: [id_orden_religiosa], onUpdate: Restrict)
+  parroquia             Parroquia            @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  rango                 RangoOrdenSacerdotal @relation(fields: [id_rango_sacerdotal], references: [id_rango_sacerdotal])
+  comuniones_sacerdote  PrimeraComunion[]
+
+  @@unique([id_parroquia, numero_identidad])
+  @@map("orden_sacerdotal")
+}
+
+model TipoSectorParroquial {
+  id_tipo_sector_parroquial Int                @id @default(autoincrement()) @db.SmallInt
+  nombre                    String             @db.VarChar(100)
+  descripcion               String?            @db.VarChar(1000)
+  sectores                  SectorParroquial[]
+
+  @@map("tipo_sector_parroquial")
+}
+
+model SectorParroquial {
+  id_sector_parroquial      BigInt               @id @default(autoincrement())
+  id_parroquia              Int                  @db.SmallInt
+  id_tipo_sector_parroquial Int                  @db.SmallInt
+  nombre                    String               @db.VarChar(55)
+  nombre_capilla            String?              @db.VarChar(55)
+  direccion                 String               @db.VarChar(1000)
+  personas                  Persona[]
+  parroquia                 Parroquia            @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  tipo_sector               TipoSectorParroquial @relation(fields: [id_tipo_sector_parroquial], references: [id_tipo_sector_parroquial], onUpdate: Restrict)
+
+  @@map("sector_parroquial")
+}
+
+model Persona {
+  numero_identidad          String              @db.VarChar(20)
+  id_parroquia              Int                 @db.SmallInt
+  id_sector_parroquial      BigInt
+  id_orden_religiosa        Int                 @db.SmallInt
+  nombres                   String              @db.VarChar(55)
+  apellidos                 String              @db.VarChar(55)
+  fecha_nacimiento          DateTime            @db.Date
+  lugar_nacimiento          String              @db.Char(4)
+  sexo                      String              @db.Char(1)
+  telefono                  String              @db.VarChar(100)
+  email                     String?             @db.Citext
+  direccion                 String?             @db.VarChar(1000)
+  estado_vital              Int                 @default(1) @db.SmallInt
+  estado_activo_parroquia   Int                 @db.SmallInt
+  otra_orden_religiosa      String?             @db.VarChar(255)
+  imagen                    String?             @db.VarChar(300)
+  created_at                DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  bautismos_bautizado       Bautismo[]          @relation("PersonaBautizada")
+  bautismos_catequista      Bautismo[]          @relation("CatequistaBautismo")
+  bautismos_madre           Bautismo[]          @relation("MadreBautismo")
+  bautismos_madrina         Bautismo[]          @relation("MadrinaBautismo")
+  bautismos_padre           Bautismo[]          @relation("PadreBautismo")
+  bautismos_padrino         Bautismo[]          @relation("PadrinoBautismo")
+  confirmaciones_catequista Confirmacion[]      @relation("CatequistaConfirmacion")
+  confirmaciones_confirmado Confirmacion[]      @relation("PersonaConfirmada")
+  confirmaciones_madre      Confirmacion[]      @relation("MadreConfirmacion")
+  confirmaciones_madrina    Confirmacion[]      @relation("MadrinaConfirmacion")
+  confirmaciones_padre      Confirmacion[]      @relation("PadreConfirmacion")
+  confirmaciones_padrino    Confirmacion[]      @relation("PadrinoConfirmacion")
+  matrimonios_esposa        Matrimonio[]        @relation("EsposaMatrimonio")
+  matrimonios_esposo        Matrimonio[]        @relation("EsposoMatrimonio")
+  matrimonios_madre_esposa  Matrimonio[]        @relation("MadreEsposa")
+  matrimonios_madre_esposo  Matrimonio[]        @relation("MadreEsposo")
+  matrimonios_madrina       Matrimonio[]        @relation("MadrinaMatrimonio")
+  matrimonios_padre_esposa  Matrimonio[]        @relation("PadreEsposa")
+  matrimonios_padre_esposo  Matrimonio[]        @relation("PadreEsposo")
+  matrimonios_padrino       Matrimonio[]        @relation("PadrinoMatrimonio")
+  orden_religiosa           OrdenReligiosa      @relation(fields: [id_orden_religiosa], references: [id_orden_religiosa], onUpdate: Restrict)
+  parroquia                 Parroquia           @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  sector                    SectorParroquial    @relation(fields: [id_sector_parroquial], references: [id_sector_parroquial], onUpdate: Restrict)
+  municipio_nacimiento      Municipio           @relation(fields: [lugar_nacimiento], references: [codigo_municipio], onUpdate: Restrict)
+  comuniones_catequista     PrimeraComunion[]   @relation("CatequistaComunion")
+  comuniones_madre          PrimeraComunion[]   @relation("MadreComunion")
+  comuniones_padre          PrimeraComunion[]   @relation("PadreComunion")
+  comuniones_persona        PrimeraComunion[]   @relation("PersonaComunion")
+  grupos                    TrPersonaGrupoRol[]
+
+  @@id([id_parroquia, numero_identidad])
+  @@index([id_parroquia, apellidos])
+  @@index([numero_identidad])
+  @@map("persona")
+}
+
+model GrupoParroquial {
+  id_grupo_parroquial Int                 @id @default(autoincrement()) @db.SmallInt
+  nombre              String              @db.VarChar(255)
+  descripcion         String?             @db.VarChar(2500)
+  miembros            TrPersonaGrupoRol[]
+
+  @@map("grupo_parroquial")
+}
+
+model RolParroquial {
+  id_rol_parroquial Int                 @id @default(autoincrement()) @db.SmallInt
+  nombre            String              @db.VarChar(255)
+  descripcion       String?             @db.VarChar(2500)
+  miembros          TrPersonaGrupoRol[]
+
+  @@map("rol_parroquial")
+}
+
+model TrPersonaGrupoRol {
+  numero_identidad    String          @db.VarChar(20)
+  id_parroquia        Int             @db.SmallInt
+  id_grupo_parroquial Int             @db.SmallInt
+  id_rol_parroquial   Int             @db.SmallInt
+  grupo               GrupoParroquial @relation(fields: [id_grupo_parroquial], references: [id_grupo_parroquial], onUpdate: Restrict)
+  persona             Persona         @relation(fields: [id_parroquia, numero_identidad], references: [id_parroquia, numero_identidad], onUpdate: Restrict)
+  rol                 RolParroquial   @relation(fields: [id_rol_parroquial], references: [id_rol_parroquial], onUpdate: Restrict)
+
+  @@id([id_parroquia, numero_identidad, id_grupo_parroquial, id_rol_parroquial])
+  @@map("tr_persona_grupo_rol")
+}
+
+model Bautismo {
+  id_bautismo                 BigInt          @id @default(autoincrement())
+  id_parroquia                Int             @db.SmallInt
+  numero_identidad_bautizado  String          @db.VarChar(20)
+  numero_identidad_madre      String          @db.VarChar(20)
+  numero_identidad_padre      String          @db.VarChar(20)
+  numero_identidad_madrina    String          @db.VarChar(20)
+  numero_identidad_padrino    String          @db.VarChar(20)
+  numero_identidad_catequista String          @db.VarChar(20)
+  numero_identidad_sacerdote  String          @db.VarChar(20)
+  fecha_bautismo              DateTime        @db.Timestamptz(6)
+  numero_folio                String
+  numero_libro                String
+  numero_pagina               String
+  numero_registro             String
+  nota_marginal               String?         @db.VarChar(1000)
+  parroquia                   Parroquia       @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  bautizado                   Persona         @relation("PersonaBautizada", fields: [id_parroquia, numero_identidad_bautizado], references: [id_parroquia, numero_identidad])
+  catequista                  Persona         @relation("CatequistaBautismo", fields: [id_parroquia, numero_identidad_catequista], references: [id_parroquia, numero_identidad])
+  madre                       Persona         @relation("MadreBautismo", fields: [id_parroquia, numero_identidad_madre], references: [id_parroquia, numero_identidad])
+  madrina                     Persona         @relation("MadrinaBautismo", fields: [id_parroquia, numero_identidad_madrina], references: [id_parroquia, numero_identidad])
+  padre                       Persona         @relation("PadreBautismo", fields: [id_parroquia, numero_identidad_padre], references: [id_parroquia, numero_identidad])
+  padrino                     Persona         @relation("PadrinoBautismo", fields: [id_parroquia, numero_identidad_padrino], references: [id_parroquia, numero_identidad])
+  sacerdote                   OrdenSacerdotal @relation(fields: [numero_identidad_sacerdote], references: [numero_identidad])
+
+  @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
+  @@index([id_parroquia, fecha_bautismo])
+  @@map("bautismo")
+}
+
+model PrimeraComunion {
+  id_primera_comunion         BigInt          @id @default(autoincrement())
+  id_parroquia                Int             @db.SmallInt
+  numero_identidad_persona    String          @db.VarChar(20)
+  numero_identidad_madre      String          @db.VarChar(20)
+  numero_identidad_padre      String          @db.VarChar(20)
+  numero_identidad_catequista String          @db.VarChar(20)
+  numero_identidad_sacerdote  String          @db.VarChar(20)
+  fecha_primera_comunion      DateTime        @db.Timestamptz(6)
+  numero_acta                 String
+  numero_libro                String
+  numero_pagina               String
+  numero_registro             String
+  nota_marginal               String?         @db.VarChar(1000)
+  parroquia                   Parroquia       @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  catequista                  Persona         @relation("CatequistaComunion", fields: [id_parroquia, numero_identidad_catequista], references: [id_parroquia, numero_identidad])
+  madre                       Persona         @relation("MadreComunion", fields: [id_parroquia, numero_identidad_madre], references: [id_parroquia, numero_identidad])
+  padre                       Persona         @relation("PadreComunion", fields: [id_parroquia, numero_identidad_padre], references: [id_parroquia, numero_identidad])
+  persona                     Persona         @relation("PersonaComunion", fields: [id_parroquia, numero_identidad_persona], references: [id_parroquia, numero_identidad])
+  sacerdote                   OrdenSacerdotal @relation(fields: [numero_identidad_sacerdote], references: [numero_identidad])
+
+  @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
+  @@index([id_parroquia, fecha_primera_comunion])
+  @@map("primera_comunion")
+}
+
+model Confirmacion {
+  id_confirmacion             BigInt          @id @default(autoincrement())
+  id_parroquia                Int             @db.SmallInt
+  numero_identidad_confirmado String          @db.VarChar(20)
+  numero_identidad_madre      String          @db.VarChar(20)
+  numero_identidad_padre      String          @db.VarChar(20)
+  numero_identidad_madrina    String          @db.VarChar(20)
+  numero_identidad_padrino    String          @db.VarChar(20)
+  numero_identidad_catequista String          @db.VarChar(20)
+  numero_identidad_obispo     String          @db.VarChar(20)
+  fecha_confirmacion          DateTime        @db.Timestamptz(6)
+  numero_acta                 String
+  numero_libro                String
+  numero_pagina               String?
+  numero_registro             String
+  nota_marginal               String?         @db.VarChar(1000)
+  parroquia                   Parroquia       @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  catequista                  Persona         @relation("CatequistaConfirmacion", fields: [id_parroquia, numero_identidad_catequista], references: [id_parroquia, numero_identidad])
+  confirmado                  Persona         @relation("PersonaConfirmada", fields: [id_parroquia, numero_identidad_confirmado], references: [id_parroquia, numero_identidad])
+  madre                       Persona         @relation("MadreConfirmacion", fields: [id_parroquia, numero_identidad_madre], references: [id_parroquia, numero_identidad])
+  madrina                     Persona         @relation("MadrinaConfirmacion", fields: [id_parroquia, numero_identidad_madrina], references: [id_parroquia, numero_identidad])
+  padre                       Persona         @relation("PadreConfirmacion", fields: [id_parroquia, numero_identidad_padre], references: [id_parroquia, numero_identidad])
+  padrino                     Persona         @relation("PadrinoConfirmacion", fields: [id_parroquia, numero_identidad_padrino], references: [id_parroquia, numero_identidad])
+  obispo                      OrdenSacerdotal @relation(fields: [numero_identidad_obispo], references: [numero_identidad])
+
+  @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
+  @@index([id_parroquia, fecha_confirmacion])
+  @@map("confirmacion")
+}
+
+model Matrimonio {
+  id_matrimonio                 BigInt          @id @default(autoincrement())
+  id_parroquia                  Int             @db.SmallInt
+  numero_identidad_esposa       String          @db.VarChar(20)
+  numero_identidad_esposo       String          @db.VarChar(20)
+  numero_identidad_madrina      String          @db.VarChar(20)
+  numero_identidad_padrino      String          @db.VarChar(20)
+  numero_identidad_sacerdote    String          @db.VarChar(20)
+  numero_identidad_madre_esposa String?         @db.VarChar(20)
+  numero_identidad_padre_esposa String?         @db.VarChar(20)
+  numero_identidad_madre_esposo String?         @db.VarChar(20)
+  numero_identidad_padre_esposo String?         @db.VarChar(20)
+  fecha_matrimonio              DateTime        @db.Timestamptz(6)
+  numero_acta                   String
+  numero_libro                  String
+  numero_pagina                 String?
+  numero_registro               String
+  nota_marginal                 String?         @db.VarChar(1000)
+  parroquia                     Parroquia       @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+  esposa                        Persona         @relation("EsposaMatrimonio", fields: [id_parroquia, numero_identidad_esposa], references: [id_parroquia, numero_identidad])
+  esposo                        Persona         @relation("EsposoMatrimonio", fields: [id_parroquia, numero_identidad_esposo], references: [id_parroquia, numero_identidad])
+  madre_esposa                  Persona?        @relation("MadreEsposa", fields: [id_parroquia, numero_identidad_madre_esposa], references: [id_parroquia, numero_identidad])
+  madre_esposo                  Persona?        @relation("MadreEsposo", fields: [id_parroquia, numero_identidad_madre_esposo], references: [id_parroquia, numero_identidad])
+  madrina                       Persona         @relation("MadrinaMatrimonio", fields: [id_parroquia, numero_identidad_madrina], references: [id_parroquia, numero_identidad])
+  padre_esposa                  Persona?        @relation("PadreEsposa", fields: [id_parroquia, numero_identidad_padre_esposa], references: [id_parroquia, numero_identidad])
+  padre_esposo                  Persona?        @relation("PadreEsposo", fields: [id_parroquia, numero_identidad_padre_esposo], references: [id_parroquia, numero_identidad])
+  padrino                       Persona         @relation("PadrinoMatrimonio", fields: [id_parroquia, numero_identidad_padrino], references: [id_parroquia, numero_identidad])
+  sacerdote                     OrdenSacerdotal @relation(fields: [numero_identidad_sacerdote], references: [numero_identidad])
+
+  @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
+  @@index([id_parroquia, fecha_matrimonio])
+  @@map("matrimonio")
+}
+
+model BitacoraCrud {
+  id_accion         BigInt    @id @default(autoincrement())
+  id_parroquia      Int       @db.SmallInt
+  id_usuario        BigInt
+  accion            String    @db.Char(1)
+  id_tabla_afectado BigInt?
+  nombre_tabla      String    @db.VarChar(100)
+  fecha             DateTime  @default(now()) @db.Timestamptz(6)
+  old_values        Json?
+  new_values        Json?
+  actor_ip          String?   @db.Inet
+  user_agent        String?
+  parroquia         Parroquia @relation(fields: [id_parroquia], references: [id_parroquia])
+
+  @@index([id_parroquia, nombre_tabla, fecha])
+  @@map("bitacora_crud")
+}
+
+model BitacoraLogin {
+  id_ingreso    BigInt   @id @default(autoincrement())
+  id_usuario    BigInt
+  fecha_ingreso DateTime @default(now()) @db.Timestamptz(6)
+  actor_ip      String?  @db.Inet
+  user_agent    String?
+  usuario       Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("bitacora_login")
+}
+
+model BitacoraPersonaParroquia {
+  id_registro      BigInt    @id @default(autoincrement())
+  numero_identidad String    @db.VarChar(20)
+  id_parroquia     Int       @db.SmallInt
+  es_parroco       Int       @default(0) @db.SmallInt
+  fecha_ingreso    DateTime  @default(now()) @db.Timestamptz(6)
+  fecha_salida     DateTime? @db.Timestamptz(6)
+  parroquia        Parroquia @relation(fields: [id_parroquia], references: [id_parroquia])
+
+  @@map("bitacora_persona_parroquia")
 }

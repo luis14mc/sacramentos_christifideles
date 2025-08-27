@@ -1,0 +1,27 @@
+<svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo circular -->
+  <circle cx="50" cy="50" r="40" fill="#7f1d1d"/>
+  
+  <!-- Cruz principal -->
+  <rect x="45" y="20" width="10" height="30" fill="white"/>
+  <rect x="30" y="30" width="40" height="8" fill="white"/>
+  
+  <!-- Base del cáliz (escalones) -->
+  <rect x="25" y="75" width="50" height="3" fill="white"/>
+  <rect x="30" y="72" width="40" height="3" fill="white"/>
+  <rect x="35" y="69" width="30" height="3" fill="white"/>
+  
+  <!-- Copa del cáliz -->
+  <path d="M32 50 Q32 45 37 45 L63 45 Q68 45 68 50 L68 65 Q68 70 63 70 L37 70 Q32 70 32 65 Z" fill="white"/>
+  
+  <!-- Pie del cáliz -->
+  <rect x="42" y="65" width="16" height="7" fill="white"/>
+  
+  <!-- Decoración lateral -->
+  <path d="M25 52 Q20 55 25 58" stroke="white" stroke-width="1.5" fill="none"/>
+  <path d="M75 52 Q80 55 75 58" stroke="white" stroke-width="1.5" fill="none"/>
+  
+  <!-- Texto ChristiFideles -->
+  <text x="110" y="45" font-family="serif" font-size="20" font-weight="bold" fill="#7f1d1d">Christi</text>
+  <text x="110" y="70" font-family="serif" font-size="20" font-weight="bold" fill="#7f1d1d">fideles</text>
+</svg>

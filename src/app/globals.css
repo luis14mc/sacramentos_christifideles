@@ -1,2 +1,75 @@
 @import "tailwindcss";
+@plugin "DaisyUI";
+
+
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(98% 0 0);
+  --color-base-300: oklch(95% 0 0);
+  --color-base-content: oklch(21% 0.006 285.885);
+  --color-primary: #590202;
+  --color-primary-content: oklch(93% 0.034 272.788);
+  --color-secondary: #454142;
+  --color-secondary-content: oklch(94% 0.028 342.258);
+  --color-accent: #590202;
+  --color-accent-content: oklch(96% 0.001 286.375);
+  --color-neutral: #260101;
+  --color-neutral-content: oklch(92% 0.004 286.32);
+  --color-info: #007dba;
+  --color-info-content: oklch(98% 0.002 247.839);
+  --color-success: oklch(39% 0.095 152.535);
+  --color-success-content: oklch(98% 0 0);
+  --color-warning: oklch(55% 0.163 48.998);
+  --color-warning-content: oklch(96% 0.003 264.542);
+  --color-error: oklch(25% 0.092 26.042);
+  --color-error-content: oklch(97% 0 0);
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.3125rem;
+  --size-field: 0.3125rem;
+  --border: 2px;
+  --depth: 1;
+  --noise: 1;
+}
+
+
+@plugin "daisyui/theme" {
+  name: "dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: oklch(25.33% 0.016 252.42);
+  --color-base-200: oklch(23.26% 0.014 253.1);
+  --color-base-300: oklch(21.15% 0.012 254.09);
+  --color-base-content: oklch(97.807% 0.029 256.847);
+  --color-primary: #590202;
+  --color-primary-content: oklch(96% 0.018 272.314);
+  --color-secondary: #454142;
+  --color-secondary-content: oklch(94% 0.028 342.258);
+  --color-accent: #A67777;
+  --color-accent-content: oklch(13% 0.028 261.692);
+  --color-neutral: oklch(14% 0.005 285.823);
+  --color-neutral-content: oklch(92% 0.004 286.32);
+  --color-info: #007dba;
+  --color-info-content: oklch(98% 0 0);
+  --color-success: oklch(62% 0.194 149.214);
+  --color-success-content: oklch(98% 0.002 247.839);
+  --color-warning: oklch(85% 0.199 91.936);
+  --color-warning-content: oklch(98% 0.001 106.423);
+  --color-error: oklch(63% 0.237 25.331);
+  --color-error-content: oklch(98% 0.002 247.839);
+  --radius-selector: 1rem;
+  --radius-field: 1rem;
+  --radius-box: 1rem;
+  --size-selector: 0.28125rem;
+  --size-field: 0.28125rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
 

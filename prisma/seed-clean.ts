@@ -228,16 +228,16 @@ async function main() {
   }
 
   // 10. Crear parroquia de ejemplo
-  console.log('⛪ Creando parroquia de ejemplo...');
+  console.log('⛪ Creando parroquia piloto...');
   const parroquia = await prisma.parroquia.upsert({
     where: { id_parroquia: 1 },
     update: {},
     create: {
-      nombre: 'Parroquia San José',
+      nombre: 'Parroquia Cristo Resucitado',
       ubicacion: '0801', // Distrito Central
       direccion: 'Barrio El Centro, Tegucigalpa',
       telefono: '+504 2222-3333',
-      email: 'parroquia.sanjose@gmail.com'
+      email: 'parroquia.cristoresucitado@gmail.com'
     }
   });
 
@@ -247,158 +247,40 @@ async function main() {
     update: {},
     create: {
       id_parroquia: 1,
-      alias_liturgico: 'Parroquia San José - Tegucigalpa',
+      alias_liturgico: 'Parroquia Cristo Resucitado - Tegucigalpa',
       tz: 'America/Tegucigalpa',
       idioma: 'es',
       opciones: {
-        tema_color: '#1e40af',
+        tema_color: '#7f1d1d',
         logo_visible: true,
         pie_constancia: 'En el nombre del Padre, del Hijo y del Espíritu Santo'
       }
     }
   });
 
-  console.log('✅ Seed completado exitosamente!');
-  console.log('⛪ Parroquia San José creada');
-  console.log('📊 Base de datos lista para usar en Neon');
-}
-      nombreDepartamento: 'Francisco Morazán'
-    }
-  })
-
-  // Crear municipio
-  const municipio = await prisma.municipio.create({
-    data: {
-      codigoMunicipio: '0801',
-      codigoDepartamento: '01',
-      nombreMunicipio: 'Tegucigalpa'
-    }
-  })
-
-  // Crear orden religiosa
-  const ordenReligiosa = await prisma.ordenReligiosa.create({
-    data: {
-      nombre: 'Clero Diocesano',
-      abreviatura: 'CD',
-      rama: 'M'
-    }
-  })
-
-  // Crear rango sacerdotal
-  const rangoSacerdotal = await prisma.rangoOrdenSacerdotal.create({
-    data: {
-      nombre: 'Presbítero',
-      descripcion: 'Sacerdote ordenado'
-    }
-  })
-
-  // Crear tipo de sector
-  const tipoSector = await prisma.tipoSectorParroquial.create({
-    data: {
-      nombre: 'Parroquia Central',
-      descripcion: 'Sector principal de la parroquia'
-    }
-  })
-
-  // Crear parroquia
-  const parroquia = await prisma.parroquia.create({
-    data: {
-      nombre: 'Cristo Resucitado',
-      ubicacion: '0801',
-      direccion: 'Col. Kennedy, Tegucigalpa',
-      telefono: '2234-5678',
-      email: 'cristo.resucitado@iglesia.hn'
-    }
-  })
-
-  // Crear configuración de parroquia
-  await prisma.parroquiaConfig.create({
-    data: {
-      idParroquia: parroquia.idParroquia,
-      aliasLiturgico: 'Parroquia Cristo Resucitado',
-      tz: 'America/Tegucigalpa',
-      idioma: 'es'
-    }
-  })
-
-  // Crear sector parroquial
-  const sector = await prisma.sectorParroquial.create({
-    data: {
-      idParroquia: parroquia.idParroquia,
-      idTipoSectorParroquial: tipoSector.idTipoSectorParroquial,
-      nombre: 'Sector Central',
-      nombreCapilla: 'Capilla Principal',
-      direccion: 'Col. Loarque, Tegucigalpa'
-    }
-  })
-
-  // Crear rol de usuario
-  const rol = await prisma.rolUsuario.create({
-    data: {
-      nombre: 'Administrador',
-      descripcion: 'Acceso completo al sistema',
-      estado: 1,
-      idUsuarioCreacion: 1
-    }
-  })
-
-  // Crear usuario administrador
-  const usuario = await prisma.usuario.create({
-    data: {
-      idParroquia: parroquia.idParroquia,
-      idRol: rol.idRol,
+  // 12. Crear usuario administrador
+  console.log('👤 Creando usuario administrador...');
+  const hashedPassword = await hash('admin123', 10);
+  
+  await prisma.usuario.upsert({
+    where: { email: 'admin@christifideles.com' },
+    update: {},
+    create: {
+      id_parroquia: 1,
+      id_rol: 1, // Super Admin
       nombre: 'Administrador Sistema',
-      email: 'admin@cristoresucitado.hn',
-      contrasena: Buffer.from('password123'), // En producción usar hash
-      telefono: '2234-5678',
+      email: 'admin@christifideles.com',
+      contrasena: Buffer.from(hashedPassword),
+      telefono: '+504 2222-3333',
       estado: 1,
-      idUsuarioCreacion: 1
+      id_usuario_creacion: 1
     }
-  })
+  });
 
-  // Crear sacerdote
-  const sacerdote = await prisma.ordenSacerdotal.create({
-    data: {
-      numeroIdentidad: '0801-1980-12345',
-      idRangoSacerdotal: rangoSacerdotal.idRangoSacerdotal,
-      idParroquia: parroquia.idParroquia,
-      idOrdenReligiosa: ordenReligiosa.idOrdenReligiosa,
-      nombres: 'José María',
-      apellidos: 'González Hernández',
-      fechaNacimiento: new Date('1980-06-15'),
-      lugarNacimiento: '0801',
-      telefono: '9876-5432',
-      email: 'padre.jose@cristoresucitado.hn',
-      esParroco: 1,
-      estadoVital: 1
-    }
-  })
-
-  // Crear persona de ejemplo
-  const persona = await prisma.persona.create({
-    data: {
-      numeroIdentidad: '0801-1995-54321',
-      idParroquia: parroquia.idParroquia,
-      idSectorParroquial: sector.idSectorParroquial,
-      idOrdenReligiosa: ordenReligiosa.idOrdenReligiosa,
-      nombres: 'María Elena',
-      apellidos: 'Rodríguez López',
-      fechaNacimiento: new Date('1995-03-20'),
-      lugarNacimiento: '0801',
-      sexo: 'F',
-      telefono: '3344-5566',
-      email: 'maria.rodriguez@email.com',
-      direccion: 'Col. Los Robles, Casa #123',
-      estadoVital: 1,
-      estadoActivoParroquia: 1
-    }
-  })
-
-  console.log('✅ Datos iniciales creados:')
-  console.log(`- Parroquia: ${parroquia.nombre}`)
-  console.log(`- Usuario: ${usuario.email}`)
-  console.log(`- Sacerdote: ${sacerdote.nombres} ${sacerdote.apellidos}`)
-  console.log(`- Persona: ${persona.nombres} ${persona.apellidos}`)
+  console.log('✅ Seed completado exitosamente!');
+  console.log('⛪ Parroquia Cristo Resucitado creada');
+  console.log('👤 Usuario admin@christifideles.com / admin123');
+  console.log('📊 Base de datos lista para usar en Neon');
 }
 
 main()
