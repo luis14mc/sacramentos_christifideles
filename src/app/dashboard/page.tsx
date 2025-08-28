@@ -186,100 +186,87 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex h-screen bg-base-200 overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
-        <Header 
-          setSidebarOpen={setSidebarOpen} 
-          parroquiaNombre={parroquiaData?.parroquia?.nombre}
-        />
-        
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto">
-            {/* Welcome section */}
-            <div className="mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-base-content mb-2">
-                ¡Bienvenido, {session.user.name}!
-              </h1>
-              <p className="text-base-content/70 text-sm sm:text-base">
-                {parroquiaData?.parroquia?.config?.alias_liturgico || parroquiaData?.parroquia?.nombre}
-              </p>
-            </div>
+    <AuthenticatedLayout parroquiaNombre={parroquiaData?.parroquia?.nombre}>
+      <div className="p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Welcome section */}
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-base-content mb-2">
+              ¡Bienvenido, {session.user.name}!
+            </h1>
+            <p className="text-base-content/70 text-sm sm:text-base">
+              {parroquiaData?.parroquia?.config?.alias_liturgico || parroquiaData?.parroquia?.nombre}
+            </p>
+          </div>
 
-            {/* Stats grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              {statsCards.map((stat) => (
-                <div
-                  key={stat.name}
-                  className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-base-content/60 truncate">
-                        {stat.name}
-                      </p>
-                      <p className="text-xl sm:text-2xl font-bold text-base-content mt-1">
-                        {stat.value.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${stat.bgColor}`}>
-                      <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color}`} />
-                    </div>
+          {/* Stats grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {statsCards.map((stat) => (
+              <div
+                key={stat.name}
+                className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-base-content/60 truncate">
+                      {stat.name}
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold text-base-content mt-1">
+                      {stat.value.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${stat.bgColor}`}>
+                    <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color}`} />
                   </div>
                 </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick actions */}
+          <div className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 className="text-base sm:text-lg font-semibold text-base-content mb-4">
+              Acciones Rápidas
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {quickActions.map((action) => (
+                <button
+                  key={action.name}
+                  onClick={() => router.push(action.href)}
+                  className="flex flex-col items-center p-3 sm:p-6 bg-base-200 rounded-lg hover:bg-base-300 transition-colors group"
+                >
+                  <div className={`p-2 sm:p-3 rounded-lg ${action.color} text-white mb-2 sm:mb-3 group-hover:scale-105 transition-transform`}>
+                    <action.icon className="h-4 w-4 sm:h-6 sm:w-6" />
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-medium text-base-content text-center leading-tight">
+                    {action.name}
+                  </h3>
+                  <p className="text-xs text-base-content/60 text-center mt-1 hidden sm:block">
+                    {action.description}
+                  </p>
+                </button>
               ))}
             </div>
+          </div>
 
-            {/* Quick actions */}
-            <div className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6 mb-6 sm:mb-8">
-              <h2 className="text-base sm:text-lg font-semibold text-base-content mb-4">
-                Acciones Rápidas
+          {/* Recent activity placeholder */}
+          <div className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base sm:text-lg font-semibold text-base-content">
+                Actividad Reciente
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {quickActions.map((action) => (
-                  <button
-                    key={action.name}
-                    onClick={() => router.push(action.href)}
-                    className="flex flex-col items-center p-3 sm:p-6 bg-base-200 rounded-lg hover:bg-base-300 transition-colors group"
-                  >
-                    <div className={`p-2 sm:p-3 rounded-lg ${action.color} text-white mb-2 sm:mb-3 group-hover:scale-105 transition-transform`}>
-                      <action.icon className="h-4 w-4 sm:h-6 sm:w-6" />
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-medium text-base-content text-center leading-tight">
-                      {action.name}
-                    </h3>
-                    <p className="text-xs text-base-content/60 text-center mt-1 hidden sm:block">
-                      {action.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
+              <button className="text-sm text-primary hover:text-primary/80 transition-colors">
+                Ver todo
+              </button>
             </div>
-
-            {/* Recent activity placeholder */}
-            <div className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base sm:text-lg font-semibold text-base-content">
-                  Actividad Reciente
-                </h2>
-                <button className="text-sm text-primary hover:text-primary/80 transition-colors">
-                  Ver todo
-                </button>
-              </div>
-              <div className="text-center py-8 sm:py-12">
-                <p className="text-base-content/60 text-sm sm:text-base">
-                  No hay actividad reciente para mostrar
-                </p>
-              </div>
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-base-content/60 text-sm sm:text-base">
+                No hay actividad reciente para mostrar
+              </p>
             </div>
           </div>
-        </main>
+        </div>
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }

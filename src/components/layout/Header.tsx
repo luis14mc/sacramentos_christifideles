@@ -89,10 +89,12 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
                             onClick={() => setUserMenuOpen(!userMenuOpen)}
                             className="flex items-center space-x-3 p-2 rounded-lg hover:bg-base-200 transition-colors"
                         >
-                            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-md">
-                                <span className="text-primary-content text-sm font-semibold">
-                                    {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                                </span>
+                            <div className="avatar">
+                                <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center">
+                                    <span className="text-xs font-bold">
+                                        {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                    </span>
+                                </div>
                             </div>
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-medium text-base-content">

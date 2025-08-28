@@ -229,9 +229,9 @@ export default function UsuariosPage() {
                       <tr key={usuario.id} className="hover">
                         <td>
                           <div className="flex items-center gap-3">
-                            <div className="avatar placeholder">
-                              <div className="bg-primary text-primary-content rounded-full w-10">
-                                <span className="text-sm font-semibold">
+                            <div className="avatar">
+                              <div className="w-10 h-10 rounded-full bg-primary text-primary-content text-center" style={{ lineHeight: '2.5rem' }}>
+                                <span className="text-sm font-bold">
                                   {usuario.nombre.charAt(0).toUpperCase()}
                                 </span>
                               </div>
