@@ -111,7 +111,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         <div className="flex items-center justify-between h-16 px-4 border-b border-base-300">
           <div className="flex items-center">
             <Image
-              src="/assets/logos/CF_LOGO_LETRAS.png"
+              src="/assets/marca/CF_LOGO_LETRAS.png"
               alt="ChristiFideles"
               width={160}
               height={40}

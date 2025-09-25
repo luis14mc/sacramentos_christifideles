@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-import PersonaModal from '../../components/modals/PersonaModal';
+import PersonaModal from '../../components/modals/PersonaModalNueva';
+import PersonaEditModal from '../../components/modals/PersonaEditModal';
+import PersonaViewModal from '../../components/modals/PersonaViewModal';
 import { 
   PlusIcon, 
   UsersIcon,
@@ -48,6 +51,10 @@ export default function PersonasPage() {
   const [filterEstado, setFilterEstado] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPersonaId, setEditingPersonaId] = useState<string | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingPersonaId, setViewingPersonaId] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -69,9 +76,101 @@ export default function PersonasPage() {
     }
   };
 
+  const abrirModalEdicion = (numeroIdentidad: string) => {
+    setEditingPersonaId(numeroIdentidad);
+    setIsEditModalOpen(true);
+  };
+
+  const cerrarModalEdicion = () => {
+    setIsEditModalOpen(false);
+    setEditingPersonaId(null);
+  };
+
+  const abrirModalVista = (numeroIdentidad: string) => {
+    setViewingPersonaId(numeroIdentidad);
+    setIsViewModalOpen(true);
+  };
+
+  const cerrarModalVista = () => {
+    setIsViewModalOpen(false);
+    setViewingPersonaId(null);
+  };
+
+  const handleEditFromView = (numeroIdentidad: string) => {
+    // Cerrar modal de vista y abrir modal de edición
+    cerrarModalVista();
+    setTimeout(() => abrirModalEdicion(numeroIdentidad), 100);
+  };
+
+  const handlePersonaUpdated = () => {
+    cargarPersonas(); // Recargar la lista de personas
+  };
+
   const handleModalSuccess = () => {
     cargarPersonas();
     setIsModalOpen(false);
+  };
+
+  const eliminarPersona = async (numeroIdentidad: string) => {
+    try {
+      // Mostrar confirmación
+      const result = await Swal.fire({
+        title: '¿Eliminar Persona?',
+        text: 'Esta acción no se puede deshacer. ¿Está seguro de que desea eliminar esta persona?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      // Realizar eliminación
+      const response = await fetch(`/api/personas/${numeroIdentidad}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: '¡Eliminado!',
+          text: 'La persona ha sido eliminada correctamente.',
+          confirmButtonColor: '#10b981'
+        });
+        
+        // Recargar la lista
+        cargarPersonas();
+      } else {
+        const errorData = await response.text();
+        let errorMessage = 'Error al eliminar la persona';
+        
+        try {
+          const parsedError = JSON.parse(errorData);
+          errorMessage = parsedError.details || parsedError.error || errorMessage;
+        } catch {
+          errorMessage = errorData || errorMessage;
+        }
+        
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error al Eliminar',
+          text: errorMessage,
+          confirmButtonColor: '#ef4444'
+        });
+      }
+    } catch (error) {
+      console.error('Error al eliminar persona:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error de Conexión',
+        text: 'No se pudo conectar con el servidor',
+        confirmButtonColor: '#ef4444'
+      });
+    }
   };
 
   // Filtros
@@ -281,9 +380,9 @@ export default function PersonasPage() {
                         <td>
                           <div className="flex items-center gap-3">
                             <div className="avatar">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-content grid place-items-center shadow-sm">
-                                <span className="text-sm font-bold">
-                                  {persona.nombres.charAt(0).toUpperCase()}
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-content shadow-sm relative">
+                                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{lineHeight: '1'}}>
+                                  {persona.nombres.charAt(0).toUpperCase()}{persona.apellidos.charAt(0).toUpperCase()}
                                 </span>
                               </div>
                             </div>
@@ -344,21 +443,21 @@ export default function PersonasPage() {
                         <td>
                           <div className="flex gap-1">
                             <button
-                              onClick={() => router.push(`/personas/${persona.numero_identidad}`)}
+                              onClick={() => abrirModalVista(persona.numero_identidad)}
                               className="btn btn-ghost btn-xs hover:bg-info/20 hover:text-info transition-colors"
                               title="Ver detalles"
                             >
                               <EyeIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => router.push(`/personas/${persona.numero_identidad}/editar`)}
+                              onClick={() => abrirModalEdicion(persona.numero_identidad)}
                               className="btn btn-ghost btn-xs hover:bg-warning/20 hover:text-warning transition-colors"
                               title="Editar"
                             >
                               <PencilSquareIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => console.log('Eliminar persona:', persona.numero_identidad)}
+                              onClick={() => eliminarPersona(persona.numero_identidad)}
                               className="btn btn-ghost btn-xs hover:bg-error/20 hover:text-error transition-colors"
                               title="Eliminar"
                             >
@@ -432,6 +531,23 @@ export default function PersonasPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSuccess={handleModalSuccess}
+        />
+
+        {/* Modal de Editar Persona */}
+        <PersonaEditModal
+          isOpen={isEditModalOpen}
+          onClose={cerrarModalEdicion}
+          personaId={editingPersonaId}
+          onPersonaUpdated={handlePersonaUpdated}
+        />
+
+        {/* Modal de Ver Persona */}
+        <PersonaViewModal
+          isOpen={isViewModalOpen}
+          onClose={cerrarModalVista}
+          personaId={viewingPersonaId}
+          onEdit={handleEditFromView}
+          onDelete={eliminarPersona}
         />
       </div>
       </div>

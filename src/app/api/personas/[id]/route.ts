@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -13,7 +13,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const numeroIdentidad = params.id;
+    const resolvedParams = await params;
+    const numeroIdentidad = resolvedParams.id;
 
     const persona = await prisma.persona.findFirst({
       where: {
@@ -47,7 +48,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
 
-    return NextResponse.json(persona);
+    // Serializar BigInt fields
+    const personaSerializada = {
+      ...persona,
+      id_sector_parroquial: persona.id_sector_parroquial?.toString(),
+      id_orden_religiosa: persona.id_orden_religiosa?.toString()
+    };
+
+    return NextResponse.json(personaSerializada);
   } catch (error) {
     console.error('Error al obtener persona:', error);
     return NextResponse.json(
@@ -57,7 +65,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -65,7 +73,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const numeroIdentidad = params.id;
+    const resolvedParams = await params;
+    const numeroIdentidad = resolvedParams.id;
     const data = await req.json();
 
     const personaActualizada = await prisma.persona.update({
@@ -86,8 +95,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         direccion: data.direccion,
         id_sector_parroquial: data.id_sector_parroquial ? parseInt(data.id_sector_parroquial) : undefined,
         id_orden_religiosa: data.id_orden_religiosa ? parseInt(data.id_orden_religiosa) : undefined,
-        estado_vital: data.estado_vital,
-        estado_activo_parroquia: data.estado_activo_parroquia,
+        estado_vital: data.estado_vital ? parseInt(data.estado_vital) : undefined,
+        estado_activo_parroquia: data.estado_activo_parroquia ? parseInt(data.estado_activo_parroquia) : undefined,
         otra_orden_religiosa: data.otra_orden_religiosa,
         imagen: data.imagen
       },
@@ -115,7 +124,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     });
 
-    return NextResponse.json(personaActualizada);
+    // Serializar BigInt fields
+    const personaSerializada = {
+      ...personaActualizada,
+      id_sector_parroquial: personaActualizada.id_sector_parroquial?.toString(),
+      id_orden_religiosa: personaActualizada.id_orden_religiosa?.toString()
+    };
+
+    return NextResponse.json(personaSerializada);
   } catch (error) {
     console.error('Error al actualizar persona:', error);
     return NextResponse.json(
@@ -125,7 +141,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -133,12 +149,28 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const numeroIdentidad = params.id;
+    const resolvedParams = await params;
+    const numeroIdentidad = resolvedParams.id;
 
+    // Primero buscar la persona para obtener su id_parroquia
+    const personaExistente = await prisma.persona.findFirst({
+      where: {
+        numero_identidad: numeroIdentidad
+      }
+    });
+
+    if (!personaExistente) {
+      return NextResponse.json(
+        { error: 'Persona no encontrada' },
+        { status: 404 }
+      );
+    }
+
+    // Ahora eliminar con la clave compuesta correcta
     await prisma.persona.delete({
       where: {
         id_parroquia_numero_identidad: {
-          id_parroquia: 1, // Se obtendrá de la sesión del usuario
+          id_parroquia: personaExistente.id_parroquia,
           numero_identidad: numeroIdentidad
         }
       }

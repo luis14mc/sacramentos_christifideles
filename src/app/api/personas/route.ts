@@ -42,7 +42,13 @@ export async function GET() {
       ]
     });
 
-    return NextResponse.json(personas);
+    // Convertir BigInt a string para serialización JSON
+    const personasSerializadas = personas.map(persona => ({
+      ...persona,
+      id_sector_parroquial: persona.id_sector_parroquial.toString()
+    }));
+
+    return NextResponse.json(personasSerializadas);
   } catch (error) {
     console.error('Error al obtener personas:', error);
     return NextResponse.json(
@@ -114,7 +120,16 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Persona creada exitosamente');
 
-    return NextResponse.json(nuevaPersona, { status: 201 });
+    // Serializar BigInt a string para la respuesta
+    const personaSerializada = {
+      ...nuevaPersona,
+      numero_identidad: nuevaPersona.numero_identidad.toString(),
+      telefono: nuevaPersona.telefono ? nuevaPersona.telefono.toString() : null,
+      id_sector_parroquial: nuevaPersona.id_sector_parroquial ? nuevaPersona.id_sector_parroquial.toString() : null,
+      id_orden_religiosa: nuevaPersona.id_orden_religiosa ? nuevaPersona.id_orden_religiosa.toString() : null
+    };
+
+    return NextResponse.json(personaSerializada, { status: 201 });
   } catch (error) {
     console.error('❌ Error al crear persona:', error);
     console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');

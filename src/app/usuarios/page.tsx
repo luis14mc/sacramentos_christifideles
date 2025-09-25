@@ -230,8 +230,8 @@ export default function UsuariosPage() {
                         <td>
                           <div className="flex items-center gap-3">
                             <div className="avatar">
-                              <div className="w-10 h-10 rounded-full bg-primary text-primary-content text-center" style={{ lineHeight: '2.5rem' }}>
-                                <span className="text-sm font-bold">
+                              <div className="w-10 h-10 rounded-full bg-primary text-primary-content relative">
+                                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{lineHeight: '1'}}>
                                   {usuario.nombre.charAt(0).toUpperCase()}
                                 </span>
                               </div>

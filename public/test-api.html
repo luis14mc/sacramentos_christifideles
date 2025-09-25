@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+</head>
+<body>
+    <h1>Test API Persona</h1>
+    <button onclick="testPersona()">Probar API Persona</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testPersona() {
+            try {
+                const response = await fetch('/api/personas/0826199400252');
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                console.log('Datos completos:', data);
+                console.log('Tipos de datos:', {
+                    id_sector_parroquial: typeof data.id_sector_parroquial,
+                    id_orden_religiosa: typeof data.id_orden_religiosa,
+                    estado_vital: typeof data.estado_vital,
+                    estado_activo_parroquia: typeof data.estado_activo_parroquia
+                });
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

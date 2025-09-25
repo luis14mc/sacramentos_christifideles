@@ -17,9 +17,9 @@ export const metadata: Metadata = {
   title: "ChristiFideles - Sistema de Gestión Parroquial",
   description: "Sistema integral para la gestión de sacramentos y administración parroquial",
   icons: {
-    icon: '/assets/logos/CF_LOGO_IMG.png',
-    shortcut: '/assets/logos/CF_LOGO_IMG.png',
-    apple: '/assets/logos/CF_LOGO_IMG.png',
+    icon: '/assets/marca/favicon.ico',
+    shortcut: '/assets/marca/favicon-32x32.png',
+    apple: '/assets/marca/CF_LOGO_IMG.png',
   },
 };
 

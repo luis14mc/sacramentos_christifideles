@@ -18,12 +18,12 @@ export default function ChristiFidelesLogo({
   size = 'md',
   className = '' 
 }: ChristiFidelesLogoProps) {
-  let logoSrc = '/assets/logos/CF_LOGO.png';
+  let logoSrc = '/assets/marca/CF_LOGO.png';
   
   if (variant === 'img') {
-    logoSrc = '/assets/logos/CF_LOGO_IMG.png';
+    logoSrc = '/assets/marca/CF_LOGO_IMG.png';
   } else if (variant === 'letras') {
-    logoSrc = '/assets/logos/CF_LOGO_LETRAS.png';
+    logoSrc = '/assets/marca/CF_LOGO_LETRAS.png';
   }
   
   return (

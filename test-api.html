@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+</head>
+<body>
+    <h1>Test API Persona</h1>
+    <button onclick="testPersona()">Probar API Persona</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testPersona() {
+            try {
+                const response = await fetch('/api/personas/0826199400252');
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                console.log('Datos:', data);
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

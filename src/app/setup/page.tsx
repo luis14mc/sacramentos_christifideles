@@ -68,7 +68,7 @@ export default function InstallationPage() {
         <div className="text-center mb-8">
           <div className="mx-auto mb-6 flex justify-center">
             <Image
-              src="/assets/logos/CF_LOGO.png"
+              src="/assets/marca/CF_LOGO.png"
               alt="ChristiFideles"
               width={120}
               height={120}

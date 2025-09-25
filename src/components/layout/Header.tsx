@@ -90,8 +90,8 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
                             className="flex items-center space-x-3 p-2 rounded-lg hover:bg-base-200 transition-colors"
                         >
                             <div className="avatar">
-                                <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center">
-                                    <span className="text-xs font-bold">
+                                <div className="w-8 h-8 rounded-full bg-primary text-primary-content relative">
+                                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{lineHeight: '1'}}>
                                         {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                                     </span>
                                 </div>
