@@ -7,10 +7,20 @@ import {
   UsersIcon, 
   UserCircleIcon,
   HomeModernIcon,
-  ShieldCheckIcon 
+  ShieldCheckIcon,
+  BuildingOfficeIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const configurationModules = [
+  {
+    name: 'Configuración General',
+    description: 'Datos de la parroquia, configuración básica del sistema',
+    href: '/configuracion/general',
+    icon: BuildingOfficeIcon,
+    color: 'bg-primary hover:bg-primary/80',
+    stats: 'Información básica'
+  },
   {
     name: 'Sacerdotes',
     description: 'Administrar sacerdotes, diáconos y religiosos',
@@ -24,15 +34,15 @@ const configurationModules = [
     description: 'Gestionar grupos y comunidades parroquiales',
     href: '/configuracion/grupos',
     icon: UsersIcon,
-    color: 'bg-secondary hover:bg-secondary/80',
+    color: 'bg-primary hover:bg-primary/80',
     stats: '0 grupos'
   },
   {
     name: 'Roles Parroquiales',
     description: 'Definir roles y responsabilidades',
     href: '/configuracion/roles',
-    icon: ShieldCheckIcon,
-    color: 'bg-accent hover:bg-accent/80',
+    icon: DocumentTextIcon,
+    color: 'bg-primary hover:bg-primary/80',
     stats: '0 roles'
   },
   {
@@ -40,8 +50,16 @@ const configurationModules = [
     description: 'Organizar sectores y capillas',
     href: '/configuracion/sectores',
     icon: HomeModernIcon,
-    color: 'bg-info hover:bg-info/80',
+    color: 'bg-primary hover:bg-primary/80',
     stats: '0 sectores'
+  },
+  {
+    name: 'Sistema de Permisos',
+    description: 'Control de acceso granular por roles',
+    href: '/configuracion/permisos',
+    icon: ShieldCheckIcon,
+    color: 'bg-primary hover:bg-primary/80',
+    stats: 'Gestión avanzada'
   }
 ];
 
@@ -66,7 +84,7 @@ export default function Configuracion() {
           </div>
 
           {/* Configuration modules grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {configurationModules.map((module) => (
               <button
                 key={module.name}
@@ -96,7 +114,7 @@ export default function Configuracion() {
                         e.stopPropagation();
                         router.push(module.href);
                       }}
-                      className={`btn btn-sm ${module.color.replace('bg-', 'btn-').replace(' hover:bg-', ' hover:btn-')} text-white`}
+                      className="btn btn-sm btn-primary text-white"
                     >
                       Administrar
                     </button>

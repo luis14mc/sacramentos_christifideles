@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { 
   PlusIcon, 
@@ -37,9 +38,22 @@ export default function RolesParroquialesAdmin() {
       if (response.ok) {
         const data = await response.json();
         setRoles(data);
+      } else {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error al cargar',
+          text: 'No se pudieron cargar los roles parroquiales',
+          confirmButtonColor: '#590202'
+        });
       }
     } catch (error) {
       console.error('Error al cargar roles:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error al cargar los roles',
+        confirmButtonColor: '#590202'
+      });
     } finally {
       setLoading(false);
     }
@@ -49,6 +63,56 @@ export default function RolesParroquialesAdmin() {
     rol.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rol.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDelete = async (rol: RolParroquial) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar rol?',
+      html: `¿Estás seguro de eliminar el rol <strong>${rol.nombre}</strong>?<br><small>Los ${rol._count.miembros} miembros con este rol no serán eliminados.</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#590202',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/configuracion/roles/${rol.id_rol_parroquial}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Eliminado',
+            text: 'El rol ha sido eliminado correctamente',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+          });
+          cargarRoles();
+        } else {
+          const errorData = await response.json();
+          await Swal.fire({
+            icon: 'error',
+            title: 'Error al eliminar',
+            text: errorData.error || 'No se pudo eliminar el rol',
+            confirmButtonColor: '#590202'
+          });
+        }
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Ocurrió un error al eliminar el rol',
+          confirmButtonColor: '#590202'
+        });
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -188,7 +252,7 @@ export default function RolesParroquialesAdmin() {
                               <PencilSquareIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => console.log('Eliminar rol:', rol.id_rol_parroquial)}
+                              onClick={() => handleDelete(rol)}
                               className="btn btn-ghost btn-xs text-error"
                               title="Eliminar"
                             >

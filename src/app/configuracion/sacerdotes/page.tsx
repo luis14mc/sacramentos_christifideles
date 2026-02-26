@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { 
   PlusIcon, 
@@ -46,9 +47,22 @@ export default function SacerdotesAdmin() {
       if (response.ok) {
         const data = await response.json();
         setSacerdotes(data);
+      } else {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error al cargar',
+          text: 'No se pudieron cargar los sacerdotes',
+          confirmButtonColor: '#590202'
+        });
       }
     } catch (error) {
       console.error('Error al cargar sacerdotes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error al cargar los sacerdotes',
+        confirmButtonColor: '#590202'
+      });
     } finally {
       setLoading(false);
     }
@@ -66,6 +80,56 @@ export default function SacerdotesAdmin() {
 
     return matchesSearch && matchesEstado;
   });
+
+  const handleDelete = async (sacerdote: Sacerdote) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar sacerdote?',
+      html: `¿Estás seguro de eliminar a <strong>${sacerdote.nombres} ${sacerdote.apellidos}</strong>?<br><small>Esta acción no se puede deshacer.</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#590202',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/configuracion/sacerdotes/${sacerdote.numero_identidad}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Eliminado',
+            text: 'El sacerdote ha sido eliminado correctamente',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+          });
+          cargarSacerdotes();
+        } else {
+          const errorData = await response.json();
+          await Swal.fire({
+            icon: 'error',
+            title: 'Error al eliminar',
+            text: errorData.error || 'No se pudo eliminar el sacerdote',
+            confirmButtonColor: '#590202'
+          });
+        }
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Ocurrió un error al eliminar el sacerdote',
+          confirmButtonColor: '#590202'
+        });
+      }
+    }
+  };
 
   const getRangoColor = (esParroco: number) => {
     return esParroco === 1 ? 'badge-primary' : 'badge-secondary';
@@ -246,7 +310,7 @@ export default function SacerdotesAdmin() {
                               <PencilSquareIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => {/* TODO: Confirmar eliminación */}}
+                              onClick={() => handleDelete(sacerdote)}
                               className="btn btn-ghost btn-xs text-error"
                               title="Eliminar"
                             >

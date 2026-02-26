@@ -11,6 +11,13 @@ interface AuthenticatedLayoutProps {
   parroquiaNombre?: string;
 }
 
+interface ParroquiaInfo {
+  nombre: string;
+  config?: {
+    logo_url?: string;
+  };
+}
+
 export default function AuthenticatedLayout({ 
   children, 
   parroquiaNombre 
@@ -18,6 +25,37 @@ export default function AuthenticatedLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [parroquiaInfo, setParroquiaInfo] = useState<ParroquiaInfo | null>(null);
+
+  // Cargar información de la parroquia
+  useEffect(() => {
+    const loadParroquiaInfo = async () => {
+      try {
+        const response = await fetch('/api/configuracion/general');
+        if (response.ok) {
+          const data = await response.json();
+          setParroquiaInfo(data);
+        }
+      } catch (error) {
+        console.error('Error cargando info de parroquia:', error);
+      }
+    };
+
+    if (status === 'authenticated') {
+      loadParroquiaInfo();
+    }
+
+    // Escuchar evento de actualización de configuración
+    const handleConfigUpdate = () => {
+      loadParroquiaInfo();
+    };
+
+    window.addEventListener('parroquiaConfigUpdated', handleConfigUpdate);
+    
+    return () => {
+      window.removeEventListener('parroquiaConfigUpdated', handleConfigUpdate);
+    };
+  }, [status]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -59,7 +97,8 @@ export default function AuthenticatedLayout({
         {/* Header */}
         <Header 
           setSidebarOpen={setSidebarOpen} 
-          parroquiaNombre={parroquiaNombre}
+          parroquiaNombre={parroquiaNombre || parroquiaInfo?.nombre}
+          parroquiaLogo={parroquiaInfo?.config?.logo_url}
         />
         
         {/* Page content */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { 
   PlusIcon, 
@@ -38,9 +39,22 @@ export default function GruposParroquialesAdmin() {
       if (response.ok) {
         const data = await response.json();
         setGrupos(data);
+      } else {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error al cargar',
+          text: 'No se pudieron cargar los grupos parroquiales',
+          confirmButtonColor: '#590202'
+        });
       }
     } catch (error) {
       console.error('Error al cargar grupos:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error al cargar los grupos',
+        confirmButtonColor: '#590202'
+      });
     } finally {
       setLoading(false);
     }
@@ -50,6 +64,56 @@ export default function GruposParroquialesAdmin() {
     grupo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     grupo.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDelete = async (grupo: GrupoParroquial) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar grupo?',
+      html: `¿Estás seguro de eliminar el grupo <strong>${grupo.nombre}</strong>?<br><small>Los ${grupo._count.miembros} miembros del grupo no serán eliminados.</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#590202',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/configuracion/grupos/${grupo.id_grupo_parroquial}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Eliminado',
+            text: 'El grupo ha sido eliminado correctamente',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+          });
+          cargarGrupos();
+        } else {
+          const errorData = await response.json();
+          await Swal.fire({
+            icon: 'error',
+            title: 'Error al eliminar',
+            text: errorData.error || 'No se pudo eliminar el grupo',
+            confirmButtonColor: '#590202'
+          });
+        }
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Ocurrió un error al eliminar el grupo',
+          confirmButtonColor: '#590202'
+        });
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -176,7 +240,7 @@ export default function GruposParroquialesAdmin() {
                         </li>
                         <li>
                           <button
-                            onClick={() => console.log('Eliminar grupo:', grupo.id_grupo_parroquial)}
+                            onClick={() => handleDelete(grupo)}
                             className="flex items-center gap-2 text-error"
                           >
                             <TrashIcon className="h-4 w-4" />

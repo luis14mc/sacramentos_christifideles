@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { signOut, useSession } from 'next-auth/react';
+import Image from 'next/image';
 import useTheme from '@/hooks/useTheme';
 import {
     Bars3Icon,
@@ -13,9 +14,10 @@ import {
 interface HeaderProps {
     readonly setSidebarOpen: (open: boolean) => void;
     readonly parroquiaNombre?: string;
+    readonly parroquiaLogo?: string;
 }
 
-export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps) {
+export default function Header({ setSidebarOpen, parroquiaNombre, parroquiaLogo }: HeaderProps) {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const { data: session } = useSession();
     const { theme, toggleTheme } = useTheme();
@@ -47,19 +49,49 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
 
                     {/* Parish name - only on desktop */}
                     <div className="hidden lg:block ml-4">
-                        <h1 className="text-lg font-semibold text-base-content">
-                            {parroquiaNombre || 'Sistema de Gestión Parroquial'}
-                        </h1>
+                        <div className="flex items-center space-x-3">
+                            {/* Logo de la parroquia */}
+                            {parroquiaLogo && (
+                                <div className="relative w-10 h-10 flex-shrink-0">
+                                    <Image
+                                        src={parroquiaLogo}
+                                        alt="Logo parroquia"
+                                        fill
+                                        className="object-contain"
+                                    />
+                                </div>
+                            )}
+                            
+                            {/* Nombre del sistema y parroquia */}
+                            <h1 className="text-lg font-semibold text-base-content">
+                                Sistema de Gestión Parroquial
+                                {parroquiaNombre && (
+                                    <span className="text-base-content/70"> - {parroquiaNombre}</span>
+                                )}
+                            </h1>
+                        </div>
                     </div>
                 </div>
 
                 {/* Right side - Theme toggle and user menu */}
                 <div className="flex items-center space-x-4">
-                    {/* Parish name - mobile */}
-                    <div className="lg:hidden">
-                        <p className="text-sm font-medium text-base-content truncate max-w-32">
-                            {parroquiaNombre}
-                        </p>
+                    {/* Parish name and logo - mobile */}
+                    <div className="lg:hidden flex items-center space-x-2">
+                        {parroquiaLogo && (
+                            <div className="relative w-8 h-8 flex-shrink-0">
+                                <Image
+                                    src={parroquiaLogo}
+                                    alt="Logo"
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        )}
+                        {parroquiaNombre && (
+                            <p className="text-sm font-medium text-base-content truncate max-w-32">
+                                {parroquiaNombre}
+                            </p>
+                        )}
                     </div>
 
                     {/* Theme toggle con DaisyUI */}
