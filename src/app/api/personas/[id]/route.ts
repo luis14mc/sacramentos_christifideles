@@ -1,187 +1,186 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { PAGES } from '@/lib/pages';
+import { withTenantScope, withTenantTransaction } from '@/lib/prisma-tenant';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { ForbiddenError } from '@/lib/errors';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { personaUpdateSchema } from '@/lib/validators/schemas';
 
-const prisma = new PrismaClient();
+const personaInclude = {
+  sector: { select: { nombre: true } },
+  orden_religiosa: { select: { nombre: true } },
+  municipio_nacimiento: {
+    select: {
+      nombre_municipio: true,
+      departamento: { select: { nombre_departamento: true } },
+    },
+  },
+} as const;
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+function serializePersona(persona: {
+  id_sector_parroquial: bigint | null;
+  id_orden_religiosa?: number | null;
+  [key: string]: unknown;
+}) {
+  return {
+    ...persona,
+    id_sector_parroquial: persona.id_sector_parroquial?.toString(),
+    id_orden_religiosa: persona.id_orden_religiosa?.toString(),
+  };
+}
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const session = await getServerSession(authOptions);
+    const { parishId } = await requireTenantWithPermission(PAGES.PERSONAS, 'ver');
+    const { id: numeroIdentidad } = await params;
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    const resolvedParams = await params;
-    const numeroIdentidad = resolvedParams.id;
-
-    const persona = await prisma.persona.findFirst({
-      where: {
-        numero_identidad: numeroIdentidad
-      },
-      include: {
-        sector: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        },
-        municipio_nacimiento: {
-          select: {
-            nombre_municipio: true,
-            departamento: {
-              select: {
-                nombre_departamento: true
-              }
-            }
-          }
-        }
-      }
-    });
+    const persona = await withTenantScope(parishId, (db) =>
+      db.persona.findFirst({
+        where: { id_parroquia: parishId, numero_identidad: numeroIdentidad },
+        include: personaInclude,
+      })
+    );
 
     if (!persona) {
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
 
-    // Serializar BigInt fields
-    const personaSerializada = {
-      ...persona,
-      id_sector_parroquial: persona.id_sector_parroquial?.toString(),
-      id_orden_religiosa: persona.id_orden_religiosa?.toString()
-    };
-
-    return NextResponse.json(personaSerializada);
+    return NextResponse.json(serializePersona(persona));
   } catch (error) {
-    console.error('Error al obtener persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const session = await getServerSession(authOptions);
+    const ctx = await requireTenantWithPermission(PAGES.PERSONAS, 'actualizar');
+    const { id: numeroIdentidad } = await params;
+    const body = await req.json();
+    const validated = safeParseBody(personaUpdateSchema, body);
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    const resolvedParams = await params;
-    const numeroIdentidad = resolvedParams.id;
-    const data = await req.json();
+    const data = validated.data;
 
-    const personaActualizada = await prisma.persona.update({
-      where: {
-        id_parroquia_numero_identidad: {
-          id_parroquia: data.id_parroquia || 1,
-          numero_identidad: numeroIdentidad
-        }
-      },
-      data: {
-        nombres: data.nombres,
-        apellidos: data.apellidos,
-        fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
-        lugar_nacimiento: data.lugar_nacimiento,
-        sexo: data.sexo,
-        telefono: data.telefono,
-        email: data.email,
-        direccion: data.direccion,
-        id_sector_parroquial: data.id_sector_parroquial ? parseInt(data.id_sector_parroquial) : undefined,
-        id_orden_religiosa: data.id_orden_religiosa ? parseInt(data.id_orden_religiosa) : undefined,
-        estado_vital: data.estado_vital ? parseInt(data.estado_vital) : undefined,
-        estado_activo_parroquia: data.estado_activo_parroquia ? parseInt(data.estado_activo_parroquia) : undefined,
-        otra_orden_religiosa: data.otra_orden_religiosa,
-        imagen: data.imagen
-      },
-      include: {
-        sector: {
-          select: {
-            nombre: true
-          }
+    const existing = await withTenantScope(ctx.parishId, (db) =>
+      db.persona.findFirst({
+        where: { id_parroquia: ctx.parishId, numero_identidad: numeroIdentidad },
+      })
+    );
+
+    if (!existing) {
+      throw new ForbiddenError();
+    }
+
+    await withTenantTransaction(ctx.parishId, async (tx) => {
+      await tx.persona.updateMany({
+        where: {
+          id_parroquia: ctx.parishId,
+          numero_identidad: numeroIdentidad,
         },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
+        data: {
+          nombres: data.nombres,
+          apellidos: data.apellidos,
+          fecha_nacimiento: data.fecha_nacimiento
+            ? new Date(data.fecha_nacimiento)
+            : undefined,
+          lugar_nacimiento: data.lugar_nacimiento ?? data.municipio_id,
+          sexo:
+            data.genero === 'Masculino' || data.sexo === 'M'
+              ? 'M'
+              : data.sexo === 'F'
+                ? 'F'
+                : data.sexo,
+          telefono: data.telefono,
+          email: data.email || null,
+          direccion: data.direccion,
+          id_sector_parroquial: data.id_sector_parroquial
+            ? BigInt(String(data.id_sector_parroquial))
+            : data.sector_id
+              ? BigInt(String(data.sector_id))
+              : undefined,
+          id_orden_religiosa: data.id_orden_religiosa
+            ? parseInt(String(data.id_orden_religiosa), 10)
+            : undefined,
+          estado_vital: data.estado_vital
+            ? parseInt(String(data.estado_vital), 10)
+            : undefined,
+          estado_activo_parroquia: data.estado_activo_parroquia
+            ? parseInt(String(data.estado_activo_parroquia), 10)
+            : undefined,
+          otra_orden_religiosa: data.otra_orden_religiosa,
+          imagen: data.imagen,
         },
-        municipio_nacimiento: {
-          select: {
-            nombre_municipio: true,
-            departamento: {
-              select: {
-                nombre_departamento: true
-              }
-            }
-          }
-        }
-      }
+      });
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'U',
+        nombreTabla: 'persona',
+        newValues: { numero_identidad: numeroIdentidad },
+      });
     });
 
-    // Serializar BigInt fields
-    const personaSerializada = {
-      ...personaActualizada,
-      id_sector_parroquial: personaActualizada.id_sector_parroquial?.toString(),
-      id_orden_religiosa: personaActualizada.id_orden_religiosa?.toString()
-    };
-
-    return NextResponse.json(personaSerializada);
-  } catch (error) {
-    console.error('Error al actualizar persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+    const persona = await withTenantScope(ctx.parishId, (db) =>
+      db.persona.findFirst({
+        where: { id_parroquia: ctx.parishId, numero_identidad: numeroIdentidad },
+        include: personaInclude,
+      })
     );
+
+    return NextResponse.json(serializePersona(persona!));
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const session = await getServerSession(authOptions);
+    const ctx = await requireTenantWithPermission(PAGES.PERSONAS, 'borrar');
+    const { id: numeroIdentidad } = await params;
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    const result = await withTenantTransaction(ctx.parishId, async (tx) => {
+      const deleted = await tx.persona.deleteMany({
+        where: {
+          id_parroquia: ctx.parishId,
+          numero_identidad: numeroIdentidad,
+        },
+      });
 
-    const resolvedParams = await params;
-    const numeroIdentidad = resolvedParams.id;
-
-    // Primero buscar la persona para obtener su id_parroquia
-    const personaExistente = await prisma.persona.findFirst({
-      where: {
-        numero_identidad: numeroIdentidad
+      if (deleted.count === 0) {
+        throw new ForbiddenError();
       }
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'D',
+        nombreTabla: 'persona',
+        oldValues: { numero_identidad: numeroIdentidad },
+      });
+
+      return deleted;
     });
 
-    if (!personaExistente) {
-      return NextResponse.json(
-        { error: 'Persona no encontrada' },
-        { status: 404 }
-      );
+    if (result.count === 0) {
+      throw new ForbiddenError();
     }
-
-    // Ahora eliminar con la clave compuesta correcta
-    await prisma.persona.delete({
-      where: {
-        id_parroquia_numero_identidad: {
-          id_parroquia: personaExistente.id_parroquia,
-          numero_identidad: numeroIdentidad
-        }
-      }
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error al eliminar persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

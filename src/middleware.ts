@@ -1,19 +1,36 @@
 import { withAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
 
 export default withAuth(
   function middleware(req) {
-    // Temporalmente comentado para permitir login
-    // const { pathname } = req.nextUrl;
-    // const token = req.nextauth.token;
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
 
-    // TODO: Reactivar lógica de restricciones después de verificar login
-    
-    return; // Permitir acceso a todas las rutas por ahora
+    if (pathname.startsWith('/api/')) {
+      if (!token) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      }
+      return NextResponse.next();
+    }
+
+    return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token
-    }
+      authorized: ({ token, req }) => {
+        const pathname = req.nextUrl.pathname;
+
+        if (pathname.startsWith('/api/auth')) {
+          return true;
+        }
+
+        if (pathname === '/api/setup') {
+          return true;
+        }
+
+        return !!token;
+      },
+    },
   }
 );
 
@@ -28,6 +45,7 @@ export const config = {
     '/constancias/:path*',
     '/reportes/:path*',
     '/configuracion/:path*',
-    '/usuarios/:path*'
-  ]
+    '/usuarios/:path*',
+    '/api/((?!auth).*)',
+  ],
 };

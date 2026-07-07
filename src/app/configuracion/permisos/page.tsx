@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
+import { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { 
@@ -63,11 +64,29 @@ export default function SistemaPermisos() {
     cargarPermisos();
   }, []);
 
+  const actualizarPermisosLocalez = useCallback(() => {
+    if (!data || !selectedRol) return;
+
+    const nuevosPermisos: AccionesPermisos = {};
+    
+    data.permisos.forEach(pagina => {
+      const permisosRol = pagina.permisos.filter(p => p.rol.id_rol === selectedRol);
+      nuevosPermisos[pagina.id_pagina] = {
+        leer: permisosRol.some(p => p.accion === 'leer'),
+        escribir: permisosRol.some(p => p.accion === 'escribir'),
+        eliminar: permisosRol.some(p => p.accion === 'eliminar'),
+        administrar: permisosRol.some(p => p.accion === 'administrar')
+      };
+    });
+
+    setPermisos(nuevosPermisos);
+  }, [data, selectedRol]);
+
   useEffect(() => {
     if (data && selectedRol) {
       actualizarPermisosLocalez();
     }
-  }, [selectedRol, data]);
+  }, [selectedRol, data, actualizarPermisosLocalez]);
 
   const cargarPermisos = async () => {
     try {
@@ -88,7 +107,7 @@ export default function SistemaPermisos() {
         });
       }
     } catch (error) {
-      console.error('Error al cargar permisos:', error);
+      logger.error('Error al cargar permisos:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -98,24 +117,6 @@ export default function SistemaPermisos() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const actualizarPermisosLocalez = () => {
-    if (!data || !selectedRol) return;
-
-    const nuevosPermisos: AccionesPermisos = {};
-    
-    data.permisos.forEach(pagina => {
-      const permisosRol = pagina.permisos.filter(p => p.rol.id_rol === selectedRol);
-      nuevosPermisos[pagina.id_pagina] = {
-        leer: permisosRol.some(p => p.accion === 'leer'),
-        escribir: permisosRol.some(p => p.accion === 'escribir'),
-        eliminar: permisosRol.some(p => p.accion === 'eliminar'),
-        administrar: permisosRol.some(p => p.accion === 'administrar')
-      };
-    });
-
-    setPermisos(nuevosPermisos);
   };
 
   const handlePermisoChange = (paginaId: number, accion: string, valor: boolean) => {
@@ -168,7 +169,7 @@ export default function SistemaPermisos() {
         });
       }
     } catch (error) {
-      console.error('Error al guardar permisos:', error);
+      logger.error('Error al guardar permisos:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',

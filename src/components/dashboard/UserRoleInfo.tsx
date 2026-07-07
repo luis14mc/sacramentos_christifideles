@@ -11,13 +11,13 @@ import {
 
 export default function UserRoleInfo() {
   const { data: session } = useSession();
-  const { permissions, userRole, canAccess } = useCanAccess();
+  const { userRole, canAccess } = useCanAccess();
 
   if (!session?.user) {
     return null;
   }
 
-  const user = session.user as any;
+  const user = session.user;
 
   const permissionChecks = [
     { label: 'Ver Dashboard', key: 'canViewDashboard' as const },

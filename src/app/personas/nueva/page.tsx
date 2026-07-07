@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
@@ -83,7 +84,7 @@ export default function NuevaPersona() {
         setOrdenesReligiosas(ordenesData);
       }
     } catch (error) {
-      console.error('Error al cargar datos iniciales:', error);
+      logger.error('Error al cargar datos iniciales:', error);
     }
   };
 
@@ -95,7 +96,7 @@ export default function NuevaPersona() {
         setMunicipios(municipiosData);
       }
     } catch (error) {
-      console.error('Error al cargar municipios:', error);
+      logger.error('Error al cargar municipios:', error);
     }
   };
 
@@ -130,9 +131,9 @@ export default function NuevaPersona() {
         },
         body: JSON.stringify({
           ...formData,
-          id_parroquia: 1, // Se asignará dinámicamente en el backend según la sesión
-          id_sector_parroquial: parseInt(formData.id_sector_parroquial),
-          id_orden_religiosa: parseInt(formData.id_orden_religiosa)
+          sector_id: formData.id_sector_parroquial,
+          id_sector_parroquial: parseInt(formData.id_sector_parroquial, 10),
+          id_orden_religiosa: parseInt(formData.id_orden_religiosa, 10),
         }),
       });
 
@@ -140,11 +141,11 @@ export default function NuevaPersona() {
         router.push('/personas');
       } else {
         const errorData = await response.json();
-        console.error('Error al crear persona:', errorData);
+        logger.error('Error al crear persona:', errorData);
         alert('Error al crear la persona. Revise los datos e intente nuevamente.');
       }
     } catch (error) {
-      console.error('Error al crear persona:', error);
+      logger.error('Error al crear persona:', error);
       alert('Error de conexión. Intente nuevamente.');
     } finally {
       setLoading(false);

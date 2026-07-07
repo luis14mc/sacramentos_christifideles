@@ -229,7 +229,7 @@ async function main() {
 
   // 10. Crear parroquia de ejemplo
   console.log('⛪ Creando parroquia piloto...');
-  const parroquia = await prisma.parroquia.upsert({
+  await prisma.parroquia.upsert({
     where: { id_parroquia: 1 },
     update: {},
     create: {

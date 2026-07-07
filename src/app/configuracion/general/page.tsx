@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Swal from 'sweetalert2';
@@ -111,7 +112,7 @@ export default function ConfiguracionGeneral() {
         }
       }
     } catch (error) {
-      console.error('Error al cargar configuración:', error);
+      logger.error('Error al cargar configuración:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error al cargar',
@@ -138,8 +139,7 @@ export default function ConfiguracionGeneral() {
 
       if (response.ok) {
         const updatedData = await response.json();
-        console.log('Datos recibidos del servidor:', updatedData);
-        
+
         setConfig(updatedData);
         
         // Actualizar formData con los datos guardados
@@ -160,17 +160,6 @@ export default function ConfiguracionGeneral() {
             idioma: updatedData.config?.idioma || 'es',
             opciones: {
               pie_constancia: updatedData.config?.opciones?.pie_constancia || 'En el nombre del Padre, del Hijo y del Espíritu Santo'
-            }
-          }
-        });
-
-        console.log('FormData actualizado:', {
-          config: updatedData.config,
-          formData: {
-            configuracion: {
-              alias_liturgico: updatedData.config?.alias_liturgico || '',
-              logo_url: updatedData.config?.logo_url || '',
-              sello_digital_url: updatedData.config?.sello_digital_url || '',
             }
           }
         });
@@ -206,7 +195,7 @@ export default function ConfiguracionGeneral() {
         });
       }
     } catch (error) {
-      console.error('Error al guardar configuración:', error);
+      logger.error('Error al guardar configuración:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -306,7 +295,7 @@ export default function ConfiguracionGeneral() {
         });
       }
     } catch (error) {
-      console.error('Error al subir logo:', error);
+      logger.error('Error al subir logo:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',

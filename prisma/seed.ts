@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { seedRolePagePermissions } from './seed-permissions';
 
 const prisma = new PrismaClient();
 
@@ -602,6 +603,8 @@ async function main() {
       }
     });
   }
+
+  await seedRolePagePermissions(prisma);
 
   console.log('✅ Seed completado exitosamente!');
   console.log('📊 Datos cargados:');

@@ -1,275 +1,231 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PAGES } from '@/lib/pages';
+import { withTenantScope, withTenantTransaction } from '@/lib/prisma-tenant';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { hashPassword } from '@/lib/password';
+import { ForbiddenError } from '@/lib/errors';
+import { prisma } from '@/lib/prisma';
+import {
+  assertParishAccess,
+  handleApiError,
+  requireTenantWithPermission,
+} from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { usuarioCreateSchema, usuarioUpdateSchema } from '@/lib/validators/schemas';
 
-const prisma = new PrismaClient();
+function formatUsuario(usuario: {
+  id_usuario: bigint;
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  estado: number;
+  fecha_creacion: Date;
+  parroquia: { id_parroquia: number; nombre: string };
+  rol: { nombre: string };
+}) {
+  return {
+    id: Number(usuario.id_usuario),
+    nombre: usuario.nombre,
+    email: usuario.email,
+    telefono: usuario.telefono || '',
+    rol: usuario.rol.nombre,
+    activo: usuario.estado === 1,
+    createdAt: usuario.fecha_creacion.toISOString(),
+    updatedAt: usuario.fecha_creacion.toISOString(),
+    parroquia: {
+      id: usuario.parroquia.id_parroquia,
+      nombre: usuario.parroquia.nombre,
+    },
+  };
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const { parishId } = await requireTenantWithPermission(PAGES.USUARIOS, 'ver');
     const { searchParams } = new URL(req.url);
-    const parroquiaId = searchParams.get('parroquiaId');
+    const requestedParish = searchParams.get('parroquiaId');
 
-    if (!parroquiaId) {
-      return NextResponse.json({ error: 'ID de parroquia requerido' }, { status: 400 });
+    if (requestedParish) {
+      assertParishAccess(parseInt(requestedParish, 10), parishId);
     }
 
-    const usuarios = await prisma.usuario.findMany({
-      where: {
-        id_parroquia: parseInt(parroquiaId)
-      },
-      include: {
-        parroquia: {
-          select: {
-            id_parroquia: true,
-            nombre: true
-          }
+    const usuarios = await withTenantScope(parishId, (db) =>
+      db.usuario.findMany({
+        where: { id_parroquia: parishId },
+        include: {
+          parroquia: { select: { id_parroquia: true, nombre: true } },
+          rol: { select: { nombre: true } },
         },
-        rol: {
-          select: {
-            nombre: true
-          }
-        }
-      },
-      orderBy: {
-        fecha_creacion: 'desc'
-      }
-    });
+        orderBy: { fecha_creacion: 'desc' },
+      })
+    );
 
-    // Mapear a la estructura esperada por el frontend
-    const usuariosFormatted = usuarios.map(usuario => ({
-      id: Number(usuario.id_usuario),
-      nombre: usuario.nombre,
-      email: usuario.email,
-      telefono: usuario.telefono || '',
-      rol: usuario.rol.nombre,
-      activo: usuario.estado === 1,
-      createdAt: usuario.fecha_creacion.toISOString(),
-      updatedAt: usuario.fecha_creacion.toISOString(), // No tenemos updatedAt en el esquema actual
-      parroquia: {
-        id: usuario.parroquia.id_parroquia,
-        nombre: usuario.parroquia.nombre
-      }
-    }));
-
-    return NextResponse.json(usuariosFormatted);
+    return NextResponse.json(usuarios.map(formatUsuario));
   } catch (error) {
-    console.error('Error fetching usuarios:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return handleApiError(error);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const ctx = await requireTenantWithPermission(PAGES.USUARIOS, 'crear');
     const body = await req.json();
-    const { nombre, email, telefono, password, rol, activo, parroquiaId } = body;
+    const validated = safeParseBody(usuarioCreateSchema, body);
 
-    // Validar datos requeridos
-    if (!nombre || !email || !password || !rol || !parroquiaId) {
-      return NextResponse.json({ 
-        error: 'Datos requeridos: nombre, email, password, rol, parroquiaId' 
-      }, { status: 400 });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    // Validar que el email no exista
-    const existingUser = await prisma.usuario.findFirst({
-      where: { email }
-    });
+    const { nombre, email, telefono, password, rol, activo, parroquiaId } =
+      validated.data;
 
+    assertParishAccess(
+      parroquiaId !== undefined ? parseInt(String(parroquiaId), 10) : ctx.parishId,
+      ctx.parishId
+    );
+
+    const existingUser = await withTenantScope(ctx.parishId, (db) =>
+      db.usuario.findFirst({ where: { email } })
+    );
     if (existingUser) {
-      return NextResponse.json({ 
-        error: 'Ya existe un usuario con este email' 
-      }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Ya existe un usuario con este email' },
+        { status: 409 }
+      );
     }
 
-    // Buscar el rol por nombre
-    const rolData = await prisma.rolUsuario.findFirst({
-      where: { nombre: rol }
-    });
-
+    const rolData = await prisma.rolUsuario.findFirst({ where: { nombre: rol } });
     if (!rolData) {
-      return NextResponse.json({ 
-        error: 'Rol no válido' 
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
     }
 
-    // Encriptar password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await hashPassword(password);
 
-    // Crear usuario
-    const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        nombre,
-        email,
-        telefono,
-        contrasena: Buffer.from(hashedPassword),
-        id_rol: rolData.id_rol,
-        estado: activo !== false ? 1 : 0,
-        id_parroquia: parseInt(parroquiaId),
-        id_usuario_creacion: BigInt(session.user.id)
-      },
-      include: {
-        parroquia: {
-          select: {
-            id_parroquia: true,
-            nombre: true
-          }
+    const nuevoUsuario = await withTenantTransaction(ctx.parishId, async (tx) => {
+      const created = await tx.usuario.create({
+        data: {
+          nombre,
+          email,
+          telefono,
+          contrasena: hashedPassword,
+          id_rol: rolData.id_rol,
+          estado: activo !== false ? 1 : 0,
+          id_parroquia: ctx.parishId,
+          id_usuario_creacion: ctx.userId,
         },
-        rol: {
-          select: {
-            nombre: true
-          }
-        }
-      }
+        include: {
+          parroquia: { select: { id_parroquia: true, nombre: true } },
+          rol: { select: { nombre: true } },
+        },
+      });
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'C',
+        nombreTabla: 'usuario',
+        idTabla: created.id_usuario,
+        newValues: { email, nombre },
+      });
+
+      return created;
     });
 
-    // Mapear a la estructura esperada
-    const usuarioFormatted = {
-      id: Number(nuevoUsuario.id_usuario),
-      nombre: nuevoUsuario.nombre,
-      email: nuevoUsuario.email,
-      telefono: nuevoUsuario.telefono || '',
-      rol: nuevoUsuario.rol.nombre,
-      activo: nuevoUsuario.estado === 1,
-      createdAt: nuevoUsuario.fecha_creacion.toISOString(),
-      updatedAt: nuevoUsuario.fecha_creacion.toISOString(),
-      parroquia: {
-        id: nuevoUsuario.parroquia.id_parroquia,
-        nombre: nuevoUsuario.parroquia.nombre
-      }
-    };
-
-    return NextResponse.json(usuarioFormatted, { status: 201 });
+    return NextResponse.json(formatUsuario(nuevoUsuario), { status: 201 });
   } catch (error) {
-    console.error('Error creating usuario:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return handleApiError(error);
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const ctx = await requireTenantWithPermission(PAGES.USUARIOS, 'actualizar');
     const body = await req.json();
-    const { id, nombre, email, telefono, rol, activo, password } = body;
+    const validated = safeParseBody(usuarioUpdateSchema, body);
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    // Verificar que el usuario existe
-    const existingUser = await prisma.usuario.findUnique({
-      where: { id_usuario: BigInt(id) }
-    });
+    const { id, nombre, email, telefono, rol, activo, password } = validated.data;
+
+    const existingUser = await withTenantScope(ctx.parishId, (db) =>
+      db.usuario.findFirst({
+        where: {
+          id_usuario: BigInt(id),
+          id_parroquia: ctx.parishId,
+        },
+      })
+    );
 
     if (!existingUser) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Preparar datos de actualización
     const updateData: Record<string, unknown> = {};
-    
     if (nombre !== undefined) updateData.nombre = nombre;
     if (email !== undefined) {
-      // Validar que el email no esté en uso por otro usuario
-      const emailInUse = await prisma.usuario.findFirst({
-        where: { 
-          email,
-          id_usuario: { not: BigInt(id) }
-        }
-      });
-
+      const emailInUse = await withTenantScope(ctx.parishId, (db) =>
+        db.usuario.findFirst({
+          where: { email, id_usuario: { not: BigInt(id) } },
+        })
+      );
       if (emailInUse) {
-        return NextResponse.json({ 
-          error: 'El email ya está en uso por otro usuario' 
-        }, { status: 409 });
+        return NextResponse.json(
+          { error: 'El email ya está en uso por otro usuario' },
+          { status: 409 }
+        );
       }
       updateData.email = email;
     }
     if (telefono !== undefined) updateData.telefono = telefono;
     if (rol !== undefined) {
-      // Buscar el rol por nombre
-      const rolData = await prisma.rolUsuario.findFirst({
-        where: { nombre: rol }
-      });
-
+      const rolData = await prisma.rolUsuario.findFirst({ where: { nombre: rol } });
       if (!rolData) {
-        return NextResponse.json({ 
-          error: 'Rol no válido' 
-        }, { status: 400 });
+        return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
       }
       updateData.id_rol = rolData.id_rol;
     }
     if (activo !== undefined) updateData.estado = activo ? 1 : 0;
-    
-    // Solo actualizar password si se proporciona
     if (password && password.trim() !== '') {
-      const hashedPassword = await bcrypt.hash(password, 12);
-      updateData.contrasena = Buffer.from(hashedPassword);
+      updateData.contrasena = await hashPassword(password);
     }
 
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id_usuario: BigInt(id) },
-      data: updateData,
-      include: {
-        parroquia: {
-          select: {
-            id_parroquia: true,
-            nombre: true
-          }
+    const usuarioActualizado = await withTenantTransaction(ctx.parishId, async (tx) => {
+      const updated = await tx.usuario.update({
+        where: { id_usuario: BigInt(id) },
+        data: updateData,
+        include: {
+          parroquia: { select: { id_parroquia: true, nombre: true } },
+          rol: { select: { nombre: true } },
         },
-        rol: {
-          select: {
-            nombre: true
-          }
-        }
-      }
+      });
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'U',
+        nombreTabla: 'usuario',
+        idTabla: BigInt(id),
+        newValues: { email: updated.email, nombre: updated.nombre },
+      });
+
+      return updated;
     });
 
-    // Mapear a la estructura esperada
-    const usuarioFormatted = {
-      id: Number(usuarioActualizado.id_usuario),
-      nombre: usuarioActualizado.nombre,
-      email: usuarioActualizado.email,
-      telefono: usuarioActualizado.telefono || '',
-      rol: usuarioActualizado.rol.nombre,
-      activo: usuarioActualizado.estado === 1,
-      createdAt: usuarioActualizado.fecha_creacion.toISOString(),
-      updatedAt: usuarioActualizado.fecha_creacion.toISOString(),
-      parroquia: {
-        id: usuarioActualizado.parroquia.id_parroquia,
-        nombre: usuarioActualizado.parroquia.nombre
-      }
-    };
+    if (usuarioActualizado.id_parroquia !== ctx.parishId) {
+      throw new ForbiddenError();
+    }
 
-    return NextResponse.json(usuarioFormatted);
+    return NextResponse.json(formatUsuario(usuarioActualizado));
   } catch (error) {
-    console.error('Error updating usuario:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return handleApiError(error);
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const ctx = await requireTenantWithPermission(PAGES.USUARIOS, 'borrar');
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -277,29 +233,40 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
     }
 
-    // Verificar que el usuario existe
-    const existingUser = await prisma.usuario.findUnique({
-      where: { id_usuario: BigInt(id) }
+    if (BigInt(id) === ctx.userId) {
+      return NextResponse.json(
+        { error: 'No puedes eliminar tu propio usuario' },
+        { status: 400 }
+      );
+    }
+
+    const result = await withTenantTransaction(ctx.parishId, async (tx) => {
+      const deleted = await tx.usuario.deleteMany({
+        where: {
+          id_usuario: BigInt(id),
+          id_parroquia: ctx.parishId,
+        },
+      });
+
+      if (deleted.count > 0) {
+        await logBitacoraCrud(tx, {
+          parishId: ctx.parishId,
+          userId: ctx.userId,
+          accion: 'D',
+          nombreTabla: 'usuario',
+          idTabla: BigInt(id),
+        });
+      }
+
+      return deleted;
     });
 
-    if (!existingUser) {
+    if (result.count === 0) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // No permitir eliminar el propio usuario
-    if (BigInt(id) === BigInt(session.user.id)) {
-      return NextResponse.json({ 
-        error: 'No puedes eliminar tu propio usuario' 
-      }, { status: 400 });
-    }
-
-    await prisma.usuario.delete({
-      where: { id_usuario: BigInt(id) }
-    });
-
     return NextResponse.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
-    console.error('Error deleting usuario:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return handleApiError(error);
   }
 }

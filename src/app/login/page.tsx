@@ -1,10 +1,11 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import Image from 'next/image';
+import ChristiFidelesLogo from '@/components/ui/ChristiFidelesLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -34,7 +35,7 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err) {
-      console.error('Login error:', err);
+      logger.error('Login error:', err);
       setError('Error de conexión. Intente nuevamente.');
     } finally {
       setIsLoading(false);
@@ -47,14 +48,7 @@ export default function LoginPage() {
         {/* Logo y título */}
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 flex justify-center">
-            <Image
-              src="/assets/marca/CF_LOGO.png"
-              alt="ChristiFideles"
-              width={120}
-              height={120}
-              className="h-20 w-auto"
-              priority
-            />
+            <ChristiFidelesLogo className="h-20 w-auto" />
           </div>
           <p className="text-gray-600 text-lg">Sistema de Gestión Parroquial</p>
         </div>

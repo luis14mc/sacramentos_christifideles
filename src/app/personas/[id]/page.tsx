@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
@@ -61,7 +62,7 @@ export default function DetallePersona() {
           router.push('/personas');
         }
       } catch (error) {
-        console.error('Error al cargar persona:', error);
+        logger.error('Error al cargar persona:', error);
         router.push('/personas');
       } finally {
         setLoading(false);

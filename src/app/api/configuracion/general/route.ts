@@ -1,29 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { PAGES } from '@/lib/pages';
+import { withTenantScope, withTenantTransaction } from '@/lib/prisma-tenant';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { configGeneralUpdateSchema } from '@/lib/validators/schemas';
+import type { Prisma } from '@prisma/client';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const { parishId } = await requireTenantWithPermission(
+      PAGES.CONFIGURACION,
+      'ver'
+    );
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    // Obtener información de la parroquia
-    const parroquia = await prisma.parroquia.findFirst({
-      include: {
-        config: true,
-        municipio: {
-          include: {
-            departamento: true
-          }
-        }
-      }
-    });
+    const parroquia = await withTenantScope(parishId, (db) =>
+      db.parroquia.findUnique({
+        where: { id_parroquia: parishId },
+        include: {
+          config: true,
+          municipio: { include: { departamento: true } },
+        },
+      })
+    );
 
     if (!parroquia) {
       return NextResponse.json(
@@ -34,85 +33,95 @@ export async function GET() {
 
     return NextResponse.json(parroquia);
   } catch (error) {
-    console.error('Error al obtener configuración:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const ctx = await requireTenantWithPermission(
+      PAGES.CONFIGURACION,
+      'actualizar'
+    );
     const body = await request.json();
-    const { 
-      parroquia: parroquiaData,
-      configuracion: configData 
-    } = body;
+    const validated = safeParseBody(configGeneralUpdateSchema, body);
 
-    // Actualizar datos de la parroquia
-    await prisma.parroquia.update({
-      where: { id_parroquia: parroquiaData.id_parroquia },
-      data: {
-        nombre: parroquiaData.nombre,
-        direccion: parroquiaData.direccion,
-        telefono: parroquiaData.telefono,
-        email: parroquiaData.email,
-        ubicacion: parroquiaData.ubicacion
-      }
-    });
-
-    // Actualizar o crear configuración
-    if (configData) {
-      await prisma.parroquiaConfig.upsert({
-        where: { id_parroquia: parroquiaData.id_parroquia },
-        update: {
-          alias_liturgico: configData.alias_liturgico,
-          logo_url: configData.logo_url,
-          sello_digital_url: configData.sello_digital_url,
-          tz: configData.tz,
-          idioma: configData.idioma,
-          opciones: configData.opciones
-        },
-        create: {
-          id_parroquia: parroquiaData.id_parroquia,
-          alias_liturgico: configData.alias_liturgico,
-          logo_url: configData.logo_url,
-          sello_digital_url: configData.sello_digital_url,
-          tz: configData.tz || 'America/Tegucigalpa',
-          idioma: configData.idioma || 'es',
-          opciones: configData.opciones || {}
-        }
-      });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    // Obtener la configuración actualizada completa
-    const resultado = await prisma.parroquia.findUnique({
-      where: { id_parroquia: parroquiaData.id_parroquia },
-      include: {
-        config: true,
-        municipio: {
-          include: {
-            departamento: true
-          }
-        }
+    const { parroquia: parroquiaData, configuracion: configData } = validated.data;
+
+    if (
+      parroquiaData?.id_parroquia &&
+      Number(parroquiaData.id_parroquia) !== ctx.parishId
+    ) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
+
+    await withTenantTransaction(ctx.parishId, async (tx) => {
+      if (parroquiaData) {
+        await tx.parroquia.update({
+          where: { id_parroquia: ctx.parishId },
+          data: {
+            nombre: parroquiaData.nombre,
+            direccion: parroquiaData.direccion,
+            telefono: parroquiaData.telefono,
+            email: parroquiaData.email || undefined,
+            ubicacion: parroquiaData.ubicacion,
+          },
+        });
       }
+
+      if (configData) {
+        const opciones: Prisma.InputJsonValue =
+          configData.opciones && typeof configData.opciones === 'object'
+            ? (configData.opciones as Prisma.InputJsonValue)
+            : {};
+
+        await tx.parroquiaConfig.upsert({
+          where: { id_parroquia: ctx.parishId },
+          update: {
+            alias_liturgico: configData.alias_liturgico,
+            logo_url: configData.logo_url,
+            sello_digital_url: configData.sello_digital_url,
+            tz: configData.tz,
+            idioma: configData.idioma,
+            opciones,
+          },
+          create: {
+            id_parroquia: ctx.parishId,
+            alias_liturgico: configData.alias_liturgico,
+            logo_url: configData.logo_url,
+            sello_digital_url: configData.sello_digital_url,
+            tz: configData.tz || 'America/Tegucigalpa',
+            idioma: configData.idioma || 'es',
+            opciones,
+          },
+        });
+      }
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'U',
+        nombreTabla: 'parroquia_config',
+        newValues: { id_parroquia: ctx.parishId },
+      });
     });
 
-    console.log('Configuración guardada y devuelta:', JSON.stringify(resultado, null, 2));
+    const resultado = await withTenantScope(ctx.parishId, (db) =>
+      db.parroquia.findUnique({
+        where: { id_parroquia: ctx.parishId },
+        include: {
+          config: true,
+          municipio: { include: { departamento: true } },
+        },
+      })
+    );
 
     return NextResponse.json(resultado);
   } catch (error) {
-    console.error('Error al actualizar configuración:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import PersonaModal from '../../components/modals/PersonaModalNueva';
@@ -43,7 +43,6 @@ interface Persona {
 }
 
 export default function PersonasPage() {
-  const router = useRouter();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,7 +69,7 @@ export default function PersonasPage() {
         setPersonas(data);
       }
     } catch (error) {
-      console.error('Error al cargar personas:', error);
+      logger.error('Error al cargar personas:', error);
     } finally {
       setLoading(false);
     }
@@ -163,7 +162,7 @@ export default function PersonasPage() {
         });
       }
     } catch (error) {
-      console.error('Error al eliminar persona:', error);
+      logger.error('Error al eliminar persona:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error de Conexión',

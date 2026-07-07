@@ -1,6 +1,5 @@
 import {
   HomeIcon,
-  UsersIcon,
   DocumentTextIcon,
   ChartBarIcon,
   CogIcon,
@@ -11,7 +10,7 @@ import {
   UserIcon
 } from '@heroicons/react/24/outline';
 
-import { UserPermissions } from '@/hooks/usePermissions';
+import { UserPermissions } from '@/types/permissions';
 
 export interface NavigationItem {
   name: string;

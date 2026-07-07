@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -54,7 +55,7 @@ export default function InstallationPage() {
         alert('Error en la instalación: ' + error.message);
       }
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
       alert('Error de conexión durante la instalación');
     } finally {
       setIsLoading(false);

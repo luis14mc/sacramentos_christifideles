@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -37,7 +38,7 @@ export default function AuthenticatedLayout({
           setParroquiaInfo(data);
         }
       } catch (error) {
-        console.error('Error cargando info de parroquia:', error);
+        logger.error('Error cargando info de parroquia:', error);
       }
     };
 

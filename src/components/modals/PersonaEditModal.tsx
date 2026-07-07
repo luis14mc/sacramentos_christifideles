@@ -1,26 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
+import { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { 
   XMarkIcon,
   CheckIcon
 } from '@heroicons/react/24/outline';
 
-interface PersonaEditModal {
-  numero_identidad: string;
-  nombres: string;
-  apellidos: string;
-  fecha_nacimiento: string;
-  sexo: string;
-  telefono: string;
-  email?: string;
-  direccion?: string;
-  estado_vital: number;
-  estado_activo_parroquia: number;
-  id_sector_parroquial: string;
-  id_orden_religiosa: string;
-}
+import {
+  type OrdenReligiosaOption,
+  type PersonaRecord,
+  type SectorOption,
+} from '@/types/catalogos';
 
 interface Props {
   isOpen: boolean;
@@ -30,11 +22,11 @@ interface Props {
 }
 
 export default function PersonaEditModal({ isOpen, onClose, personaId, onPersonaUpdated }: Props) {
-  const [persona, setPersona] = useState<PersonaEditModal | null>(null);
+  const [persona, setPersona] = useState<PersonaRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sectores, setSectores] = useState<any[]>([]);
-  const [ordenesReligiosas, setOrdenesReligiosas] = useState<any[]>([]);
+  const [sectores, setSectores] = useState<SectorOption[]>([]);
+  const [ordenesReligiosas, setOrdenesReligiosas] = useState<OrdenReligiosaOption[]>([]);
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -49,15 +41,7 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
     id_orden_religiosa: ''
   });
 
-  useEffect(() => {
-    if (isOpen && personaId) {
-      cargarPersona();
-      cargarSectores();
-      cargarOrdenesReligiosas();
-    }
-  }, [isOpen, personaId]);
-
-  const cargarPersona = async () => {
+  const cargarPersona = useCallback(async () => {
     if (!personaId) return;
     
     try {
@@ -91,7 +75,7 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
         onClose();
       }
     } catch (error) {
-      console.error('Error al cargar persona:', error);
+      logger.error('Error al cargar persona:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -102,9 +86,9 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
     } finally {
       setLoading(false);
     }
-  };
+  }, [personaId, onClose]);
 
-  const cargarSectores = async () => {
+  const cargarSectores = useCallback(async () => {
     try {
       const response = await fetch('/api/sectores');
       if (response.ok) {
@@ -112,11 +96,11 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
         setSectores(data);
       }
     } catch (error) {
-      console.error('Error al cargar sectores:', error);
+      logger.error('Error al cargar sectores:', error);
     }
-  };
+  }, []);
 
-  const cargarOrdenesReligiosas = async () => {
+  const cargarOrdenesReligiosas = useCallback(async () => {
     try {
       const response = await fetch('/api/ordenes-religiosas');
       if (response.ok) {
@@ -124,9 +108,17 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
         setOrdenesReligiosas(data);
       }
     } catch (error) {
-      console.error('Error al cargar órdenes religiosas:', error);
+      logger.error('Error al cargar órdenes religiosas:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && personaId) {
+      cargarPersona();
+      cargarSectores();
+      cargarOrdenesReligiosas();
+    }
+  }, [isOpen, personaId, cargarPersona, cargarSectores, cargarOrdenesReligiosas]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -157,10 +149,7 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          id_parroquia: 3 // Parroquia Cristo Resucitado
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
@@ -191,7 +180,7 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
         });
       }
     } catch (error) {
-      console.error('Error al actualizar:', error);
+      logger.error('Error al actualizar:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error de Conexión',

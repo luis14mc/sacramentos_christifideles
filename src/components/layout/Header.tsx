@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { signOut, useSession } from 'next-auth/react';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';import Image from 'next/image';
 import useTheme from '@/hooks/useTheme';
 import {
     Bars3Icon,
@@ -18,8 +18,8 @@ interface HeaderProps {
 }
 
 export default function Header({ setSidebarOpen, parroquiaNombre, parroquiaLogo }: HeaderProps) {
-    const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const { data: session } = useSession();
+    const router = useRouter();
+    const [userMenuOpen, setUserMenuOpen] = useState(false);    const { data: session } = useSession();
     const { theme, toggleTheme } = useTheme();
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -159,9 +159,8 @@ export default function Header({ setSidebarOpen, parroquiaNombre, parroquiaLogo 
                                     <button
                                         onClick={() => {
                                             setUserMenuOpen(false);
-                                            // TODO: Navigate to profile
-                                        }}
-                                        className="flex items-center w-full px-4 py-2 text-sm text-base-content hover:bg-base-200"
+                                            router.push('/perfil');
+                                        }}                                        className="flex items-center w-full px-4 py-2 text-sm text-base-content hover:bg-base-200"
                                     >
                                         <UserCircleIcon className="mr-3 h-4 w-4" />
                                         Mi Perfil
@@ -170,9 +169,8 @@ export default function Header({ setSidebarOpen, parroquiaNombre, parroquiaLogo 
                                     <button
                                         onClick={() => {
                                             setUserMenuOpen(false);
-                                            // TODO: Navigate to settings
-                                        }}
-                                        className="flex items-center w-full px-4 py-2 text-sm text-base-content hover:bg-base-200"
+                                            router.push('/configuracion');
+                                        }}                                        className="flex items-center w-full px-4 py-2 text-sm text-base-content hover:bg-base-200"
                                     >
                                         <CogIcon className="mr-3 h-4 w-4" />
                                         Configuración

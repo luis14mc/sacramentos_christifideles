@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
+import { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { 
   XMarkIcon,
@@ -53,13 +54,7 @@ export default function PersonaViewModal({ isOpen, onClose, personaId, onEdit, o
   const [persona, setPersona] = useState<PersonaDetalle | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && personaId) {
-      cargarPersona();
-    }
-  }, [isOpen, personaId]);
-
-  const cargarPersona = async () => {
+  const cargarPersona = useCallback(async () => {
     if (!personaId) return;
     
     try {
@@ -79,7 +74,7 @@ export default function PersonaViewModal({ isOpen, onClose, personaId, onEdit, o
         onClose();
       }
     } catch (error) {
-      console.error('Error al cargar persona:', error);
+      logger.error('Error al cargar persona:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -90,7 +85,13 @@ export default function PersonaViewModal({ isOpen, onClose, personaId, onEdit, o
     } finally {
       setLoading(false);
     }
-  };
+  }, [personaId, onClose]);
+
+  useEffect(() => {
+    if (isOpen && personaId) {
+      cargarPersona();
+    }
+  }, [isOpen, personaId, cargarPersona]);
 
   const handleEdit = () => {
     if (personaId) {

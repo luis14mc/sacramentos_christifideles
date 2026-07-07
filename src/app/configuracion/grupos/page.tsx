@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -48,7 +49,7 @@ export default function GruposParroquialesAdmin() {
         });
       }
     } catch (error) {
-      console.error('Error al cargar grupos:', error);
+      logger.error('Error al cargar grupos:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -104,7 +105,7 @@ export default function GruposParroquialesAdmin() {
           });
         }
       } catch (error) {
-        console.error('Error al eliminar:', error);
+        logger.error('Error al eliminar:', error);
         await Swal.fire({
           icon: 'error',
           title: 'Error',

@@ -1,41 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { PAGES } from '@/lib/pages';
 import { getParroquiaData, getDashboardStats } from '@/lib/dashboard';
+import { ForbiddenError } from '@/lib/errors';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'ID de usuario requerido' }, 
-        { status: 400 }
-      );
-    }
-
-    // Obtener datos de la parroquia y usuario
-    const parroquiaData = await getParroquiaData(userId);
-    
-    if (!parroquiaData) {
-      return NextResponse.json(
-        { error: 'Usuario o parroquia no encontrada' }, 
-        { status: 404 }
-      );
-    }
-
-    // Obtener estadísticas del dashboard
-    const stats = await getDashboardStats(parroquiaData.parroquia.id);
-
-    return NextResponse.json({
-      parroquiaData,
-      stats
-    });
-
-  } catch (error) {
-    console.error('Error en API dashboard:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' }, 
-      { status: 500 }
+    const { parishId, userId } = await requireTenantWithPermission(
+      PAGES.DASHBOARD,
+      'ver'
     );
+
+    const parroquiaData = await getParroquiaData(userId.toString());
+
+    if (!parroquiaData || parroquiaData.parroquia.id !== parishId) {
+      throw new ForbiddenError();
+    }
+
+    const stats = await getDashboardStats(parishId);
+
+    return NextResponse.json({ parroquiaData, stats });
+  } catch (error) {
+    return handleApiError(error);
   }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
@@ -47,7 +48,6 @@ export default function SectoresParroquialesAdmin() {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<SectorParroquial | null>(null);
   const [formData, setFormData] = useState({
-    id_parroquia: 1,
     id_tipo_sector_parroquial: 1,
     nombre: '',
     nombre_capilla: '',
@@ -77,7 +77,7 @@ export default function SectoresParroquialesAdmin() {
         });
       }
     } catch (error) {
-      console.error('Error al cargar sectores:', error);
+      logger.error('Error al cargar sectores:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -97,7 +97,7 @@ export default function SectoresParroquialesAdmin() {
         setTiposSector(data);
       }
     } catch (error) {
-      console.error('Error al cargar tipos de sector:', error);
+      logger.error('Error al cargar tipos de sector:', error);
     }
   };
 
@@ -147,7 +147,7 @@ export default function SectoresParroquialesAdmin() {
         });
       }
     } catch (error) {
-      console.error('Error al guardar sector:', error);
+      logger.error('Error al guardar sector:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -160,7 +160,6 @@ export default function SectoresParroquialesAdmin() {
   const handleEdit = (sector: SectorParroquial) => {
     setEditingItem(sector);
     setFormData({
-      id_parroquia: 1,
       id_tipo_sector_parroquial: 1,
       nombre: sector.nombre,
       nombre_capilla: sector.nombre_capilla || '',
@@ -205,7 +204,7 @@ export default function SectoresParroquialesAdmin() {
           alert(`Error: ${errorData.error}`);
         }
       } catch (error) {
-        console.error('Error al eliminar sector:', error);
+        logger.error('Error al eliminar sector:', error);
         alert('Error al eliminar el sector');
       }
     }
@@ -215,7 +214,6 @@ export default function SectoresParroquialesAdmin() {
     setShowModal(false);
     setEditingItem(null);
     setFormData({
-      id_parroquia: 1,
       id_tipo_sector_parroquial: 1,
       nombre: '',
       nombre_capilla: '',

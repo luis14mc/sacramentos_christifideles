@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -60,7 +61,7 @@ export default function UsuarioModal({ isOpen, onClose, mode, usuario, onSuccess
           setRolesDisponibles(roles);
         }
       } catch (error) {
-        console.error('Error loading roles:', error);
+        logger.error('Error loading roles:', error);
       }
     }
 
@@ -193,7 +194,7 @@ export default function UsuarioModal({ isOpen, onClose, mode, usuario, onSuccess
       onClose();
     } catch (error) {
       alerts.closeLoading();
-      console.error('Error submitting form:', error);
+      logger.error('Error submitting form:', error);
       
       await alerts.showError(
         'Error al procesar',
@@ -240,7 +241,7 @@ export default function UsuarioModal({ isOpen, onClose, mode, usuario, onSuccess
       onClose();
     } catch (error) {
       alerts.closeLoading();
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       
       await alerts.showError(
         'Error al eliminar',

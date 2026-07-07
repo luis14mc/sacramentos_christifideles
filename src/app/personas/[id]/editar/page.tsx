@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
@@ -9,31 +10,22 @@ import {
   CheckIcon
 } from '@heroicons/react/24/outline';
 
-interface PersonaEditar {
-  numero_identidad: string;
-  nombres: string;
-  apellidos: string;
-  fecha_nacimiento: string;
-  sexo: string;
-  telefono: string;
-  email?: string;
-  direccion?: string;
-  estado_vital: number;
-  estado_activo_parroquia: number;
-  id_sector_parroquial: string;
-  id_orden_religiosa: string;
-}
+import {
+  type OrdenReligiosaOption,
+  type PersonaRecord,
+  type SectorOption,
+} from '@/types/catalogos';
 
 export default function EditarPersona() {
   const router = useRouter();
   const params = useParams();
   const numeroIdentidad = params.id as string;
   
-  const [persona, setPersona] = useState<PersonaEditar | null>(null);
+  const [persona, setPersona] = useState<PersonaRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sectores, setSectores] = useState<any[]>([]);
-  const [ordenesReligiosas, setOrdenesReligiosas] = useState<any[]>([]);
+  const [sectores, setSectores] = useState<SectorOption[]>([]);
+  const [ordenesReligiosas, setOrdenesReligiosas] = useState<OrdenReligiosaOption[]>([]);
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -75,7 +67,7 @@ export default function EditarPersona() {
           setFormData(newFormData);
         } else {
           const errorText = await response.text();
-          console.error('Error en response:', errorText);
+          logger.error('Error en response:', errorText);
           await Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -85,7 +77,7 @@ export default function EditarPersona() {
           router.push('/personas');
         }
       } catch (error) {
-        console.error('Error al cargar persona:', error);
+        logger.error('Error al cargar persona:', error);
         await Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -106,7 +98,7 @@ export default function EditarPersona() {
           setSectores(data);
         }
       } catch (error) {
-        console.error('Error al cargar sectores:', error);
+        logger.error('Error al cargar sectores:', error);
       }
     };
 
@@ -118,7 +110,7 @@ export default function EditarPersona() {
           setOrdenesReligiosas(data);
         }
       } catch (error) {
-        console.error('Error al cargar órdenes religiosas:', error);
+        logger.error('Error al cargar órdenes religiosas:', error);
       }
     };
 
@@ -158,10 +150,7 @@ export default function EditarPersona() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          id_parroquia: 3 // Parroquia Cristo Resucitado
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
@@ -191,7 +180,7 @@ export default function EditarPersona() {
         });
       }
     } catch (error) {
-      console.error('Error al actualizar:', error);
+      logger.error('Error al actualizar:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Error de Conexión',
@@ -359,7 +348,7 @@ export default function EditarPersona() {
                     onChange={handleInputChange}
                   >
                     <option value="">Seleccionar sector...</option>
-                    {sectores.map((sector: any) => (
+                    {sectores.map((sector) => (
                       <option key={sector.id_sector_parroquial} value={sector.id_sector_parroquial}>
                         {sector.nombre}
                       </option>
@@ -378,7 +367,7 @@ export default function EditarPersona() {
                     onChange={handleInputChange}
                   >
                     <option value="">Seleccionar orden...</option>
-                    {ordenesReligiosas.map((orden: any) => (
+                    {ordenesReligiosas.map((orden) => (
                       <option key={orden.id_orden_religiosa} value={orden.id_orden_religiosa}>
                         {orden.nombre}
                       </option>

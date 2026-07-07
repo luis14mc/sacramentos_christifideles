@@ -1,14 +1,22 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
+import {
+  type DepartamentoOption,
+  type MunicipioOption,
+  type PersonaRecord,
+  type SectorOption,
+} from '@/types/catalogos';
+
 interface PersonaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (data: any) => void;
-  persona?: any;
+  onSuccess: (data: PersonaRecord) => void;
+  persona?: PersonaRecord;
 }
 
 interface FormData {
@@ -45,9 +53,9 @@ export default function PersonaModal({ isOpen, onClose, onSuccess }: PersonaModa
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
-  const [departamentos, setDepartamentos] = useState<any[]>([]);
-  const [municipios, setMunicipios] = useState<any[]>([]);
-  const [sectores, setSectores] = useState<any[]>([]);
+  const [departamentos, setDepartamentos] = useState<DepartamentoOption[]>([]);
+  const [municipios, setMunicipios] = useState<MunicipioOption[]>([]);
+  const [sectores, setSectores] = useState<SectorOption[]>([]);
 
   const steps = [
     { id: 1, title: 'Información Personal' },
@@ -72,24 +80,24 @@ export default function PersonaModal({ isOpen, onClose, onSuccess }: PersonaModa
         setDepartamentos(data);
       }
     } catch (error) {
-      console.error('Error al cargar departamentos:', error);
+      logger.error('Error al cargar departamentos:', error);
     }
   };
 
   const cargarMunicipios = async (departamentoId: string) => {
-    console.log('🏙️ Cargando municipios para departamento:', departamentoId);
+    logger.debug('🏙️ Cargando municipios para departamento:', departamentoId);
     try {
       const response = await fetch(`/api/ubicacion/municipios?departamento=${departamentoId}`);
-      console.log('📡 Respuesta municipios - Status:', response.status);
+      logger.debug('📡 Respuesta municipios - Status:', response.status);
       if (response.ok) {
         const data = await response.json();
-        console.log('🏙️ Municipios recibidos:', data);
+        logger.debug('🏙️ Municipios recibidos:', data);
         setMunicipios(data);
       } else {
-        console.error('❌ Error al cargar municipios - Status:', response.status);
+        logger.error('❌ Error al cargar municipios - Status:', response.status);
       }
     } catch (error) {
-      console.error('❌ Error al cargar municipios:', error);
+      logger.error('❌ Error al cargar municipios:', error);
     }
   };
 
@@ -101,16 +109,16 @@ export default function PersonaModal({ isOpen, onClose, onSuccess }: PersonaModa
         setSectores(data);
       }
     } catch (error) {
-      console.error('Error al cargar sectores:', error);
+      logger.error('Error al cargar sectores:', error);
     }
   };
 
   useEffect(() => {
-    console.log('🔄 Cambio en departamento_id:', formData.departamento_id);
+    logger.debug('🔄 Cambio en departamento_id:', formData.departamento_id);
     if (formData.departamento_id) {
       cargarMunicipios(formData.departamento_id);
     } else {
-      console.log('🧹 Limpiando municipios');
+      logger.debug('🧹 Limpiando municipios');
       setMunicipios([]);
       setFormData(prev => ({ ...prev, municipio_id: null }));
     }
@@ -118,7 +126,7 @@ export default function PersonaModal({ isOpen, onClose, onSuccess }: PersonaModa
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    console.log('📝 Input change:', { name, value });
+    logger.debug('📝 Input change:', { name, value });
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -190,7 +198,7 @@ export default function PersonaModal({ isOpen, onClose, onSuccess }: PersonaModa
       }
       
     } catch (error) {
-      console.error('Error en la petición:', error);
+      logger.error('Error en la petición:', error);
       
       await Swal.fire({
         icon: 'error',

@@ -1,71 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { PAGES } from '@/lib/pages';
+import { prisma } from '@/lib/prisma';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { grupoCreateSchema } from '@/lib/validators/schemas';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    await requireTenantWithPermission(PAGES.CONFIGURACION, 'ver');
 
     const grupos = await prisma.grupoParroquial.findMany({
-      include: {
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      },
-      orderBy: {
-        nombre: 'asc'
-      }
+      include: { _count: { select: { miembros: true } } },
+      orderBy: { nombre: 'asc' },
     });
 
     return NextResponse.json(grupos);
   } catch (error) {
-    console.error('Error al obtener grupos parroquiales:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const ctx = await requireTenantWithPermission(PAGES.CONFIGURACION, 'crear');
+    const body = await req.json();
+    const validated = safeParseBody(grupoCreateSchema, body);
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    const data = await req.json();
+    const nuevoGrupo = await prisma.$transaction(async (tx) => {
+      const created = await tx.grupoParroquial.create({
+        data: {
+          nombre: validated.data.nombre,
+          descripcion: validated.data.descripcion,
+        },
+        include: { _count: { select: { miembros: true } } },
+      });
 
-    const nuevoGrupo = await prisma.grupoParroquial.create({
-      data: {
-        nombre: data.nombre,
-        descripcion: data.descripcion
-      },
-      include: {
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      }
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'C',
+        nombreTabla: 'grupo_parroquial',
+        idTabla: BigInt(created.id_grupo_parroquial),
+        newValues: { nombre: validated.data.nombre },
+      });
+
+      return created;
     });
 
     return NextResponse.json(nuevoGrupo, { status: 201 });
   } catch (error) {
-    console.error('Error al crear grupo parroquial:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

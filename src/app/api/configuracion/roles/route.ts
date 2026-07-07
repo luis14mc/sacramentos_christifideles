@@ -1,71 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { PAGES } from '@/lib/pages';
+import { prisma } from '@/lib/prisma';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { rolParroquialCreateSchema } from '@/lib/validators/schemas';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    await requireTenantWithPermission(PAGES.CONFIGURACION, 'ver');
 
     const roles = await prisma.rolParroquial.findMany({
-      include: {
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      },
-      orderBy: {
-        nombre: 'asc'
-      }
+      include: { _count: { select: { miembros: true } } },
+      orderBy: { nombre: 'asc' },
     });
 
     return NextResponse.json(roles);
   } catch (error) {
-    console.error('Error al obtener roles parroquiales:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const ctx = await requireTenantWithPermission(PAGES.CONFIGURACION, 'crear');
+    const body = await req.json();
+    const validated = safeParseBody(rolParroquialCreateSchema, body);
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    const data = await req.json();
+    const nuevoRol = await prisma.$transaction(async (tx) => {
+      const created = await tx.rolParroquial.create({
+        data: {
+          nombre: validated.data.nombre,
+          descripcion: validated.data.descripcion,
+        },
+        include: { _count: { select: { miembros: true } } },
+      });
 
-    const nuevoRol = await prisma.rolParroquial.create({
-      data: {
-        nombre: data.nombre,
-        descripcion: data.descripcion
-      },
-      include: {
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      }
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'C',
+        nombreTabla: 'rol_parroquial',
+        idTabla: BigInt(created.id_rol_parroquial),
+        newValues: { nombre: validated.data.nombre },
+      });
+
+      return created;
     });
 
     return NextResponse.json(nuevoRol, { status: 201 });
   } catch (error) {
-    console.error('Error al crear rol parroquial:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

@@ -1,17 +1,20 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { 
   UsersIcon, 
-  DocumentCheckIcon, 
+  DocumentCheckIcon,
+  DocumentTextIcon,
   HeartIcon, 
   BookOpenIcon,
   ClipboardDocumentListIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import UserRoleInfo from '@/components/dashboard/UserRoleInfo';
 
 interface ParroquiaData {
   parroquia: {
@@ -72,14 +75,14 @@ export default function DashboardPage() {
       if (!session?.user?.id) return;
       
       try {
-        const response = await fetch(`/api/dashboard?userId=${session.user.id}`);
+        const response = await fetch('/api/dashboard');
         if (response.ok) {
           const data = await response.json();
           setParroquiaData(data.parroquiaData);
           setStats(data.stats);
         }
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        logger.error('Error loading dashboard data:', error);
       } finally {
         setLoading(false);
       }
@@ -156,25 +159,39 @@ export default function DashboardPage() {
       color: 'bg-success hover:bg-success/80'
     },
     {
+      name: 'Primera Comunión',
+      description: 'Registrar primera comunión',
+      href: '/primera-comunion/nuevo',
+      icon: DocumentCheckIcon,
+      color: 'bg-warning hover:bg-warning/80'
+    },
+    {
+      name: 'Confirmación',
+      description: 'Registrar confirmación',
+      href: '/confirmaciones/nuevo',
+      icon: ClipboardDocumentListIcon,
+      color: 'bg-secondary hover:bg-secondary/80'
+    },
+    {
+      name: 'Matrimonio',
+      description: 'Registrar matrimonio',
+      href: '/matrimonios/nuevo',
+      icon: HeartIcon,
+      color: 'bg-accent hover:bg-accent/80'
+    },
+    {
+      name: 'Generar Constancia',
+      description: 'Emitir constancia sacramental',
+      href: '/constancias',
+      icon: DocumentTextIcon,
+      color: 'bg-primary hover:bg-primary/80'
+    },
+    {
       name: 'Nueva Persona',
       description: 'Registrar nueva persona',
       href: '/personas/nueva',
       icon: UsersIcon,
       color: 'bg-info hover:bg-info/80'
-    },
-    {
-      name: 'Primera Comunión',
-      description: 'Registrar primera comunión',
-      href: '/primera-comunion/nueva',
-      icon: DocumentCheckIcon,
-      color: 'bg-warning hover:bg-warning/80'
-    },
-    {
-      name: 'Generar Constancia',
-      description: 'Emitir constancia sacramental',
-      href: '/constancias/nueva',
-      icon: ClipboardDocumentListIcon,
-      color: 'bg-secondary hover:bg-secondary/80'
     },
     {
       name: 'Gestionar Usuarios',
@@ -249,20 +266,36 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* User role info */}
+          <div className="mb-6 sm:mb-8">
+            <UserRoleInfo />
+          </div>
+
           {/* Recent activity placeholder */}
           <div className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base sm:text-lg font-semibold text-base-content">
                 Actividad Reciente
               </h2>
-              <button className="text-sm text-primary hover:text-primary/80 transition-colors">
-                Ver todo
+              <button
+                type="button"
+                onClick={() => router.push('/reportes')}
+                className="text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                Ver reportes
               </button>
             </div>
             <div className="text-center py-8 sm:py-12">
-              <p className="text-base-content/60 text-sm sm:text-base">
-                No hay actividad reciente para mostrar
+              <p className="text-base-content/60 text-sm sm:text-base mb-4">
+                Consulte estadísticas y registros recientes en el módulo de reportes.
               </p>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => router.push('/reportes')}
+              >
+                Ir a Reportes
+              </button>
             </div>
           </div>
         </div>

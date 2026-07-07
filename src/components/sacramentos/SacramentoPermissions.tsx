@@ -1,6 +1,7 @@
 'use client';
 
 import { useCanAccess } from '@/hooks/usePermissions';
+import { PermissionButton } from '@/components/common/ReadOnlyNotice';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface SacramentoActionButtonsProps {
@@ -15,8 +16,6 @@ interface SacramentoActionButtonsProps {
 export function SacramentoActionButtons({
   onEdit,
   onDelete,
-  itemId,
-  itemName,
   showEdit = true,
   showDelete = true
 }: SacramentoActionButtonsProps) {
@@ -78,34 +77,25 @@ export function CreateSacramentoButton({
   label = 'Nuevo Registro',
   className = ''
 }: CreateSacramentoButtonProps) {
-  const { canAccess, userRole } = useCanAccess();
-
-  const canCreate = canAccess('canCreateSacramentos');
+  const { userRole } = useCanAccess();
 
   const getTooltipMessage = () => {
     if (userRole === 'secretario') {
       return 'Los secretarios pueden crear nuevos registros de sacramentos';
     }
-    if (!canCreate) {
-      return 'No tienes permisos para crear registros';
-    }
     return 'Crear nuevo registro';
   };
 
   return (
-    <button
-      onClick={canCreate ? onClick : undefined}
-      className={`btn btn-primary gap-2 ${
-        canCreate 
-          ? '' 
-          : 'opacity-50 cursor-not-allowed'
-      } ${className}`}
-      disabled={!canCreate}
+    <PermissionButton
+      permission="canCreateSacramentos"
+      onClick={onClick}
+      className={`btn btn-primary gap-2 ${className}`}
       title={getTooltipMessage()}
     >
       <PlusIcon className="h-4 w-4" />
       {label}
-    </button>
+    </PermissionButton>
   );
 }
 

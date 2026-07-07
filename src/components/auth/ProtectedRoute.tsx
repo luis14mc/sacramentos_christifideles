@@ -28,7 +28,7 @@ export default function ProtectedRoute({
     if (status === 'loading') return; // Aún cargando
 
     if (!session) {
-      router.push('/auth/signin');
+      router.push('/login');
       return;
     }
 
@@ -90,12 +90,12 @@ export default function ProtectedRoute({
 }
 
 // HOC para facilitar el uso
-export function withPermissions(
-  WrappedComponent: React.ComponentType<any>, 
+export function withPermissions<P extends object>(
+  WrappedComponent: React.ComponentType<P>,
   requiredPermission?: keyof UserPermissions,
   requiredRoles?: string[]
 ) {
-  return function ProtectedComponent(props: any) {
+  return function ProtectedComponent(props: P) {
     return (
       <ProtectedRoute 
         requiredPermission={requiredPermission} 

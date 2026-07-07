@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -62,20 +63,20 @@ export default function UsuariosPage() {
       
       try {
         // Cargar datos de la parroquia
-        const parroquiaResponse = await fetch(`/api/dashboard?userId=${session.user.id}`);
+        const parroquiaResponse = await fetch('/api/dashboard');
         if (parroquiaResponse.ok) {
           const data = await parroquiaResponse.json();
           setParroquiaData(data.parroquiaData);
         }
 
         // Cargar usuarios
-        const usuariosResponse = await fetch(`/api/usuarios?parroquiaId=${session.user.parishId}`);
+        const usuariosResponse = await fetch('/api/usuarios');
         if (usuariosResponse.ok) {
           const usuariosData = await usuariosResponse.json();
           setUsuarios(usuariosData);
         }
       } catch (error) {
-        console.error('Error loading data:', error);
+        logger.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
@@ -112,13 +113,13 @@ export default function UsuariosPage() {
     if (!session?.user?.parishId) return;
     
     try {
-      const response = await fetch(`/api/usuarios?parroquiaId=${session.user.parishId}`);
+      const response = await fetch('/api/usuarios');
       if (response.ok) {
         const usuariosData = await response.json();
         setUsuarios(usuariosData);
       }
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
     }
   };
 

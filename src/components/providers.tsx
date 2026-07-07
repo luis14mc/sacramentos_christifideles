@@ -1,15 +1,16 @@
 'use client';
 
 import { SessionProvider } from 'next-auth/react';
+import { PermissionsProvider } from '@/contexts/PermissionsContext';
 
 export default function Providers({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <SessionProvider>
-      {children}
+      <PermissionsProvider>{children}</PermissionsProvider>
     </SessionProvider>
   );
 }

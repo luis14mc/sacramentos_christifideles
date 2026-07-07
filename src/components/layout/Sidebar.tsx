@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -13,62 +13,12 @@ interface SidebarProps {
   readonly setSidebarOpen: (open: boolean) => void;
 }
 
-// Componentes de iconos
-const DashboardIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-  </svg>
-);
-
-const PersonasIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-  </svg>
-);
-
-const UsuariosIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-  </svg>
-);
-
-const BautismosIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-  </svg>
-);
-
-const ConstanciasIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-  </svg>
-);
-
-const ConfiguracionIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-);
-
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const pathname = usePathname();
   const permissions = usePermissions();
-  
-  // Navegación básica temporal mientras arreglamos permisos
-  const basicNavigation = [
-    { name: 'Dashboard', href: '/', icon: DashboardIcon },
-    { name: 'Personas', href: '/personas', icon: PersonasIcon },
-    { name: 'Usuarios', href: '/usuarios', icon: UsuariosIcon },
-    { name: 'Bautismos', href: '/bautismos', icon: BautismosIcon },
-    { name: 'Constancias', href: '/constancias', icon: ConstanciasIcon },
-    { name: 'Configuración', href: '/configuracion', icon: ConfiguracionIcon }
-  ];
-  
-  // Obtener navegación filtrada según permisos del usuario
+
   const navigation = getFilteredNavigation(permissions);
 
-  // Cerrar sidebar con tecla Escape
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && sidebarOpen) {
@@ -84,7 +34,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
   return (
     <>
-      {/* Overlay para móvil */}
       {sidebarOpen && (
         <button
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden cursor-default"
@@ -95,56 +44,49 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             }
           }}
           aria-label="Cerrar sidebar"
-          tabIndex={-1}
+          type="button"
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`
-        fixed top-0 left-0 h-full w-64 bg-base-100 border-r border-base-300 z-30
-        transform transition-transform duration-300 ease-in-out
-        lg:relative lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        
-        {/* Header del sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-base-100 border-r border-base-300 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="flex items-center justify-between h-16 px-4 border-b border-base-300">
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <Image
-              src="/assets/marca/CF_LOGO_LETRAS.png"
+              src="/assets/marca/CF_LOGO.png"
               alt="ChristiFideles"
-              width={160}
-              height={40}
+              width={32}
+              height={32}
               className="h-8 w-auto"
-              priority
             />
+            <span className="font-bold text-lg text-primary">ChristiFideles</span>
           </div>
-          {/* Botón de cierre solo en móvil */}
           <button
             className="lg:hidden p-1 rounded-md text-base-content/60 hover:text-base-content hover:bg-base-200"
             onClick={() => setSidebarOpen(false)}
             aria-label="Cerrar sidebar"
+            type="button"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-          {/* Usar navegación filtrada real, fallback a básica solo si es necesario */}
-          {(navigation.length > 0 ? navigation : basicNavigation).map((item) => {
-            // Mejorar lógica de comparación para elementos activos
-            const isActive = item.href === '/' 
-              ? pathname === '/' || pathname === '/dashboard'
-              : pathname === item.href;
+          {navigation.map((item) => {
+            const isActive =
+              item.href === '/'
+                ? pathname === '/' || pathname === '/dashboard'
+                : pathname === item.href;
             const IconComponent = item.icon;
-            
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 onClick={() => {
-                  // Cerrar sidebar en móvil después de navegar
                   if (window.innerWidth < 1024) {
                     setSidebarOpen(false);
                   }
@@ -155,24 +97,17 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
                     : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
                 }`}
               >
-                <IconComponent className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                  isActive 
-                    ? 'text-primary-content' 
-                    : 'text-base-content/50 group-hover:text-base-content/70'
-                }`} />
-                <span className="truncate">{item.name}</span>
+                <IconComponent
+                  className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                    isActive ? 'text-primary-content' : 'text-base-content/50 group-hover:text-base-content'
+                  }`}
+                />
+                {item.name}
               </Link>
             );
           })}
         </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-base-300">
-          <p className="text-xs text-base-content/60 text-center">
-            Sistema de Gestión Parroquial v1.0
-          </p>
-        </div>
-      </div>
+      </aside>
     </>
   );
 }

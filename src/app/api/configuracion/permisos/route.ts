@@ -1,188 +1,156 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { PAGES } from '@/lib/pages';
+import { prisma } from '@/lib/prisma';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { requireSuperAdmin } from '@/lib/rbac';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { permisoBulkPutSchema, permisoPostSchema } from '@/lib/validators/schemas';
 
-const prisma = new PrismaClient();
+function mapPermisosToFlags(permisos: {
+  leer?: boolean;
+  escribir?: boolean;
+  eliminar?: boolean;
+  administrar?: boolean;
+}) {
+  if (permisos.administrar) {
+    return {
+      puede_ver: 1,
+      puede_crear: 1,
+      puede_actualizar: 1,
+      puede_borrar: 1,
+    };
+  }
+  return {
+    puede_ver: permisos.leer ? 1 : 0,
+    puede_crear: permisos.escribir ? 1 : 0,
+    puede_actualizar: permisos.escribir ? 1 : 0,
+    puede_borrar: permisos.eliminar ? 1 : 0,
+  };
+}
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    await requireTenantWithPermission(PAGES.CONFIGURACION, 'ver');
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    // Obtener todos los permisos con sus asignaciones por rol
-    const permisos = await prisma.pagina.findMany({
+    const paginas = await prisma.pagina.findMany({
       include: {
-        permisos: {
+        roles: {
           include: {
-            rol: {
-              select: {
-                id_rol: true,
-                nombre: true
-              }
-            }
-          }
-        }
+            rol: { select: { id_rol: true, nombre: true } },
+          },
+        },
       },
-      orderBy: {
-        nombre: 'asc'
-      }
+      orderBy: { nombre: 'asc' },
     });
 
-    // Obtener todos los roles
     const roles = await prisma.rolUsuario.findMany({
-      where: {
-        estado: 1
-      },
-      orderBy: {
-        nombre: 'asc'
-      }
+      where: { estado: 1 },
+      orderBy: { nombre: 'asc' },
     });
 
-    return NextResponse.json({
-      permisos,
-      roles
-    });
+    return NextResponse.json({ permisos: paginas, roles });
   } catch (error) {
-    console.error('Error al obtener permisos:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    const ctx = await requireTenantWithPermission(
+      PAGES.CONFIGURACION,
+      'actualizar'
+    );
+    requireSuperAdmin(ctx.roleName);
 
     const body = await request.json();
-    const { id_rol, id_pagina, permisos } = body;
+    const validated = safeParseBody(permisoPostSchema, body);
 
-    // Validaciones básicas
-    if (!id_rol || !id_pagina || !permisos) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
-        { status: 400 }
-      );
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    // Eliminar permisos existentes para este rol y página
-    await prisma.permiso.deleteMany({
-      where: {
-        id_rol,
-        id_pagina
-      }
+    const { id_rol, id_pagina, permisos } = validated.data;
+    const flags = mapPermisosToFlags(permisos);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.trRolPagina.upsert({
+        where: {
+          id_rol_id_pagina: {
+            id_rol: Number(id_rol),
+            id_pagina: Number(id_pagina),
+          },
+        },
+        update: flags,
+        create: {
+          id_rol: Number(id_rol),
+          id_pagina: Number(id_pagina),
+          ...flags,
+        },
+      });
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'U',
+        nombreTabla: 'tr_rol_pagina',
+        newValues: { id_rol: Number(id_rol), id_pagina: Number(id_pagina) },
+      });
     });
-
-    // Crear nuevos permisos
-    const nuevosPermisos = [];
-    if (permisos.leer) {
-      nuevosPermisos.push({
-        id_rol,
-        id_pagina,
-        accion: 'leer'
-      });
-    }
-    if (permisos.escribir) {
-      nuevosPermisos.push({
-        id_rol,
-        id_pagina,
-        accion: 'escribir'
-      });
-    }
-    if (permisos.eliminar) {
-      nuevosPermisos.push({
-        id_rol,
-        id_pagina,
-        accion: 'eliminar'
-      });
-    }
-    if (permisos.administrar) {
-      nuevosPermisos.push({
-        id_rol,
-        id_pagina,
-        accion: 'administrar'
-      });
-    }
-
-    if (nuevosPermisos.length > 0) {
-      await prisma.permiso.createMany({
-        data: nuevosPermisos
-      });
-    }
 
     return NextResponse.json({ message: 'Permisos actualizados exitosamente' });
   } catch (error) {
-    console.error('Error al actualizar permisos:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    const ctx = await requireTenantWithPermission(
+      PAGES.CONFIGURACION,
+      'actualizar'
+    );
+    requireSuperAdmin(ctx.roleName);
 
     const body = await request.json();
-    const { rol_id, permisos_bulk } = body;
+    const validated = safeParseBody(permisoBulkPutSchema, body);
 
-    if (!rol_id || !permisos_bulk) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
-        { status: 400 }
-      );
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    // Eliminar todos los permisos existentes para este rol
-    await prisma.permiso.deleteMany({
-      where: {
-        id_rol: rol_id
-      }
-    });
+    const { rol_id, permisos_bulk } = validated.data;
 
-    // Crear nuevos permisos en lote
-    const nuevosPermisos = [];
-    for (const [id_pagina, acciones] of Object.entries(permisos_bulk)) {
-      const pagina_id = parseInt(id_pagina);
-      const accionesObj = acciones as { [key: string]: boolean };
-      
-      for (const [accion, permitido] of Object.entries(accionesObj)) {
-        if (permitido) {
-          nuevosPermisos.push({
-            id_rol: rol_id,
-            id_pagina: pagina_id,
-            accion
-          });
-        }
-      }
-    }
-
-    if (nuevosPermisos.length > 0) {
-      await prisma.permiso.createMany({
-        data: nuevosPermisos
+    await prisma.$transaction(async (tx) => {
+      await tx.trRolPagina.deleteMany({
+        where: { id_rol: Number(rol_id) },
       });
-    }
+
+      const nuevosPermisos = [];
+      for (const [id_pagina, acciones] of Object.entries(permisos_bulk)) {
+        const flags = mapPermisosToFlags(acciones);
+        nuevosPermisos.push({
+          id_rol: Number(rol_id),
+          id_pagina: parseInt(id_pagina, 10),
+          ...flags,
+        });
+      }
+
+      if (nuevosPermisos.length > 0) {
+        await tx.trRolPagina.createMany({ data: nuevosPermisos });
+      }
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'U',
+        nombreTabla: 'tr_rol_pagina',
+        newValues: { rol_id: Number(rol_id), count: nuevosPermisos.length },
+      });
+    });
 
     return NextResponse.json({ message: 'Permisos actualizados exitosamente' });
   } catch (error) {
-    console.error('Error al actualizar permisos en lote:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

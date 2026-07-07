@@ -1,195 +1,171 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { PAGES } from '@/lib/pages';
+import { withTenantScope, withTenantTransaction } from '@/lib/prisma-tenant';
+import { logBitacoraCrud } from '@/lib/bitacora';
+import { ForbiddenError } from '@/lib/errors';
+import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
+import { safeParseBody } from '@/lib/validation';
+import { sectorCreateSchema, sectorUpdateSchema } from '@/lib/validators/schemas';
 
-const prisma = new PrismaClient();
+function mapSectorResponse(sector: {
+  id_sector_parroquial: bigint;
+  id_parroquia: number;
+  id_tipo_sector_parroquial: number;
+  nombre: string;
+  nombre_capilla: string | null;
+  direccion: string;
+  parroquia: { nombre: string };
+  tipo_sector: { nombre: string; descripcion: string | null };
+  _count: { personas: number };
+}) {
+  return {
+    ...sector,
+    id_sector_parroquial: Number(sector.id_sector_parroquial),
+    tipoSector: sector.tipo_sector,
+    _count: { miembros: sector._count.personas },
+  };
+}
+
+const sectorInclude = {
+  parroquia: { select: { nombre: true } },
+  tipo_sector: { select: { nombre: true, descripcion: true } },
+  _count: { select: { personas: true } },
+} as const;
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    const sectores = await prisma.sectorParroquial.findMany({
-      include: {
-        parroquia: {
-          select: {
-            nombre: true
-          }
-        },
-        tipoSector: {
-          select: {
-            nombre: true,
-            descripcion: true
-          }
-        },
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      },
-      orderBy: {
-        nombre: 'asc'
-      }
-    });
-
-    return NextResponse.json(sectores);
-  } catch (error) {
-    console.error('Error al obtener sectores parroquiales:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+    const { parishId } = await requireTenantWithPermission(
+      PAGES.CONFIGURACION,
+      'ver'
     );
+
+    const sectores = await withTenantScope(parishId, (db) =>
+      db.sectorParroquial.findMany({
+        where: { id_parroquia: parishId },
+        include: sectorInclude,
+        orderBy: { nombre: 'asc' },
+      })
+    );
+
+    return NextResponse.json(sectores.map(mapSectorResponse));
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const ctx = await requireTenantWithPermission(PAGES.CONFIGURACION, 'crear');
     const body = await request.json();
-    const { 
-      id_parroquia, 
-      id_tipo_sector_parroquial, 
-      nombre, 
-      nombre_capilla,
-      direccion,
-      telefono,
-      responsable 
-    } = body;
+    const validated = safeParseBody(sectorCreateSchema, body);
 
-    // Validaciones básicas
-    if (!id_parroquia || !id_tipo_sector_parroquial || !nombre) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
-        { status: 400 }
-      );
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    const nuevoSector = await prisma.sectorParroquial.create({
-      data: {
-        id_parroquia,
-        id_tipo_sector_parroquial,
-        nombre,
-        nombre_capilla,
-        direccion,
-        telefono,
-        responsable
-      },
-      include: {
-        parroquia: {
-          select: {
-            nombre: true
-          }
+    const { id_tipo_sector_parroquial, nombre, nombre_capilla, direccion } =
+      validated.data;
+
+    const nuevoSector = await withTenantTransaction(ctx.parishId, async (tx) => {
+      const created = await tx.sectorParroquial.create({
+        data: {
+          id_parroquia: ctx.parishId,
+          id_tipo_sector_parroquial: Number(id_tipo_sector_parroquial),
+          nombre,
+          nombre_capilla,
+          direccion: direccion || '',
         },
-        tipoSector: {
-          select: {
-            nombre: true,
-            descripcion: true
-          }
-        },
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      }
+        include: sectorInclude,
+      });
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'C',
+        nombreTabla: 'sector_parroquial',
+        idTabla: created.id_sector_parroquial,
+        newValues: { nombre },
+      });
+
+      return created;
     });
 
-    return NextResponse.json(nuevoSector, { status: 201 });
+    return NextResponse.json(mapSectorResponse(nuevoSector), { status: 201 });
   } catch (error) {
-    console.error('Error al crear sector parroquial:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const ctx = await requireTenantWithPermission(
+      PAGES.CONFIGURACION,
+      'actualizar'
+    );
+    const body = await request.json();
+    const validated = safeParseBody(sectorUpdateSchema, body);
 
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { 
+    const {
       id_sector_parroquial,
-      id_parroquia, 
-      id_tipo_sector_parroquial, 
-      nombre, 
+      id_tipo_sector_parroquial,
+      nombre,
       nombre_capilla,
       direccion,
-      telefono,
-      responsable 
-    } = body;
+    } = validated.data;
 
-    if (!id_sector_parroquial) {
-      return NextResponse.json(
-        { error: 'ID del sector es requerido' },
-        { status: 400 }
-      );
-    }
+    const sectorId = parseInt(String(id_sector_parroquial), 10);
 
-    const sectorActualizado = await prisma.sectorParroquial.update({
-      where: { id_sector_parroquial },
-      data: {
-        id_parroquia,
-        id_tipo_sector_parroquial,
-        nombre,
-        nombre_capilla,
-        direccion,
-        telefono,
-        responsable
-      },
-      include: {
-        parroquia: {
-          select: {
-            nombre: true
-          }
+    await withTenantTransaction(ctx.parishId, async (tx) => {
+      const result = await tx.sectorParroquial.updateMany({
+        where: {
+          id_sector_parroquial: BigInt(sectorId),
+          id_parroquia: ctx.parishId,
         },
-        tipoSector: {
-          select: {
-            nombre: true,
-            descripcion: true
-          }
+        data: {
+          id_tipo_sector_parroquial: Number(id_tipo_sector_parroquial),
+          nombre,
+          nombre_capilla,
+          direccion,
         },
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
+      });
+
+      if (result.count === 0) {
+        throw new ForbiddenError();
       }
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'U',
+        nombreTabla: 'sector_parroquial',
+        idTabla: BigInt(sectorId),
+        newValues: { nombre },
+      });
     });
 
-    return NextResponse.json(sectorActualizado);
-  } catch (error) {
-    console.error('Error al actualizar sector parroquial:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+    const sectorActualizado = await withTenantScope(ctx.parishId, (db) =>
+      db.sectorParroquial.findFirst({
+        where: {
+          id_sector_parroquial: BigInt(sectorId),
+          id_parroquia: ctx.parishId,
+        },
+        include: sectorInclude,
+      })
     );
+
+    return NextResponse.json(mapSectorResponse(sectorActualizado!));
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    const ctx = await requireTenantWithPermission(PAGES.CONFIGURACION, 'borrar');
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -200,42 +176,43 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verificar si el sector tiene miembros asociados
-    const sector = await prisma.sectorParroquial.findUnique({
-      where: { id_sector_parroquial: parseInt(id) },
-      include: {
-        _count: {
-          select: {
-            miembros: true
-          }
-        }
-      }
-    });
+    const sector = await withTenantScope(ctx.parishId, (db) =>
+      db.sectorParroquial.findFirst({
+        where: {
+          id_sector_parroquial: BigInt(parseInt(id, 10)),
+          id_parroquia: ctx.parishId,
+        },
+        include: { _count: { select: { personas: true } } },
+      })
+    );
 
     if (!sector) {
-      return NextResponse.json(
-        { error: 'Sector no encontrado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Sector no encontrado' }, { status: 404 });
     }
 
-    if (sector._count.miembros > 0) {
+    if (sector._count.personas > 0) {
       return NextResponse.json(
         { error: 'No se puede eliminar un sector que tiene miembros asociados' },
         { status: 400 }
       );
     }
 
-    await prisma.sectorParroquial.delete({
-      where: { id_sector_parroquial: parseInt(id) }
+    await withTenantTransaction(ctx.parishId, async (tx) => {
+      await tx.sectorParroquial.delete({
+        where: { id_sector_parroquial: BigInt(parseInt(id, 10)) },
+      });
+
+      await logBitacoraCrud(tx, {
+        parishId: ctx.parishId,
+        userId: ctx.userId,
+        accion: 'D',
+        nombreTabla: 'sector_parroquial',
+        idTabla: BigInt(parseInt(id, 10)),
+      });
     });
 
     return NextResponse.json({ message: 'Sector eliminado exitosamente' });
   } catch (error) {
-    console.error('Error al eliminar sector parroquial:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
