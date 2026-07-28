@@ -3,6 +3,7 @@ import { PAGES } from '@/lib/pages';
 import { withTenantScope, withTenantTransaction } from '@/lib/prisma-tenant';
 import { logBitacoraCrud } from '@/lib/bitacora';
 import { ForbiddenError } from '@/lib/errors';
+import { assertPersonaSinCleroActivo } from '@/lib/sacerdote';
 import { handleApiError, requireTenantWithPermission } from '@/lib/tenant';
 import { safeParseBody } from '@/lib/validation';
 import { personaUpdateSchema } from '@/lib/validators/schemas';
@@ -151,6 +152,13 @@ export async function DELETE(
   try {
     const ctx = await requireTenantWithPermission(PAGES.PERSONAS, 'borrar');
     const { id: numeroIdentidad } = await params;
+
+    const cleroError = await withTenantScope(ctx.parishId, (db) =>
+      assertPersonaSinCleroActivo(db, ctx.parishId, numeroIdentidad)
+    );
+    if (cleroError) {
+      return NextResponse.json({ error: cleroError }, { status: 400 });
+    }
 
     const result = await withTenantTransaction(ctx.parishId, async (tx) => {
       const deleted = await tx.persona.deleteMany({

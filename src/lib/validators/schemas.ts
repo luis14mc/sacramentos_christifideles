@@ -213,21 +213,28 @@ export const grupoCreateSchema = z.object({
   descripcion: z.string().trim().optional().nullable(),
 });
 
-export const sacerdoteCreateSchema = z.object({
+export const cleroCreateSchema = z.object({
   numero_identidad: identidadSchema,
-  nombres: z.string().trim().min(1).max(100),
-  apellidos: z.string().trim().min(1).max(100),
   id_rango_sacerdotal: z.union([z.string(), z.number()]),
   id_orden_religiosa: z.union([z.string(), z.number()]).optional(),
-  fecha_nacimiento: z.string().trim().optional().nullable(),
-  lugar_nacimiento: z.string().trim().optional().nullable(),
-  telefono: z.string().trim().optional(),
-  email: z.string().trim().email().optional().or(z.literal('')),
-  otra_orden_religiosa: z.string().trim().optional().nullable(),
-  es_parroco: z.union([z.string(), z.number()]).optional(),
-  estado_vital: z.union([z.string(), z.number()]).optional(),
-  imagen: z.string().trim().optional().nullable(),
+  otra_orden_religiosa: z.string().trim().max(255).optional().nullable(),
+  es_parroco: z.union([z.boolean(), z.string(), z.number()]).optional(),
+  estado_ministerial: z.union([z.string(), z.number()]).optional(),
+  imagen: z.string().trim().max(300).optional().nullable(),
 });
+
+export const cleroUpdateSchema = cleroCreateSchema.omit({
+  numero_identidad: true,
+});
+
+export const cleroDeactivateSchema = z.object({
+  estado_ministerial: z.union([z.string(), z.number()]).optional().default(0),
+});
+
+/** @deprecated Use cleroCreateSchema */
+export const sacerdoteCreateSchema = cleroCreateSchema;
+/** @deprecated Use cleroUpdateSchema */
+export const sacerdoteUpdateSchema = cleroUpdateSchema;
 
 export const setupSchema = z.object({
   nombreParroquia: z.string().trim().min(1, 'Nombre de parroquia obligatorio'),

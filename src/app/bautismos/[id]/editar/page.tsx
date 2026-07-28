@@ -13,6 +13,7 @@ import {
   type SacerdoteOption,
 } from '@/components/sacramentos/PersonaSelectField';
 import { validateSacramentoFormClient } from '@/lib/sacramento-form-validation';
+import { cleroToSelectOption } from '@/lib/sacerdote';
 import { ArrowLeftIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 
 function EditarBautismoContent() {
@@ -41,11 +42,14 @@ function EditarBautismoContent() {
       const [bautismoRes, personasRes, sacerdotesRes] = await Promise.all([
         fetch(`/api/bautismos/${id}`),
         fetch('/api/personas'),
-        fetch('/api/configuracion/sacerdotes'),
+        fetch('/api/configuracion/sacerdotes?tipo=sacerdote&activos=1'),
       ]);
 
       if (personasRes.ok) setPersonas(await personasRes.json());
-      if (sacerdotesRes.ok) setSacerdotes(await sacerdotesRes.json());
+      if (sacerdotesRes.ok) {
+        const clero = await sacerdotesRes.json();
+        setSacerdotes(clero.map(cleroToSelectOption));
+      }
 
       if (bautismoRes.ok) {
         const b = await bautismoRes.json();

@@ -22,8 +22,8 @@ const configurationModules = [
     stats: 'Información básica'
   },
   {
-    name: 'Sacerdotes',
-    description: 'Administrar sacerdotes, diáconos y religiosos',
+    name: 'Clero',
+    description: 'Ministros ordenados (diáconos, sacerdotes y obispos)',
     href: '/configuracion/sacerdotes',
     icon: UserCircleIcon,
     color: 'bg-primary hover:bg-primary/80',

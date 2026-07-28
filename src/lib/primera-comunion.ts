@@ -1,4 +1,6 @@
 import type { TenantDb } from '@/lib/prisma-tenant';
+import { findCleroActivo, RANGOS_SACRAMENTO_SACERDOTE } from '@/lib/sacerdote';
+import { validatePrimeraComunionRoleConflicts } from '@/lib/sacrament-role-validation';
 import { safeParseBody } from '@/lib/validation';
 import { primeraComunionBodySchema } from '@/lib/validators/schemas';
 
@@ -11,7 +13,15 @@ export const primeraComunionInclude = {
   madre: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   padre: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   catequista: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-  sacerdote: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+  sacerdote: {
+    select: {
+      numero_identidad: true,
+      es_parroco: true,
+      estado_ministerial: true,
+      rango: { select: { nombre: true } },
+      persona: { select: { nombres: true, apellidos: true } },
+    },
+  },
 } as const;
 
 const PERSONA_FIELDS = [
@@ -46,7 +56,13 @@ export interface PrimeraComunionValidationError {
 export function validatePrimeraComunionInput(
   body: unknown
 ): PrimeraComunionValidationResult | PrimeraComunionValidationError {
-  return safeParseBody(primeraComunionBodySchema, body);
+  const parsed = safeParseBody(primeraComunionBodySchema, body);
+  if (!parsed.ok) return parsed;
+
+  const roleCheck = validatePrimeraComunionRoleConflicts(parsed.data);
+  if (!roleCheck.ok) return roleCheck;
+
+  return parsed;
 }
 
 export function serializePrimeraComunion(record: {
@@ -77,16 +93,14 @@ export async function assertPrimeraComunionReferencias(
     }
   }
 
-  const sacerdote = await db.ordenSacerdotal.findFirst({
-    where: {
-      id_parroquia: parishId,
-      numero_identidad: data.numero_identidad_sacerdote,
-    },
-    select: { numero_identidad: true },
-  });
-
-  if (!sacerdote) {
-    return `Sacerdote no encontrado: ${data.numero_identidad_sacerdote}`;
+  const sacerdoteCheck = await findCleroActivo(
+    db,
+    parishId,
+    data.numero_identidad_sacerdote,
+    RANGOS_SACRAMENTO_SACERDOTE
+  );
+  if (!sacerdoteCheck.ok) {
+    return sacerdoteCheck.error;
   }
 
   return null;

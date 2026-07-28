@@ -12,6 +12,7 @@ import {
   SacramentoSecretaryNotice,
 } from '@/components/sacramentos/SacramentoPermissions';
 import ReadOnlyNotice from '@/components/common/ReadOnlyNotice';
+import { nombreCleroFromRecord } from '@/lib/sacerdote';
 import {
   BookOpenIcon,
   MagnifyingGlassIcon,
@@ -23,6 +24,13 @@ interface PersonaRef {
   apellidos: string;
 }
 
+interface CleroRef {
+  numero_identidad: string;
+  persona?: PersonaRef;
+  nombres?: string;
+  apellidos?: string;
+}
+
 interface BautismoRecord {
   id_bautismo: string;
   fecha_bautismo: string;
@@ -32,7 +40,7 @@ interface BautismoRecord {
   numero_registro: string;
   nota_marginal?: string | null;
   bautizado: PersonaRef;
-  sacerdote: PersonaRef;
+  sacerdote: CleroRef;
   padre: PersonaRef;
   madre: PersonaRef;
 }
@@ -221,7 +229,10 @@ function BautismosPageContent() {
                             </span>
                           </td>
                           <td>
-                            {b.sacerdote.nombres} {b.sacerdote.apellidos}
+                            {(() => {
+                              const s = nombreCleroFromRecord(b.sacerdote);
+                              return `${s.nombres} ${s.apellidos}`;
+                            })()}
                           </td>
                           <td>
                             <div className="flex justify-end">

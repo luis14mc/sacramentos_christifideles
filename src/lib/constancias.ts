@@ -327,7 +327,9 @@ async function loadSacramentoVariables(
         },
         include: {
           bautizado: { select: { nombres: true, apellidos: true, numero_identidad: true } },
-          sacerdote: { select: { nombres: true, apellidos: true } },
+          sacerdote: {
+            select: { persona: { select: { nombres: true, apellidos: true } } },
+          },
         },
       });
       if (!r) throw new Error('Registro de bautismo no encontrado');
@@ -339,7 +341,7 @@ async function loadSacramentoVariables(
         numero_libro: r.numero_libro,
         numero_folio: r.numero_folio,
         numero_registro: r.numero_registro,
-        celebrante: nombreCompleto(r.sacerdote),
+        celebrante: nombreCompleto(r.sacerdote.persona),
         nota_marginal: r.nota_marginal ?? '',
       };
     }
@@ -351,7 +353,9 @@ async function loadSacramentoVariables(
         },
         include: {
           persona: { select: { nombres: true, apellidos: true, numero_identidad: true } },
-          sacerdote: { select: { nombres: true, apellidos: true } },
+          sacerdote: {
+            select: { persona: { select: { nombres: true, apellidos: true } } },
+          },
         },
       });
       if (!r) throw new Error('Registro de primera comunión no encontrado');
@@ -363,7 +367,7 @@ async function loadSacramentoVariables(
         numero_libro: r.numero_libro,
         numero_acta: r.numero_acta,
         numero_registro: r.numero_registro,
-        celebrante: nombreCompleto(r.sacerdote),
+        celebrante: nombreCompleto(r.sacerdote.persona),
         nota_marginal: r.nota_marginal ?? '',
       };
     }
@@ -375,7 +379,9 @@ async function loadSacramentoVariables(
         },
         include: {
           confirmado: { select: { nombres: true, apellidos: true, numero_identidad: true } },
-          obispo: { select: { nombres: true, apellidos: true } },
+          obispo: {
+            select: { persona: { select: { nombres: true, apellidos: true } } },
+          },
         },
       });
       if (!r) throw new Error('Registro de confirmación no encontrado');
@@ -387,7 +393,7 @@ async function loadSacramentoVariables(
         numero_libro: r.numero_libro,
         numero_acta: r.numero_acta,
         numero_registro: r.numero_registro,
-        celebrante: nombreCompleto(r.obispo),
+        celebrante: nombreCompleto(r.obispo.persona),
         nota_marginal: r.nota_marginal ?? '',
       };
     }
@@ -400,7 +406,9 @@ async function loadSacramentoVariables(
         include: {
           esposo: { select: { nombres: true, apellidos: true, numero_identidad: true } },
           esposa: { select: { nombres: true, apellidos: true, numero_identidad: true } },
-          sacerdote: { select: { nombres: true, apellidos: true } },
+          sacerdote: {
+            select: { persona: { select: { nombres: true, apellidos: true } } },
+          },
         },
       });
       if (!r) throw new Error('Registro de matrimonio no encontrado');
@@ -412,7 +420,7 @@ async function loadSacramentoVariables(
         numero_libro: r.numero_libro,
         numero_acta: r.numero_acta,
         numero_registro: r.numero_registro,
-        celebrante: nombreCompleto(r.sacerdote),
+        celebrante: nombreCompleto(r.sacerdote.persona),
         esposo_nombre: nombreCompleto(r.esposo),
         esposa_nombre: nombreCompleto(r.esposa),
         nota_marginal: r.nota_marginal ?? '',

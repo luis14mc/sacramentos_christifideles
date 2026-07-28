@@ -11,6 +11,7 @@ import {
   SacramentoActionButtons,
   SacramentoSecretaryNotice,
 } from '@/components/sacramentos/SacramentoPermissions';
+import { nombreCleroFromRecord } from '@/lib/sacerdote';
 import {
   DocumentCheckIcon,
   MagnifyingGlassIcon,
@@ -22,6 +23,13 @@ interface PersonaRef {
   apellidos: string;
 }
 
+interface CleroRef {
+  numero_identidad: string;
+  persona?: PersonaRef;
+  nombres?: string;
+  apellidos?: string;
+}
+
 interface PrimeraComunionRecord {
   id_primera_comunion: string;
   fecha_primera_comunion: string;
@@ -29,7 +37,7 @@ interface PrimeraComunionRecord {
   numero_acta: string;
   numero_registro: string;
   persona: PersonaRef;
-  sacerdote: PersonaRef;
+  sacerdote: CleroRef;
 }
 
 function PrimeraComunionPageContent() {
@@ -215,7 +223,10 @@ function PrimeraComunionPageContent() {
                             </span>
                           </td>
                           <td>
-                            {r.sacerdote.nombres} {r.sacerdote.apellidos}
+                            {(() => {
+                              const s = nombreCleroFromRecord(r.sacerdote);
+                              return `${s.nombres} ${s.apellidos}`;
+                            })()}
                           </td>
                           <td>
                             <div className="flex justify-end">

@@ -14,25 +14,25 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 
-interface Sacerdote {
-  numero_identidad: string;
+interface PersonaRef {
   nombres: string;
   apellidos: string;
   telefono?: string;
-  email?: string;
-  es_parroco: number;
-  estado_vital: number;
-  rango: {
-    nombre: string;
-  };
-  orden_religiosa: {
-    nombre: string;
-  };
+  email?: string | null;
 }
 
-export default function SacerdotesAdmin() {
+interface MinistroOrdenado {
+  numero_identidad: string;
+  es_parroco: number;
+  estado_ministerial: number;
+  persona: PersonaRef;
+  rango: { nombre: string };
+  orden_religiosa?: { nombre: string } | null;
+}
+
+export default function CleroAdmin() {
   const router = useRouter();
-  const [sacerdotes, setSacerdotes] = useState<Sacerdote[]>([]);
+  const [ministros, setMinistros] = useState<MinistroOrdenado[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState('todos');
@@ -47,7 +47,7 @@ export default function SacerdotesAdmin() {
       const response = await fetch('/api/configuracion/sacerdotes');
       if (response.ok) {
         const data = await response.json();
-        setSacerdotes(data);
+        setMinistros(data);
       } else {
         await Swal.fire({
           icon: 'error',
@@ -69,23 +69,24 @@ export default function SacerdotesAdmin() {
     }
   };
 
-  const filteredSacerdotes = sacerdotes.filter(sacerdote => {
-    const matchesSearch = 
-      sacerdote.nombres.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sacerdote.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sacerdote.numero_identidad.includes(searchTerm);
+  const filteredMinistros = ministros.filter((ministro) => {
+    const matchesSearch =
+      ministro.persona.nombres.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ministro.persona.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ministro.numero_identidad.includes(searchTerm);
 
-    const matchesEstado = filterEstado === 'todos' || 
-      (filterEstado === 'activos' && sacerdote.estado_vital === 1) ||
-      (filterEstado === 'inactivos' && sacerdote.estado_vital === 0);
+    const matchesEstado =
+      filterEstado === 'todos' ||
+      (filterEstado === 'activos' && ministro.estado_ministerial === 1) ||
+      (filterEstado === 'inactivos' && ministro.estado_ministerial === 0);
 
     return matchesSearch && matchesEstado;
   });
 
-  const handleDelete = async (sacerdote: Sacerdote) => {
+  const handleDelete = async (ministro: MinistroOrdenado) => {
     const result = await Swal.fire({
-      title: '¿Eliminar sacerdote?',
-      html: `¿Estás seguro de eliminar a <strong>${sacerdote.nombres} ${sacerdote.apellidos}</strong>?<br><small>Esta acción no se puede deshacer.</small>`,
+      title: '¿Desactivar o eliminar registro clerical?',
+      html: `¿Qué desea hacer con <strong>${ministro.persona.nombres} ${ministro.persona.apellidos}</strong>?<br><small>Si tiene sacramentos asociados, solo se desactivará. La persona no se elimina.</small>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#590202',
@@ -96,15 +97,21 @@ export default function SacerdotesAdmin() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/configuracion/sacerdotes/${sacerdote.numero_identidad}`, {
-          method: 'DELETE'
-        });
+        const response = await fetch(
+          `/api/configuracion/sacerdotes/${encodeURIComponent(ministro.numero_identidad)}`,
+          {
+            method: 'DELETE',
+          }
+        );
 
         if (response.ok) {
+          const data = await response.json();
           await Swal.fire({
             icon: 'success',
-            title: 'Eliminado',
-            text: 'El sacerdote ha sido eliminado correctamente',
+            title: data.deactivated ? 'Desactivado' : 'Eliminado',
+            text:
+              data.message ||
+              'El registro clerical fue procesado. La persona permanece en el sistema.',
             timer: 2000,
             showConfirmButton: false,
             toast: true,
@@ -160,10 +167,10 @@ export default function SacerdotesAdmin() {
               <UserCircleIcon className="h-8 w-8 text-primary mr-3" />
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-base-content">
-                  Sacerdotes
+                  Clero
                 </h1>
                 <p className="text-base-content/70 text-sm">
-                  Administrar sacerdotes, diáconos y religiosos
+                  Ministros ordenados vinculados a personas registradas
                 </p>
               </div>
             </div>
@@ -172,7 +179,7 @@ export default function SacerdotesAdmin() {
               className="btn btn-primary gap-2"
             >
               <PlusIcon className="h-4 w-4" />
-              Nuevo Sacerdote
+              Nuevo Ministro
             </button>
           </div>
 
@@ -208,19 +215,19 @@ export default function SacerdotesAdmin() {
           {/* Results count */}
           <div className="mb-4">
             <p className="text-sm text-base-content/70">
-              Mostrando {filteredSacerdotes.length} de {sacerdotes.length} sacerdotes
+              Mostrando {filteredMinistros.length} de {ministros.length} ministros
             </p>
           </div>
 
           {/* Sacerdotes table */}
           <div className="bg-base-100 rounded-lg border border-base-300 overflow-hidden">
-            {filteredSacerdotes.length === 0 ? (
+            {filteredMinistros.length === 0 ? (
               <div className="text-center py-12">
                 <UserCircleIcon className="h-12 w-12 text-base-content/30 mx-auto mb-4" />
                 <p className="text-base-content/60 mb-4">
                   {searchTerm || filterEstado !== 'todos' 
-                    ? 'No se encontraron sacerdotes con los filtros aplicados'
-                    : 'No hay sacerdotes registrados'
+                    ? 'No se encontraron ministros con los filtros aplicados'
+                    : 'No hay ministros ordenados registrados'
                   }
                 </p>
                 {(!searchTerm && filterEstado === 'todos') && (
@@ -229,7 +236,7 @@ export default function SacerdotesAdmin() {
                     className="btn btn-primary gap-2"
                   >
                     <PlusIcon className="h-4 w-4" />
-                    Registrar Primer Sacerdote
+                    Registrar Primer Ministro
                   </button>
                 )}
               </div>
@@ -238,7 +245,7 @@ export default function SacerdotesAdmin() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Sacerdote</th>
+                      <th>Ministro</th>
                       <th>Contacto</th>
                       <th>Rango</th>
                       <th>Orden</th>
@@ -247,71 +254,79 @@ export default function SacerdotesAdmin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSacerdotes.map((sacerdote) => (
-                      <tr key={sacerdote.numero_identidad} className="hover">
+                    {filteredMinistros.map((ministro) => (
+                      <tr key={ministro.numero_identidad} className="hover">
                         <td>
                           <div className="flex items-center gap-3">
                             <div className="avatar">
                               <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
                                 <span className="text-sm font-bold">
-                                  {sacerdote.nombres.charAt(0).toUpperCase()}
+                                  {ministro.persona.nombres.charAt(0).toUpperCase()}
                                 </span>
                               </div>
                             </div>
                             <div>
                               <div className="font-bold text-base-content">
-                                {sacerdote.nombres} {sacerdote.apellidos}
+                                {ministro.persona.nombres} {ministro.persona.apellidos}
                               </div>
                               <div className="text-sm opacity-50">
-                                {sacerdote.numero_identidad}
+                                {ministro.numero_identidad}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="text-base-content/70">
                           <div className="text-sm">
-                            {sacerdote.telefono && (
-                              <div>📞 {sacerdote.telefono}</div>
+                            {ministro.persona.telefono && (
+                              <div>📞 {ministro.persona.telefono}</div>
                             )}
-                            {sacerdote.email && (
-                              <div>✉️ {sacerdote.email}</div>
+                            {ministro.persona.email && (
+                              <div>✉️ {ministro.persona.email}</div>
                             )}
-                            {!sacerdote.telefono && !sacerdote.email && (
+                            {!ministro.persona.telefono && !ministro.persona.email && (
                               <span className="text-base-content/40">Sin contacto</span>
                             )}
                           </div>
                         </td>
                         <td>
-                          <span className={`badge ${getRangoColor(sacerdote.es_parroco)}`}>
-                            {sacerdote.es_parroco === 1 ? 'Párroco' : sacerdote.rango.nombre}
+                          <span className={`badge ${getRangoColor(ministro.es_parroco)}`}>
+                            {ministro.es_parroco === 1 ? 'Párroco' : ministro.rango.nombre}
                           </span>
                         </td>
                         <td className="text-base-content/70 text-sm">
-                          {sacerdote.orden_religiosa.nombre}
+                          {ministro.orden_religiosa?.nombre || '—'}
                         </td>
                         <td>
-                          <span className={`badge ${getEstadoColor(sacerdote.estado_vital)}`}>
-                            {sacerdote.estado_vital === 1 ? 'Activo' : 'Inactivo'}
+                          <span className={`badge ${getEstadoColor(ministro.estado_ministerial)}`}>
+                            {ministro.estado_ministerial === 1 ? 'Activo' : 'Inactivo'}
                           </span>
                         </td>
                         <td>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => router.push(`/configuracion/sacerdotes/${sacerdote.numero_identidad}`)}
+                              onClick={() =>
+                                router.push(
+                                  `/configuracion/sacerdotes/${encodeURIComponent(ministro.numero_identidad)}`
+                                )
+                              }
                               className="btn btn-ghost btn-xs"
                               title="Ver detalles"
                             >
                               <EyeIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => router.push(`/configuracion/sacerdotes/${sacerdote.numero_identidad}/editar`)}
+                              onClick={() =>
+                                router.push(
+                                  `/configuracion/sacerdotes/${encodeURIComponent(ministro.numero_identidad)}/editar`
+                                )
+                              }
                               className="btn btn-ghost btn-xs"
                               title="Editar"
                             >
                               <PencilSquareIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(sacerdote)}
+                              onClick={() => handleDelete(ministro)}
                               className="btn btn-ghost btn-xs text-error"
                               title="Eliminar"
                             >

@@ -1,4 +1,6 @@
 import type { TenantDb } from '@/lib/prisma-tenant';
+import { findCleroActivo, RANGOS_SACRAMENTO_OBISPO } from '@/lib/sacerdote';
+import { validateConfirmacionRoleConflicts } from '@/lib/sacrament-role-validation';
 import { safeParseBody } from '@/lib/validation';
 import { confirmacionBodySchema } from '@/lib/validators/schemas';
 
@@ -13,7 +15,15 @@ export const confirmacionInclude = {
   madrina: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   padrino: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   catequista: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-  obispo: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+  obispo: {
+    select: {
+      numero_identidad: true,
+      es_parroco: true,
+      estado_ministerial: true,
+      rango: { select: { nombre: true } },
+      persona: { select: { nombres: true, apellidos: true } },
+    },
+  },
 } as const;
 
 const PERSONA_FIELDS = [
@@ -52,7 +62,13 @@ export interface ConfirmacionValidationError {
 export function validateConfirmacionInput(
   body: unknown
 ): ConfirmacionValidationResult | ConfirmacionValidationError {
-  return safeParseBody(confirmacionBodySchema, body);
+  const parsed = safeParseBody(confirmacionBodySchema, body);
+  if (!parsed.ok) return parsed;
+
+  const roleCheck = validateConfirmacionRoleConflicts(parsed.data);
+  if (!roleCheck.ok) return roleCheck;
+
+  return parsed;
 }
 
 export function serializeConfirmacion(record: {
@@ -83,16 +99,14 @@ export async function assertConfirmacionReferencias(
     }
   }
 
-  const obispo = await db.ordenSacerdotal.findFirst({
-    where: {
-      id_parroquia: parishId,
-      numero_identidad: data.numero_identidad_obispo,
-    },
-    select: { numero_identidad: true },
-  });
-
-  if (!obispo) {
-    return `Obispo no encontrado: ${data.numero_identidad_obispo}`;
+  const obispoCheck = await findCleroActivo(
+    db,
+    parishId,
+    data.numero_identidad_obispo,
+    RANGOS_SACRAMENTO_OBISPO
+  );
+  if (!obispoCheck.ok) {
+    return obispoCheck.error;
   }
 
   return null;

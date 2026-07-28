@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { validateSacramentoFormClient } from '@/lib/sacramento-form-validation';
+import { cleroToSelectOption } from '@/lib/sacerdote';
 import {
   PersonaSelectField,
   SacerdoteSelectField,
@@ -42,12 +43,15 @@ function NuevaPrimeraComunionContent() {
       try {
         const [personasRes, sacerdotesRes, numeradorRes] = await Promise.all([
           fetch('/api/personas'),
-          fetch('/api/configuracion/sacerdotes'),
+          fetch('/api/configuracion/sacerdotes?tipo=sacerdote&activos=1'),
           fetch('/api/primera-comunion/numerador'),
         ]);
 
         if (personasRes.ok) setPersonas(await personasRes.json());
-        if (sacerdotesRes.ok) setSacerdotes(await sacerdotesRes.json());
+        if (sacerdotesRes.ok) {
+          const clero = await sacerdotesRes.json();
+          setSacerdotes(clero.map(cleroToSelectOption));
+        }
         if (numeradorRes.ok) setNumeracion(await numeradorRes.json());
       } catch (error) {
         logger.error('Error al cargar datos:', error);

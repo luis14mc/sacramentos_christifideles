@@ -11,12 +11,20 @@ import {
   SacramentoActionButtons,
   SacramentoSecretaryNotice,
 } from '@/components/sacramentos/SacramentoPermissions';
+import { nombreCleroFromRecord } from '@/lib/sacerdote';
 import { HeartIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface PersonaRef {
   numero_identidad: string;
   nombres: string;
   apellidos: string;
+}
+
+interface CleroRef {
+  numero_identidad: string;
+  persona?: PersonaRef;
+  nombres?: string;
+  apellidos?: string;
 }
 
 interface MatrimonioRecord {
@@ -27,7 +35,7 @@ interface MatrimonioRecord {
   numero_registro: string;
   esposo: PersonaRef;
   esposa: PersonaRef;
-  sacerdote: PersonaRef;
+  sacerdote: CleroRef;
 }
 
 function MatrimoniosPageContent() {
@@ -224,7 +232,10 @@ function MatrimoniosPageContent() {
                             </span>
                           </td>
                           <td>
-                            {r.sacerdote.nombres} {r.sacerdote.apellidos}
+                            {(() => {
+                              const s = nombreCleroFromRecord(r.sacerdote);
+                              return `${s.nombres} ${s.apellidos}`;
+                            })()}
                           </td>
                           <td>
                             <div className="flex justify-end">

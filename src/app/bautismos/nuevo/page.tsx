@@ -12,6 +12,7 @@ import {
   type SacerdoteOption,
 } from '@/components/sacramentos/PersonaSelectField';
 import { validateSacramentoFormClient } from '@/lib/sacramento-form-validation';
+import { cleroToSelectOption } from '@/lib/sacerdote';
 import { logger } from '@/lib/logger';
 import { ArrowLeftIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 
@@ -45,7 +46,7 @@ function NuevoBautismoContent() {
       try {
         const [personasRes, sacerdotesRes, numeradorRes] = await Promise.all([
           fetch('/api/personas'),
-          fetch('/api/configuracion/sacerdotes'),
+          fetch('/api/configuracion/sacerdotes?tipo=sacerdote&activos=1'),
           fetch('/api/bautismos/numerador'),
         ]);
 
@@ -53,7 +54,8 @@ function NuevoBautismoContent() {
           setPersonas(await personasRes.json());
         }
         if (sacerdotesRes.ok) {
-          setSacerdotes(await sacerdotesRes.json());
+          const clero = await sacerdotesRes.json();
+          setSacerdotes(clero.map(cleroToSelectOption));
         }
         if (numeradorRes.ok) {
           setNumeracion(await numeradorRes.json());

@@ -11,6 +11,7 @@ import {
   SacramentoActionButtons,
   SacramentoSecretaryNotice,
 } from '@/components/sacramentos/SacramentoPermissions';
+import { nombreCleroFromRecord } from '@/lib/sacerdote';
 import {
   ClipboardDocumentListIcon,
   MagnifyingGlassIcon,
@@ -22,6 +23,13 @@ interface PersonaRef {
   apellidos: string;
 }
 
+interface CleroRef {
+  numero_identidad: string;
+  persona?: PersonaRef;
+  nombres?: string;
+  apellidos?: string;
+}
+
 interface ConfirmacionRecord {
   id_confirmacion: string;
   fecha_confirmacion: string;
@@ -29,7 +37,7 @@ interface ConfirmacionRecord {
   numero_acta: string;
   numero_registro: string;
   confirmado: PersonaRef;
-  obispo: PersonaRef;
+  obispo: CleroRef;
 }
 
 function ConfirmacionesPageContent() {
@@ -215,7 +223,10 @@ function ConfirmacionesPageContent() {
                             </span>
                           </td>
                           <td>
-                            {r.obispo.nombres} {r.obispo.apellidos}
+                            {(() => {
+                              const s = nombreCleroFromRecord(r.obispo);
+                              return `${s.nombres} ${s.apellidos}`;
+                            })()}
                           </td>
                           <td>
                             <div className="flex justify-end">

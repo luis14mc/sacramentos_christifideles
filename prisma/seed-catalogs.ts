@@ -93,11 +93,10 @@ async function main() {
   // 4. Crear rangos sacerdotales
   console.log('👨‍💼 Creando rangos sacerdotales...');
   const rangos = [
-    { nombre: 'Obispo', desc: 'Obispo de la Diócesis' },
-    { nombre: 'Párroco', desc: 'Párroco de la Parroquia' },
-    { nombre: 'Vicario', desc: 'Vicario Parroquial' },
-    { nombre: 'Diácono', desc: 'Diácono Permanente' },
-    { nombre: 'Seminarista', desc: 'Seminarista en formación' }
+    { nombre: 'Obispo', desc: 'Obispo diocesano o auxiliar' },
+    { nombre: 'Presbítero', desc: 'Sacerdote con orden presbiteral' },
+    { nombre: 'Sacerdote', desc: 'Sacerdote presbítero' },
+    { nombre: 'Diácono', desc: 'Diácono permanente o transitorio' },
   ];
 
   for (const rango of rangos) {
