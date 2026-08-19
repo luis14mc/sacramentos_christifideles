@@ -9,11 +9,16 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const parishId = parseInt(session.user.parishId, 10);
+
     const personas = await prisma.persona.findMany({
+      where: {
+        id_parroquia: parishId
+      },
       include: {
         sector: {
           select: {
@@ -42,7 +47,6 @@ export async function GET() {
       ]
     });
 
-    // Convertir BigInt a string para serialización JSON
     const personasSerializadas = personas.map(persona => ({
       ...persona,
       id_sector_parroquial: persona.id_sector_parroquial.toString()
@@ -62,25 +66,23 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const parishId = parseInt(session.user.parishId, 10);
     const data = await req.json();
-    console.log('🔍 Datos recibidos completos:', JSON.stringify(data, null, 2));
 
-    // Validar datos obligatorios
     if (!data.numero_identidad || !data.nombres || !data.apellidos) {
       return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 });
     }
 
-    // Crear la persona
     const nuevaPersona = await prisma.persona.create({
       data: {
         numero_identidad: data.numero_identidad,
-        id_parroquia: 3, // Usar ID válido de parroquia (Parroquia Cristo Resucitado)
+        id_parroquia: parishId,
         id_sector_parroquial: data.sector_id ? BigInt(data.sector_id) : BigInt(1),
-        id_orden_religiosa: 1, // ID válido (Diocesano)
+        id_orden_religiosa: 1,
         nombres: data.nombres,
         apellidos: data.apellidos,
         fecha_nacimiento: new Date(data.fecha_nacimiento),
@@ -118,9 +120,6 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    console.log('✅ Persona creada exitosamente');
-
-    // Serializar BigInt a string para la respuesta
     const personaSerializada = {
       ...nuevaPersona,
       numero_identidad: nuevaPersona.numero_identidad.toString(),
@@ -131,15 +130,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(personaSerializada, { status: 201 });
   } catch (error) {
-    console.error('❌ Error al crear persona:', error);
-    console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack');
-    
+    console.error('Error al crear persona:', error);
     return NextResponse.json(
-      { 
-        error: 'Error interno del servidor', 
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }
