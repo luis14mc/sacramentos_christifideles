@@ -5,40 +5,39 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
+async function getParishContext() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.parishId) return null;
 
-    if (!session) {
+  const parishId = parseInt(session.user.parishId, 10);
+  if (Number.isNaN(parishId)) return null;
+
+  return { session, parishId };
+}
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const context = await getParishContext();
+    if (!context) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
-    const numeroIdentidad = resolvedParams.id;
+    const { id: numeroIdentidad } = await params;
 
-    const persona = await prisma.persona.findFirst({
+    const persona = await prisma.persona.findUnique({
       where: {
-        numero_identidad: numeroIdentidad
+        id_parroquia_numero_identidad: {
+          id_parroquia: context.parishId,
+          numero_identidad: numeroIdentidad
+        }
       },
       include: {
-        sector: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        },
+        sector: { select: { nombre: true } },
+        orden_religiosa: { select: { nombre: true } },
         municipio_nacimiento: {
           select: {
             nombre_municipio: true,
-            departamento: {
-              select: {
-                nombre_departamento: true
-              }
-            }
+            departamento: { select: { nombre_departamento: true } }
           }
         }
       }
@@ -48,39 +47,31 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
 
-    // Serializar BigInt fields
-    const personaSerializada = {
+    return NextResponse.json({
       ...persona,
       id_sector_parroquial: persona.id_sector_parroquial?.toString(),
       id_orden_religiosa: persona.id_orden_religiosa?.toString()
-    };
-
-    return NextResponse.json(personaSerializada);
+    });
   } catch (error) {
     console.error('Error al obtener persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
+    const context = await getParishContext();
+    if (!context) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
-    const numeroIdentidad = resolvedParams.id;
+    const { id: numeroIdentidad } = await params;
     const data = await req.json();
 
     const personaActualizada = await prisma.persona.update({
       where: {
         id_parroquia_numero_identidad: {
-          id_parroquia: data.id_parroquia || 1,
+          id_parroquia: context.parishId,
           numero_identidad: numeroIdentidad
         }
       },
@@ -93,84 +84,62 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         telefono: data.telefono,
         email: data.email,
         direccion: data.direccion,
-        id_sector_parroquial: data.id_sector_parroquial ? parseInt(data.id_sector_parroquial) : undefined,
-        id_orden_religiosa: data.id_orden_religiosa ? parseInt(data.id_orden_religiosa) : undefined,
-        estado_vital: data.estado_vital ? parseInt(data.estado_vital) : undefined,
-        estado_activo_parroquia: data.estado_activo_parroquia ? parseInt(data.estado_activo_parroquia) : undefined,
+        id_sector_parroquial: data.id_sector_parroquial ? BigInt(data.id_sector_parroquial) : undefined,
+        id_orden_religiosa: data.id_orden_religiosa ? parseInt(data.id_orden_religiosa, 10) : undefined,
+        estado_vital: data.estado_vital !== undefined ? parseInt(data.estado_vital, 10) : undefined,
+        estado_activo_parroquia: data.estado_activo_parroquia !== undefined ? parseInt(data.estado_activo_parroquia, 10) : undefined,
         otra_orden_religiosa: data.otra_orden_religiosa,
         imagen: data.imagen
       },
       include: {
-        sector: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        },
+        sector: { select: { nombre: true } },
+        orden_religiosa: { select: { nombre: true } },
         municipio_nacimiento: {
           select: {
             nombre_municipio: true,
-            departamento: {
-              select: {
-                nombre_departamento: true
-              }
-            }
+            departamento: { select: { nombre_departamento: true } }
           }
         }
       }
     });
 
-    // Serializar BigInt fields
-    const personaSerializada = {
+    return NextResponse.json({
       ...personaActualizada,
       id_sector_parroquial: personaActualizada.id_sector_parroquial?.toString(),
       id_orden_religiosa: personaActualizada.id_orden_religiosa?.toString()
-    };
-
-    return NextResponse.json(personaSerializada);
+    });
   } catch (error) {
     console.error('Error al actualizar persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
+    const context = await getParishContext();
+    if (!context) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
-    const numeroIdentidad = resolvedParams.id;
+    const { id: numeroIdentidad } = await params;
 
-    // Primero buscar la persona para obtener su id_parroquia
-    const personaExistente = await prisma.persona.findFirst({
+    const personaExistente = await prisma.persona.findUnique({
       where: {
-        numero_identidad: numeroIdentidad
+        id_parroquia_numero_identidad: {
+          id_parroquia: context.parishId,
+          numero_identidad: numeroIdentidad
+        }
       }
     });
 
     if (!personaExistente) {
-      return NextResponse.json(
-        { error: 'Persona no encontrada' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
 
-    // Ahora eliminar con la clave compuesta correcta
     await prisma.persona.delete({
       where: {
         id_parroquia_numero_identidad: {
-          id_parroquia: personaExistente.id_parroquia,
+          id_parroquia: context.parishId,
           numero_identidad: numeroIdentidad
         }
       }
@@ -179,9 +148,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error al eliminar persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
