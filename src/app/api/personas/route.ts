@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import { hasPermission } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -13,52 +14,34 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(session.user.rol, 'canViewPersonas')) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
+
     const parishId = parseInt(session.user.parishId, 10);
 
     const personas = await prisma.persona.findMany({
-      where: {
-        id_parroquia: parishId
-      },
+      where: { id_parroquia: parishId },
       include: {
-        sector: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        },
+        sector: { select: { nombre: true } },
+        orden_religiosa: { select: { nombre: true } },
         municipio_nacimiento: {
           select: {
             nombre_municipio: true,
-            departamento: {
-              select: {
-                nombre_departamento: true
-              }
-            }
+            departamento: { select: { nombre_departamento: true } }
           }
         }
       },
-      orderBy: [
-        { apellidos: 'asc' },
-        { nombres: 'asc' }
-      ]
+      orderBy: [{ apellidos: 'asc' }, { nombres: 'asc' }]
     });
 
-    const personasSerializadas = personas.map(persona => ({
+    return NextResponse.json(personas.map(persona => ({
       ...persona,
       id_sector_parroquial: persona.id_sector_parroquial.toString()
-    }));
-
-    return NextResponse.json(personasSerializadas);
+    })));
   } catch (error) {
     console.error('Error al obtener personas:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -68,6 +51,10 @@ export async function POST(req: NextRequest) {
 
     if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    if (!hasPermission(session.user.rol, 'canManagePersonas')) {
+      return NextResponse.json({ error: 'No tienes permiso para crear personas' }, { status: 403 });
     }
 
     const parishId = parseInt(session.user.parishId, 10);
@@ -97,43 +84,26 @@ export async function POST(req: NextRequest) {
         imagen: null
       },
       include: {
-        sector: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        },
+        sector: { select: { nombre: true } },
+        orden_religiosa: { select: { nombre: true } },
         municipio_nacimiento: {
           select: {
             nombre_municipio: true,
-            departamento: {
-              select: {
-                nombre_departamento: true
-              }
-            }
+            departamento: { select: { nombre_departamento: true } }
           }
         }
       }
     });
 
-    const personaSerializada = {
+    return NextResponse.json({
       ...nuevaPersona,
       numero_identidad: nuevaPersona.numero_identidad.toString(),
       telefono: nuevaPersona.telefono ? nuevaPersona.telefono.toString() : null,
-      id_sector_parroquial: nuevaPersona.id_sector_parroquial ? nuevaPersona.id_sector_parroquial.toString() : null,
-      id_orden_religiosa: nuevaPersona.id_orden_religiosa ? nuevaPersona.id_orden_religiosa.toString() : null
-    };
-
-    return NextResponse.json(personaSerializada, { status: 201 });
+      id_sector_parroquial: nuevaPersona.id_sector_parroquial?.toString() || null,
+      id_orden_religiosa: nuevaPersona.id_orden_religiosa?.toString() || null
+    }, { status: 201 });
   } catch (error) {
     console.error('Error al crear persona:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
