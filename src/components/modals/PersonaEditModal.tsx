@@ -29,12 +29,15 @@ interface Props {
   onPersonaUpdated: () => void;
 }
 
+interface SectorOption { id_sector_parroquial: string | number; nombre: string; }
+interface OrdenOption { id_orden_religiosa: string | number; nombre: string; }
+
 export default function PersonaEditModal({ isOpen, onClose, personaId, onPersonaUpdated }: Props) {
   const [persona, setPersona] = useState<PersonaEditModal | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sectores, setSectores] = useState<any[]>([]);
-  const [ordenesReligiosas, setOrdenesReligiosas] = useState<any[]>([]);
+  const [sectores, setSectores] = useState<SectorOption[]>([]);
+  const [ordenesReligiosas, setOrdenesReligiosas] = useState<OrdenOption[]>([]);
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
