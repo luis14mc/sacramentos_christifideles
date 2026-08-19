@@ -1,4 +1,4 @@
-# ADR-001 — Identidad técnica de personas y ministros
+# ADR-001 — Persona como núcleo y DNI obligatorio
 
 **Estado:** Aceptado para ChristiFideles v1.0  
 **Fecha:** 2026-08-19  
@@ -6,65 +6,69 @@
 
 ## Contexto
 
-El modelo actual utiliza `numero_identidad` (DNI) como parte de la clave primaria de `Persona` y como clave primaria de `OrdenSacerdotal`. Los sacramentos dependen directamente de esos valores.
+ChristiFideles se basa en la entidad `Persona`. Ningún sacramento, grupo, relación familiar o registro parroquial funcional debe existir sin que las personas involucradas estén registradas previamente.
 
-Esto impide representar correctamente registros históricos donde el DNI no existe, no se conoce o nunca fue consignado en el libro sacramental. También acopla la identidad técnica del registro a un dato civil que puede ser corregido.
+Para la v1 se establece además que **no puede existir una Persona sin DNI**. El DNI es obligatorio y forma parte de la identidad de negocio del registro.
 
 ## Decisión
 
-1. `Persona` tendrá un identificador técnico `id_persona` (`BigInt`, autoincremental) como clave primaria.
-2. `numero_identidad` será un atributo opcional de negocio.
-3. Cuando exista DNI, será único dentro de la parroquia mediante `@@unique([id_parroquia, numero_identidad])`.
-4. Ninguna relación sacramental utilizará DNI como foreign key. Bautismo, Confirmación, Primera Comunión, Matrimonio y Defunción referenciarán `id_persona`.
-5. Padres, padrinos, madrinas y catequistas podrán ser opcionales cuando el registro histórico no contenga esa información.
-6. `OrdenSacerdotal` tendrá `id_sacerdote` como clave primaria y `numero_identidad` opcional.
-7. Los endpoints y rutas UI usarán IDs técnicos para consultar/editar. El DNI seguirá disponible como criterio de búsqueda.
-8. No se generarán DNIs ficticios para completar datos históricos.
+1. `Persona` es el centro y core funcional del sistema.
+2. `numero_identidad` (DNI) es obligatorio para crear una Persona.
+3. Se mantiene el identificador actual compuesto `@@id([id_parroquia, numero_identidad])` para la v1; no se introduce `id_persona` en este release.
+4. El DNI debe ser único dentro de cada parroquia por construcción de la clave compuesta.
+5. Ningún sacramento puede registrarse si la persona principal no existe previamente en `Persona`.
+6. Toda persona relacionada con un sacramento (padre, madre, padrino, madrina, catequista u otro rol que el modelo requiera) debe existir previamente en `Persona` cuando esa relación sea requerida por el proceso.
+7. Bautismo, Primera Comunión, Confirmación y Matrimonio continuarán referenciando Persona mediante `(id_parroquia, numero_identidad)`.
+8. La parroquia nunca se recibe como autorización desde el cliente; siempre proviene de la sesión autenticada.
+9. Las rutas del CRUD de Personas seguirán operando con el DNI dentro del tenant autenticado: `/api/personas/{numero_identidad}`.
+10. No se crearán Personas temporales, anónimas, sin DNI ni identificadores ficticios.
 
-## Datos mínimos para persona histórica
+## Flujo funcional obligatorio
 
-Para v1, una persona podrá existir con:
+```text
+Persona existe con DNI
+        ↓
+Validación de parroquia
+        ↓
+Puede participar en sacramentos
+        ↓
+Bautismo / Comunión / Confirmación / Matrimonio / Defunción
+```
 
-- parroquia;
-- nombres;
-- apellidos.
+Si una persona no existe en `Persona`, el flujo debe detenerse y llevar primero al registro de Persona.
 
-Los siguientes campos podrán ser desconocidos/opcionales:
+## Regla para UI y API
 
-- DNI;
-- fecha de nacimiento;
-- municipio de nacimiento;
-- sexo;
-- teléfono;
-- dirección;
-- sector parroquial;
-- orden religiosa.
+- Los selectores de bautizado, confirmado, cónyuges, padres, padrinos, madrinas y catequistas deben buscar Personas existentes.
+- La API sacramental debe volver a validar que cada DNI referenciado existe en la misma parroquia antes de crear el registro.
+- La UI no sustituye esta validación del servidor.
+- No se permitirá escribir manualmente un DNI en un sacramento para saltarse el catálogo de Personas.
 
 ## Grupos y roles parroquiales
 
-- `GrupoParroquial` será tenant-scoped: pertenece a una parroquia.
-- `RolParroquial` se mantiene como catálogo global en v1 (`Coordinador`, `Secretario`, `Miembro`, etc.).
-- La membresía debe conservar el `id_parroquia` para asegurar aislamiento y consistencia.
+- `GrupoParroquial` será tenant-scoped y pertenecerá a una parroquia.
+- `RolParroquial` se mantiene como catálogo global en v1.
+- Toda membresía requiere una Persona existente.
 
 ## Defunciones
 
-Se incorpora `Defuncion` como módulo administrativo parroquial de v1, aunque no sea un sacramento. Debe soportar persona, fechas de defunción/exequias, ministro opcional, datos de libro/folio/registro, lugar de sepultura y observaciones.
+Se mantiene `Defuncion` dentro del alcance v1 como módulo administrativo parroquial. La persona fallecida deberá existir previamente en `Persona`, identificada por su DNI y parroquia.
 
 ## Consecuencias
 
 ### Positivas
 
-- Soporta libros históricos sin inventar información.
-- Permite corregir DNI sin romper relaciones.
-- Simplifica relaciones futuras e importaciones masivas.
-- Permite búsqueda por DNI sin convertirlo en identidad técnica.
+- Una sola fuente de verdad para todos los datos personales.
+- Evita duplicidad de nombres y participantes escritos libremente dentro de sacramentos.
+- Simplifica búsqueda integral por DNI.
+- Reduce el refactor necesario para llegar a producción en ocho semanas.
+- Mantiene compatibilidad con el CRUD de Personas ya construido.
 
-### Costos
+### Restricciones aceptadas
 
-- Requiere migrar Prisma y el CRUD actual de Personas.
-- Los componentes que hoy utilizan `numero_identidad` como ID deben pasar a `id_persona`.
-- Debe existir una migración controlada de datos de desarrollo existentes antes de aplicar el cambio en entornos persistentes.
+- No se registrarán partidas de personas para las cuales no exista DNI dentro del alcance de v1.
+- El alta de Persona es un prerrequisito obligatorio de cualquier proceso sacramental.
 
 ## Regla para agentes IA
 
-A partir de esta ADR queda prohibido introducir nuevas foreign keys basadas en `numero_identidad`. Todo nuevo módulo debe referenciar IDs técnicos y obtener `id_parroquia` exclusivamente del contexto autenticado cuando aplique.
+Ningún agente debe crear un módulo que permita registrar participantes sacramentales fuera de `Persona`. Todo flujo nuevo debe comenzar validando Persona + DNI + `id_parroquia` del contexto autenticado.
