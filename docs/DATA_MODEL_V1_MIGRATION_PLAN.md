@@ -1,156 +1,121 @@
-# Plan de migración del modelo de datos — ChristiFideles v1.0
+# Reglas del modelo de datos — ChristiFideles v1.0
 
 Fecha: 2026-08-19
 
 ## Objetivo
 
-Eliminar la dependencia técnica del DNI y preparar la base para registros sacramentales históricos, multi-parroquia y el módulo de defunciones.
+Consolidar `Persona` como núcleo obligatorio de ChristiFideles, conservar DNI obligatorio y preparar los módulos sacramentales sin introducir un refactor innecesario de claves durante la ventana de ocho semanas.
 
-## Fase A — Persona
+## Persona — regla central
 
-### Modelo objetivo
-
-- `id_persona BigInt @id @default(autoincrement())`
-- `id_parroquia Int`
-- `numero_identidad String?`
-- `nombres String`
-- `apellidos String`
-- `fecha_nacimiento DateTime?`
-- `lugar_nacimiento String?`
-- `sexo String?`
-- `telefono String?`
-- `id_sector_parroquial BigInt?`
-- `id_orden_religiosa Int?`
-
-Constraint de negocio:
+Para v1 se mantiene el modelo actual:
 
 ```prisma
-@@unique([id_parroquia, numero_identidad])
-@@unique([id_persona, id_parroquia])
-@@index([id_parroquia, apellidos, nombres])
+model Persona {
+  numero_identidad String
+  id_parroquia     Int
+  // ...
+
+  @@id([id_parroquia, numero_identidad])
+}
 ```
 
-El DNI deja de ser clave primaria y nunca se generará un DNI ficticio.
+Reglas:
 
-## Fase B — Ministros
+- No existe Persona sin DNI.
+- DNI es obligatorio en API y UI.
+- La parroquia proviene exclusivamente de la sesión autenticada.
+- No se introduce `id_persona` en v1.
+- No se generan DNIs temporales o ficticios.
+- El CRUD mantiene `/api/personas/{numero_identidad}` dentro del tenant autenticado.
 
-`OrdenSacerdotal` pasa a tener:
+## Persona primero, módulo después
 
-- `id_sacerdote BigInt @id @default(autoincrement())`
-- `numero_identidad String?`
+Antes de registrar cualquier operación funcional se debe validar Persona.
 
-Los sacramentos apuntarán a `id_sacerdote`, no al DNI. El ministro podrá ser opcional para partidas antiguas.
+```text
+Buscar Persona por DNI
+        ↓
+¿Existe en la parroquia?
+   ├─ No → registrar Persona primero
+   └─ Sí → continuar
+                    ↓
+             módulo funcional
+```
 
-## Fase C — Relaciones sacramentales
+Este patrón será obligatorio para Bautismo, Primera Comunión, Confirmación, Matrimonio, Defunción y membresías de grupos.
+
+## Sacramentos
 
 ### Bautismo
 
-Obligatorio:
-- bautizado
-- parroquia
-- fecha de bautismo
-- referencia registral disponible
-
-Opcional:
-- madre
-- padre
-- padrino
-- madrina
-- catequista
-- sacerdote
-- notas
-
-Todas las personas se referencian por `id_persona`.
+El bautizado debe existir en `Persona`. Padres, padrinos, madrinas y catequista deberán seleccionarse desde Personas existentes cuando el proceso los requiera. La API vuelve a validar todos los DNIs recibidos contra la misma parroquia.
 
 ### Primera Comunión
 
-Persona principal obligatoria; padre, madre, catequista y sacerdote opcionales.
+La persona debe existir previamente. Cualquier padre, madre o catequista asociado debe provenir igualmente de `Persona`.
 
 ### Confirmación
 
-Persona principal obligatoria; padre, madre, padrinos, catequista y obispo opcionales.
+El confirmado debe existir previamente. Padres, padrinos, madrinas y catequista se resuelven desde `Persona`.
 
 ### Matrimonio
 
-Esposo y esposa obligatorios; padres, padrinos y sacerdote opcionales.
+Esposo y esposa deben existir previamente en `Persona`. Los familiares y padrinos asociados deben resolverse desde Personas existentes.
 
-## Fase D — Defunciones
+## Defunciones
 
-Nuevo modelo `Defuncion`:
+Se incorpora `Defuncion` a v1. La persona fallecida debe existir previamente en `Persona`.
+
+Campos iniciales previstos:
 
 - `id_defuncion`
 - `id_parroquia`
-- `id_persona`
-- `id_sacerdote?`
+- `numero_identidad_persona`
+- `numero_identidad_sacerdote` cuando aplique
 - `fecha_defuncion`
-- `fecha_exequias?`
-- `lugar_sepultura?`
-- `numero_libro?`
-- `numero_folio?`
-- `numero_pagina?`
-- `numero_registro?`
-- `observaciones?`
-- timestamps
+- `fecha_exequias`
+- `lugar_sepultura`
+- `numero_libro`
+- `numero_folio`
+- `numero_pagina`
+- `numero_registro`
+- `observaciones`
 
-## Fase E — Grupos
+## Ministros
 
-`GrupoParroquial` pasa a pertenecer a una parroquia (`id_parroquia`).
+Para v1 no se hará un refactor general de `OrdenSacerdotal` a `id_sacerdote`. Se conserva el modelo existente mientras sea compatible con las reglas funcionales y el CI. Cualquier cambio posterior debe justificarse por una necesidad real del piloto.
 
-`RolParroquial` se mantiene como catálogo global en v1.
+## Grupos
 
-`TrPersonaGrupoRol` referenciará `id_persona`, no DNI, y conservará `id_parroquia` para aislamiento.
+- `GrupoParroquial` debe pertenecer a una parroquia (`id_parroquia`).
+- `RolParroquial` permanece global en v1.
+- La membresía siempre apunta a una Persona existente en la misma parroquia.
 
-## Fase F — CRUD Personas
+## Validaciones obligatorias del servidor
 
-El frontend y API deben migrar de:
+Una API sacramental no puede confiar únicamente en el selector de frontend. Antes de insertar debe comprobar:
 
-```text
-/api/personas/{numero_identidad}
-```
-
-a:
-
-```text
-/api/personas/{id_persona}
-```
-
-La búsqueda por DNI se mantiene como filtro, no como identificador técnico.
-
-### Reglas de formulario
-
-Solo nombres y apellidos son obligatorios a nivel de persona histórica, además de la parroquia tomada de la sesión.
-
-DNI, fecha de nacimiento, municipio, sexo, teléfono, sector y orden religiosa pueden quedar vacíos.
-
-## Estrategia para datos existentes
-
-No se aplicará un `db push --force-reset` sobre una base persistente.
-
-Orden recomendado:
-
-1. Crear columnas `id_persona` / `id_sacerdote` y poblar IDs.
-2. Agregar nuevas FKs en tablas relacionadas.
-3. Copiar referencias desde DNI a los nuevos IDs mediante JOIN por parroquia.
-4. Validar conteos y referencias huérfanas.
-5. Cambiar PK/constraints.
-6. Eliminar las FKs antiguas basadas en DNI cuando la aplicación ya opere por IDs.
-7. Ejecutar pruebas de regresión.
-8. Tomar backup antes de aplicar la migración en staging o producción.
+1. sesión autenticada;
+2. permiso RBAC correspondiente;
+3. `id_parroquia` desde sesión;
+4. existencia de cada Persona referenciada mediante `(id_parroquia, numero_identidad)`;
+5. consistencia de referencias registrales;
+6. ausencia de acceso cruzado entre parroquias.
 
 ## Gates obligatorios
 
-El PR no puede mergearse si falla cualquiera de estos controles:
-
 - `npx prisma validate`
 - `npx prisma generate`
-- `npx prisma db push` contra PostgreSQL vacío de CI
+- PostgreSQL CI
 - `npm run lint`
 - `npm run build`
-- CRUD Persona con persona con DNI
-- CRUD Persona sin DNI
+- no permite crear Persona sin DNI
+- no permite sacramento con persona inexistente
+- no permite usar Persona de otra parroquia
 - aislamiento Parroquia A/B
-- no existen nuevas FKs de sacramentos basadas en `numero_identidad`
+- RBAC por operación
 
 ## Definition of Done
 
-El modelo de datos v1 se considera terminado cuando una persona histórica sin DNI puede ser creada, consultada y vinculada a un sacramento sin valores ficticios, y la misma operación permanece aislada por parroquia.
+El modelo base de v1 se considera listo cuando Persona funciona como fuente única de verdad y ninguna entidad funcional puede saltarse ese núcleo para crear participantes o registros sacramentales.
