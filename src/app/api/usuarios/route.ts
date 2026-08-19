@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { hasPermission } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -49,17 +50,17 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(context.session.user.rol, 'canViewUsuarios')) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
+
     const usuarios = await prisma.usuario.findMany({
-      where: {
-        id_parroquia: context.parishId
-      },
+      where: { id_parroquia: context.parishId },
       include: {
         parroquia: { select: { id_parroquia: true, nombre: true } },
         rol: { select: { nombre: true } }
       },
-      orderBy: {
-        fecha_creacion: 'desc'
-      }
+      orderBy: { fecha_creacion: 'desc' }
     });
 
     return NextResponse.json(usuarios.map(formatUsuario));
@@ -76,27 +77,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(context.session.user.rol, 'canManageUsuarios')) {
+      return NextResponse.json({ error: 'No tienes permiso para crear usuarios' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { nombre, email, telefono, password, rol, activo } = body;
 
     if (!nombre || !email || !password || !rol) {
-      return NextResponse.json({
-        error: 'Datos requeridos: nombre, email, password, rol'
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Datos requeridos: nombre, email, password, rol' }, { status: 400 });
     }
 
-    const existingUser = await prisma.usuario.findFirst({
-      where: { email }
-    });
-
+    const existingUser = await prisma.usuario.findFirst({ where: { email } });
     if (existingUser) {
       return NextResponse.json({ error: 'Ya existe un usuario con este email' }, { status: 409 });
     }
 
-    const rolData = await prisma.rolUsuario.findFirst({
-      where: { nombre: rol }
-    });
-
+    const rolData = await prisma.rolUsuario.findFirst({ where: { nombre: rol } });
     if (!rolData) {
       return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
     }
@@ -134,6 +131,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(context.session.user.rol, 'canManageUsuarios')) {
+      return NextResponse.json({ error: 'No tienes permiso para editar usuarios' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { id, nombre, email, telefono, rol, activo, password } = body;
 
@@ -142,10 +143,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const existingUser = await prisma.usuario.findFirst({
-      where: {
-        id_usuario: BigInt(id),
-        id_parroquia: context.parishId
-      }
+      where: { id_usuario: BigInt(id), id_parroquia: context.parishId }
     });
 
     if (!existingUser) {
@@ -153,16 +151,11 @@ export async function PUT(req: NextRequest) {
     }
 
     const updateData: Record<string, unknown> = {};
-
     if (nombre !== undefined) updateData.nombre = nombre;
     if (email !== undefined) {
       const emailInUse = await prisma.usuario.findFirst({
-        where: {
-          email,
-          id_usuario: { not: BigInt(id) }
-        }
+        where: { email, id_usuario: { not: BigInt(id) } }
       });
-
       if (emailInUse) {
         return NextResponse.json({ error: 'El email ya está en uso por otro usuario' }, { status: 409 });
       }
@@ -170,20 +163,15 @@ export async function PUT(req: NextRequest) {
     }
     if (telefono !== undefined) updateData.telefono = telefono;
     if (rol !== undefined) {
-      const rolData = await prisma.rolUsuario.findFirst({
-        where: { nombre: rol }
-      });
-
+      const rolData = await prisma.rolUsuario.findFirst({ where: { nombre: rol } });
       if (!rolData) {
         return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
       }
       updateData.id_rol = rolData.id_rol;
     }
     if (activo !== undefined) updateData.estado = activo ? 1 : 0;
-
     if (password && password.trim() !== '') {
-      const hashedPassword = await bcrypt.hash(password, 12);
-      updateData.contrasena = Buffer.from(hashedPassword);
+      updateData.contrasena = Buffer.from(await bcrypt.hash(password, 12));
     }
 
     const usuarioActualizado = await prisma.usuario.update({
@@ -209,6 +197,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(context.session.user.rol, 'canManageUsuarios')) {
+      return NextResponse.json({ error: 'No tienes permiso para eliminar usuarios' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -217,10 +209,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const existingUser = await prisma.usuario.findFirst({
-      where: {
-        id_usuario: BigInt(id),
-        id_parroquia: context.parishId
-      }
+      where: { id_usuario: BigInt(id), id_parroquia: context.parishId }
     });
 
     if (!existingUser) {
@@ -231,10 +220,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'No puedes eliminar tu propio usuario' }, { status: 400 });
     }
 
-    await prisma.usuario.delete({
-      where: { id_usuario: BigInt(id) }
-    });
-
+    await prisma.usuario.delete({ where: { id_usuario: BigInt(id) } });
     return NextResponse.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
     console.error('Error deleting usuario:', error);
