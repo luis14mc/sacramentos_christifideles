@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import { hasPermission } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const context = await getParishContext();
     if (!context) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    if (!hasPermission(context.session.user.rol, 'canViewPersonas')) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 
     const { id: numeroIdentidad } = await params;
@@ -63,6 +68,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const context = await getParishContext();
     if (!context) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    if (!hasPermission(context.session.user.rol, 'canManagePersonas')) {
+      return NextResponse.json({ error: 'No tienes permiso para editar personas' }, { status: 403 });
     }
 
     const { id: numeroIdentidad } = await params;
@@ -119,6 +128,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     const context = await getParishContext();
     if (!context) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    if (!hasPermission(context.session.user.rol, 'canManagePersonas')) {
+      return NextResponse.json({ error: 'No tienes permiso para eliminar personas' }, { status: 403 });
     }
 
     const { id: numeroIdentidad } = await params;
