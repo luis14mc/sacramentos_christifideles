@@ -72,7 +72,7 @@ export default function DashboardPage() {
       if (!session?.user?.id) return;
       
       try {
-        const response = await fetch(`/api/dashboard?userId=${session.user.id}`);
+        const response = await fetch('/api/dashboard');
         if (response.ok) {
           const data = await response.json();
           setParroquiaData(data.parroquiaData);

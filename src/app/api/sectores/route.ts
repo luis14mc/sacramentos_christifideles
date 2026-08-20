@@ -1,58 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { hasPermission } from '@/lib/permissions';
 
-const prisma = new PrismaClient();
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const municipio = searchParams.get('municipio');
-
-    console.log('🔍 API Sectores - Municipio solicitado:', municipio);
-
-    let sectores;
-
-    if (municipio) {
-      // Filtrar sectores por municipio a través de las parroquias
-      sectores = await prisma.sectorParroquial.findMany({
-        where: {
-          parroquia: {
-            ubicacion: municipio
-          }
-        },
-        orderBy: {
-          nombre: 'asc'
-        }
-      });
-      console.log(`🔍 API Sectores - Filtrados para municipio ${municipio}:`, sectores.length);
-    } else {
-      // Devolver todos los sectores si no se especifica municipio
-      sectores = await prisma.sectorParroquial.findMany({
-        orderBy: {
-          nombre: 'asc'
-        }
-      });
-      console.log('🔍 API Sectores - Todos los sectores:', sectores.length);
+    if (
+      !hasPermission(session.user.rol, 'canViewPersonas') &&
+      !hasPermission(session.user.rol, 'canViewSacramentos') &&
+      !hasPermission(session.user.rol, 'canViewConfiguracion')
+    ) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 
-    console.log('🔍 API Sectores - Primeros 3:', sectores.slice(0, 3).map(s => s.nombre));
+    const parishId = parseInt(session.user.parishId, 10);
+    if (Number.isNaN(parishId)) {
+      return NextResponse.json({ error: 'Contexto de parroquia inválido' }, { status: 401 });
+    }
 
-    // Convertir BigInt a string para la serialización JSON
+    const sectores = await prisma.sectorParroquial.findMany({
+      where: {
+        id_parroquia: parishId
+      },
+      orderBy: {
+        nombre: 'asc'
+      }
+    });
+
     const sectoresSerializados = sectores.map(sector => ({
       ...sector,
-      id_sector_parroquial: sector.id_sector_parroquial.toString(),
-      id_parroquia: sector.id_parroquia
+      id_sector_parroquial: sector.id_sector_parroquial.toString()
     }));
-
-    console.log('🔍 API Sectores - Retornando:', sectoresSerializados.length, 'sectores');
 
     return NextResponse.json(sectoresSerializados);
   } catch (error) {

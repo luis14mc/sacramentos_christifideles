@@ -2,34 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import { hasPermission } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(session.user.rol, 'canViewConfiguracion')) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
+
+    const parishId = parseInt(session.user.parishId, 10);
+
     const sacerdotes = await prisma.ordenSacerdotal.findMany({
+      where: { id_parroquia: parishId },
       include: {
-        rango: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        },
-        parroquia: {
-          select: {
-            nombre: true
-          }
-        }
+        rango: { select: { nombre: true } },
+        orden_religiosa: { select: { nombre: true } },
+        parroquia: { select: { nombre: true } }
       },
       orderBy: [
         { es_parroco: 'desc' },
@@ -41,10 +37,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(sacerdotes);
   } catch (error) {
     console.error('Error al obtener sacerdotes:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -52,10 +45,15 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    if (!hasPermission(session.user.rol, 'canManageConfiguracion')) {
+      return NextResponse.json({ error: 'No tienes permiso para modificar configuración' }, { status: 403 });
+    }
+
+    const parishId = parseInt(session.user.parishId, 10);
     const data = await req.json();
 
     const nuevoSacerdote = await prisma.ordenSacerdotal.create({
@@ -64,7 +62,7 @@ export async function POST(req: NextRequest) {
         nombres: data.nombres,
         apellidos: data.apellidos,
         id_rango_sacerdotal: data.id_rango_sacerdotal,
-        id_parroquia: data.id_parroquia,
+        id_parroquia: parishId,
         id_orden_religiosa: data.id_orden_religiosa,
         fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : null,
         lugar_nacimiento: data.lugar_nacimiento,
@@ -76,25 +74,14 @@ export async function POST(req: NextRequest) {
         imagen: data.imagen
       },
       include: {
-        rango: {
-          select: {
-            nombre: true
-          }
-        },
-        orden_religiosa: {
-          select: {
-            nombre: true
-          }
-        }
+        rango: { select: { nombre: true } },
+        orden_religiosa: { select: { nombre: true } }
       }
     });
 
     return NextResponse.json(nuevoSacerdote, { status: 201 });
   } catch (error) {
     console.error('Error al crear sacerdote:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

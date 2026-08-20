@@ -1,12 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-export async function getParroquiaData(userId: string) {
+export async function getParroquiaData(userId: string, parishId: number) {
   try {
-    const user = await prisma.usuario.findUnique({
+    const user = await prisma.usuario.findFirst({
       where: {
-        id_usuario: BigInt(userId)
+        id_usuario: BigInt(userId),
+        id_parroquia: parishId
       },
       include: {
         parroquia: {
@@ -61,30 +60,13 @@ export async function getDashboardStats(parroquiaId: number) {
       totalUsuarios,
       usuariosActivos
     ] = await Promise.all([
-      prisma.persona.count({
-        where: { id_parroquia: parroquiaId }
-      }),
-      prisma.bautismo.count({
-        where: { id_parroquia: parroquiaId }
-      }),
-      prisma.primeraComunion.count({
-        where: { id_parroquia: parroquiaId }
-      }),
-      prisma.confirmacion.count({
-        where: { id_parroquia: parroquiaId }
-      }),
-      prisma.matrimonio.count({
-        where: { id_parroquia: parroquiaId }
-      }),
-      prisma.usuario.count({
-        where: { id_parroquia: parroquiaId }
-      }),
-      prisma.usuario.count({
-        where: { 
-          id_parroquia: parroquiaId,
-          estado: 1
-        }
-      })
+      prisma.persona.count({ where: { id_parroquia: parroquiaId } }),
+      prisma.bautismo.count({ where: { id_parroquia: parroquiaId } }),
+      prisma.primeraComunion.count({ where: { id_parroquia: parroquiaId } }),
+      prisma.confirmacion.count({ where: { id_parroquia: parroquiaId } }),
+      prisma.matrimonio.count({ where: { id_parroquia: parroquiaId } }),
+      prisma.usuario.count({ where: { id_parroquia: parroquiaId } }),
+      prisma.usuario.count({ where: { id_parroquia: parroquiaId, estado: 1 } })
     ]);
 
     return {
@@ -98,14 +80,6 @@ export async function getDashboardStats(parroquiaId: number) {
     };
   } catch (error) {
     console.error('Error getting dashboard stats:', error);
-    return {
-      totalPersonas: 0,
-      totalBautismos: 0,
-      totalPrimerasComuniones: 0,
-      totalConfirmaciones: 0,
-      totalMatrimonios: 0,
-      totalUsuarios: 0,
-      usuariosActivos: 0
-    };
+    throw error;
   }
 }

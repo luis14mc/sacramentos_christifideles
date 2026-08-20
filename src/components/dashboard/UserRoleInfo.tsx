@@ -17,7 +17,7 @@ export default function UserRoleInfo() {
     return null;
   }
 
-  const user = session.user as any;
+  const user = session.user as { name?: string | null; email?: string | null };
 
   const permissionChecks = [
     { label: 'Ver Dashboard', key: 'canViewDashboard' as const },

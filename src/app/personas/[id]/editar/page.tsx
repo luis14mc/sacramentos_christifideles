@@ -24,6 +24,9 @@ interface PersonaEditar {
   id_orden_religiosa: string;
 }
 
+interface SectorOption { id_sector_parroquial: string | number; nombre: string; }
+interface OrdenOption { id_orden_religiosa: string | number; nombre: string; }
+
 export default function EditarPersona() {
   const router = useRouter();
   const params = useParams();
@@ -32,8 +35,8 @@ export default function EditarPersona() {
   const [persona, setPersona] = useState<PersonaEditar | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sectores, setSectores] = useState<any[]>([]);
-  const [ordenesReligiosas, setOrdenesReligiosas] = useState<any[]>([]);
+  const [sectores, setSectores] = useState<SectorOption[]>([]);
+  const [ordenesReligiosas, setOrdenesReligiosas] = useState<OrdenOption[]>([]);
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -359,7 +362,7 @@ export default function EditarPersona() {
                     onChange={handleInputChange}
                   >
                     <option value="">Seleccionar sector...</option>
-                    {sectores.map((sector: any) => (
+                    {sectores.map((sector) => (
                       <option key={sector.id_sector_parroquial} value={sector.id_sector_parroquial}>
                         {sector.nombre}
                       </option>
@@ -378,7 +381,7 @@ export default function EditarPersona() {
                     onChange={handleInputChange}
                   >
                     <option value="">Seleccionar orden...</option>
-                    {ordenesReligiosas.map((orden: any) => (
+                    {ordenesReligiosas.map((orden) => (
                       <option key={orden.id_orden_religiosa} value={orden.id_orden_religiosa}>
                         {orden.nombre}
                       </option>

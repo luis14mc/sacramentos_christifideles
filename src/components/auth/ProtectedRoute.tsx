@@ -91,11 +91,11 @@ export default function ProtectedRoute({
 
 // HOC para facilitar el uso
 export function withPermissions(
-  WrappedComponent: React.ComponentType<any>, 
+  WrappedComponent: React.ComponentType<Record<string, unknown>>, 
   requiredPermission?: keyof UserPermissions,
   requiredRoles?: string[]
 ) {
-  return function ProtectedComponent(props: any) {
+  return function ProtectedComponent(props: Record<string, unknown>) {
     return (
       <ProtectedRoute 
         requiredPermission={requiredPermission} 

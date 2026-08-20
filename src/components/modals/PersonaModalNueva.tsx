@@ -7,8 +7,8 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 interface PersonaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (data: any) => void;
-  persona?: any;
+  onSuccess: (data: unknown) => void;
+  persona?: unknown;
 }
 
 interface FormData {
@@ -41,13 +41,17 @@ const initialFormData: FormData = {
   sector_id: null,
 };
 
+interface DepartamentoOption { codigo_departamento: string | number; nombre_departamento: string; }
+interface MunicipioOption { codigo_municipio: string | number; nombre_municipio: string; }
+interface SectorOption { id_sector_parroquial: string | number; nombre: string; }
+
 export default function PersonaModal({ isOpen, onClose, onSuccess }: PersonaModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
-  const [departamentos, setDepartamentos] = useState<any[]>([]);
-  const [municipios, setMunicipios] = useState<any[]>([]);
-  const [sectores, setSectores] = useState<any[]>([]);
+  const [departamentos, setDepartamentos] = useState<DepartamentoOption[]>([]);
+  const [municipios, setMunicipios] = useState<MunicipioOption[]>([]);
+  const [sectores, setSectores] = useState<SectorOption[]>([]);
 
   const steps = [
     { id: 1, title: 'Información Personal' },
