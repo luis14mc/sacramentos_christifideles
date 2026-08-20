@@ -46,9 +46,10 @@ Si una persona no existe en `Persona`, el flujo debe detenerse y llevar primero 
 
 ## Grupos y roles parroquiales
 
-- `GrupoParroquial` será tenant-scoped y pertenecerá a una parroquia.
+- `GrupoParroquial` es un catálogo **global** en v1 (sin `id_parroquia`), conforme al SQL v3 y a la matriz de concordancia. No se le añade `id_parroquia` en v1.
 - `RolParroquial` se mantiene como catálogo global en v1.
-- Toda membresía requiere una Persona existente.
+- El aislamiento por parroquia se aplica en la membresía `TrPersonaGrupoRol`, que conserva `id_parroquia` y FK compuesta hacia Persona.
+- Toda membresía requiere una Persona existente en la misma parroquia.
 
 ## Defunciones
 

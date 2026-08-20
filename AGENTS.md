@@ -32,8 +32,8 @@ Llevar ChristiFideles a una primera versión productiva utilizable por una secre
 8. No usar `prisma db push` como mecanismo normal de producción. Para producción usar migraciones versionadas y revisadas.
 9. No borrar físicamente información sacramental desde UI salvo decisión funcional explícita. Preferir estado, anulación o trazabilidad.
 10. Toda modificación de registros sacramentales debe generar auditoría suficiente para reconstruir quién cambió qué y cuándo.
-11. Los cambios de esquema deben incluir análisis de compatibilidad con datos históricos incompletos.
-12. No asumir que toda persona histórica tiene DNI, teléfono, email, sector, orden religiosa o datos completos.
+11. En ChristiFidelis v1 no puede existir `Persona` sin DNI. `numero_identidad` es obligatorio y forma parte de la PK compuesta `(id_parroquia, numero_identidad)`. `Persona` es el core: ningún módulo puede saltárselo y todos los participantes sacramentales requeridos deben existir previamente en `Persona`, dentro de la misma parroquia.
+12. Reglas obligatorias para agentes IA sobre el modelo de datos: no introducir `id_persona`; no hacer el DNI opcional; no generar DNIs temporales, ficticios ni placeholders; no introducir `id_sacerdote` (los ministros se referencian por FK compuesta `(id_parroquia, numero_identidad)`). `docs/christi_fidelis_bdd_pg_v3.sql` es la fuente funcional de verdad y Prisma debe alinearse con él.
 13. No duplicar personas sin antes aplicar búsqueda por identidad y búsqueda aproximada por nombre/fecha.
 14. Toda funcionalidad nueva debe incluir criterios de aceptación y pruebas mínimas.
 15. Ningún cambio se considera terminado si rompe `npm run build` o `npm run lint`.
