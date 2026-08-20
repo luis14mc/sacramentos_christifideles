@@ -49,7 +49,7 @@ export const navigationConfig: NavigationItem[] = [
   },
   { 
     name: 'Primera Comunión', 
-    href: '/primera-comunion', 
+    href: '/primeras-comuniones',
     icon: HeartIcon,
     requiredPermission: 'canViewSacramentos'
   },
