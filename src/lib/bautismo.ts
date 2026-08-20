@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { validarPersonasTenant, validarMinistroTenant } from '@/lib/sacramentos';
 
 // Roles que deben existir como Persona dentro de la MISMA parroquia.
 export const ROLES_PERSONA = [
@@ -106,33 +106,12 @@ export async function validarReferenciasTenant(
   parishId: number,
   input: BautismoInput
 ): Promise<string | null> {
-  const dnis = ROLES_PERSONA.map(([field]) => input[field] as string);
-  const encontradas = await prisma.persona.findMany({
-    where: { id_parroquia: parishId, numero_identidad: { in: dnis } },
-    select: { numero_identidad: true },
-  });
-  const set = new Set(encontradas.map((p) => p.numero_identidad));
-  for (const [field, label] of ROLES_PERSONA) {
-    const dni = input[field] as string;
-    if (!set.has(dni)) {
-      return `El/La ${label} (DNI ${dni}) no existe como Persona en tu parroquia. Regístrelo primero en el módulo Personas.`;
-    }
-  }
-
-  const sacerdote = await prisma.ordenSacerdotal.findUnique({
-    where: {
-      id_parroquia_numero_identidad: {
-        id_parroquia: parishId,
-        numero_identidad: input.numero_identidad_sacerdote,
-      },
-    },
-    select: { numero_identidad: true },
-  });
-  if (!sacerdote) {
-    return `El sacerdote (DNI ${input.numero_identidad_sacerdote}) no existe en tu parroquia.`;
-  }
-
-  return null;
+  const personas = await validarPersonasTenant(
+    parishId,
+    ROLES_PERSONA.map(([field, label]) => ({ label, dni: input[field] as string }))
+  );
+  if (personas) return personas;
+  return validarMinistroTenant(parishId, input.numero_identidad_sacerdote, 'sacerdote');
 }
 
 export const bautismoInclude = {
