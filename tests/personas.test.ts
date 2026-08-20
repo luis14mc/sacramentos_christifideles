@@ -44,6 +44,10 @@ function makeReq(body: unknown): NextRequest {
   }) as unknown as NextRequest;
 }
 
+function listReq(query = ''): NextRequest {
+  return new Request(`http://test.local/api/personas${query}`) as unknown as NextRequest;
+}
+
 function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
 }
@@ -157,6 +161,12 @@ describe('CREATE /api/personas', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rechaza Persona sin orden religiosa explícita -> 400', async () => {
+    setSession(parishA);
+    const res = await createPersona(makeReq(validBody('A1005', sectorA, { id_orden_religiosa: '' })));
+    expect(res.status).toBe(400);
+  });
+
   it('rechaza DNI duplicado en la misma parroquia -> 409', async () => {
     setSession(parishA);
     await seedPersona(parishA, 'A1002', sectorA);
@@ -174,6 +184,19 @@ describe('CREATE /api/personas', () => {
     setSession(null);
     const res = await createPersona(makeReq(validBody('A1004', sectorA)));
     expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/personas', () => {
+  it('búsqueda lite respeta tenant y límite', async () => {
+    await seedPersona(parishA, 'SEARCH-A', sectorA);
+    await seedPersona(parishB, 'SEARCH-B', sectorB);
+    setSession(parishA);
+    const res = await listPersonas(listReq('?q=SEARCH&limit=10&lite=1'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveLength(1);
+    expect(json[0].numero_identidad).toBe('SEARCH-A');
   });
 });
 
@@ -280,7 +303,7 @@ describe('DELETE /api/personas/[id]', () => {
 describe('RBAC', () => {
   it('solo lectura puede ver (GET list) -> 200', async () => {
     setSession(parishA, 'solo lectura');
-    const res = await listPersonas();
+    const res = await listPersonas(listReq());
     expect(res.status).toBe(200);
   });
 
