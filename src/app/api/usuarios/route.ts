@@ -3,9 +3,17 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, normalizeRole } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
+
+// Super Admin es un rol de alcance global: solo un Super Admin puede asignarlo.
+// Evita escalación de privilegios desde Admin Parroquia u otros roles locales.
+const GLOBAL_ROLE = 'super admin';
+function canAssignRole(actorRole: string | null | undefined, targetRole: string): boolean {
+  if (normalizeRole(targetRole) !== GLOBAL_ROLE) return true;
+  return normalizeRole(actorRole) === GLOBAL_ROLE;
+}
 
 async function getParishContext() {
   const session = await getServerSession(authOptions);
@@ -98,6 +106,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
     }
 
+    if (!canAssignRole(context.session.user.rol, rolData.nombre)) {
+      return NextResponse.json({ error: 'No puedes asignar el rol Super Admin' }, { status: 403 });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const nuevoUsuario = await prisma.usuario.create({
@@ -166,6 +178,9 @@ export async function PUT(req: NextRequest) {
       const rolData = await prisma.rolUsuario.findFirst({ where: { nombre: rol } });
       if (!rolData) {
         return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
+      }
+      if (!canAssignRole(context.session.user.rol, rolData.nombre)) {
+        return NextResponse.json({ error: 'No puedes asignar el rol Super Admin' }, { status: 403 });
       }
       updateData.id_rol = rolData.id_rol;
     }

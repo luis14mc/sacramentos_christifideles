@@ -77,6 +77,27 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id: numeroIdentidad } = await params;
     const data = await req.json();
 
+    // Si se reasigna el sector, debe existir y pertenecer a la MISMA parroquia
+    // (nunca confiar en el id de sector recibido del cliente como autorización).
+    if (data.id_sector_parroquial !== undefined && data.id_sector_parroquial !== null && data.id_sector_parroquial !== '') {
+      let sectorId: bigint;
+      try {
+        sectorId = BigInt(data.id_sector_parroquial);
+      } catch {
+        return NextResponse.json({ error: 'Sector parroquial inválido' }, { status: 400 });
+      }
+      const sector = await prisma.sectorParroquial.findUnique({
+        where: { id_sector_parroquial: sectorId },
+        select: { id_parroquia: true }
+      });
+      if (!sector) {
+        return NextResponse.json({ error: 'El sector indicado no existe' }, { status: 400 });
+      }
+      if (sector.id_parroquia !== context.parishId) {
+        return NextResponse.json({ error: 'El sector no pertenece a tu parroquia' }, { status: 403 });
+      }
+    }
+
     const personaActualizada = await prisma.persona.update({
       where: {
         id_parroquia_numero_identidad: {
@@ -142,11 +163,55 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
           id_parroquia: context.parishId,
           numero_identidad: numeroIdentidad
         }
+      },
+      include: {
+        _count: {
+          select: {
+            bautismos_bautizado: true,
+            bautismos_catequista: true,
+            bautismos_madre: true,
+            bautismos_madrina: true,
+            bautismos_padre: true,
+            bautismos_padrino: true,
+            confirmaciones_catequista: true,
+            confirmaciones_confirmado: true,
+            confirmaciones_madre: true,
+            confirmaciones_madrina: true,
+            confirmaciones_padre: true,
+            confirmaciones_padrino: true,
+            matrimonios_esposa: true,
+            matrimonios_esposo: true,
+            matrimonios_madre_esposa: true,
+            matrimonios_madre_esposo: true,
+            matrimonios_madrina: true,
+            matrimonios_padre_esposa: true,
+            matrimonios_padre_esposo: true,
+            matrimonios_padrino: true,
+            comuniones_catequista: true,
+            comuniones_madre: true,
+            comuniones_padre: true,
+            comuniones_persona: true,
+            grupos: true
+          }
+        }
       }
     });
 
     if (!personaExistente) {
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
+    }
+
+    // No destruir la historia sacramental: si la Persona está referenciada por
+    // cualquier sacramento o grupo parroquial, no se permite el borrado físico.
+    const referencias = Object.values(personaExistente._count).reduce((a, b) => a + b, 0);
+    if (referencias > 0) {
+      return NextResponse.json(
+        {
+          error: 'La persona tiene historial sacramental o de grupos y no puede eliminarse',
+          referencias
+        },
+        { status: 409 }
+      );
     }
 
     await prisma.persona.delete({

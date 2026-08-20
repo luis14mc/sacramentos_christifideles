@@ -43,6 +43,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolver el rol inicial por NOMBRE, no por un id mágico (no asumir 1 = Super Admin).
+    // El catálogo de roles debe estar sembrado antes del setup inicial.
+    const rolInicial = await prisma.rolUsuario.findFirst({
+      where: { nombre: 'Super Admin' },
+      select: { id_rol: true }
+    });
+    if (!rolInicial) {
+      return NextResponse.json(
+        { error: 'El catálogo de roles no está inicializado (falta "Super Admin")' },
+        { status: 500 }
+      );
+    }
+
     const hashedPassword = await hash(data.passwordAdmin, 12);
 
     const result = await prisma.$transaction(async tx => {
@@ -73,7 +86,7 @@ export async function POST(request: NextRequest) {
       const usuario = await tx.usuario.create({
         data: {
           id_parroquia: parroquia.id_parroquia,
-          id_rol: 1,
+          id_rol: rolInicial.id_rol,
           nombre: data.nombreAdmin,
           email: String(data.emailAdmin).trim().toLowerCase(),
           contrasena: Buffer.from(hashedPassword, 'utf8'),
