@@ -44,20 +44,17 @@ Las relaciones Persona de Bautismo, Primera Comunión, Confirmación y Matrimoni
 ### SQL v3
 `orden_sacerdotal` mantiene `numero_identidad` como PK global y además `UNIQUE(id_parroquia, numero_identidad)` para habilitar FKs compuestas. Cada sacramento relaciona sacerdote/obispo mediante `(id_parroquia, numero_identidad)`.
 
-### Prisma actual
-`OrdenSacerdotal` contiene `@@unique([id_parroquia, numero_identidad])`, pero Bautismo, Primera Comunión, Confirmación y Matrimonio relacionan al ministro solo por `numero_identidad`.
+### Prisma anterior
+`OrdenSacerdotal` contenía `@@unique([id_parroquia, numero_identidad])`, pero Bautismo, Primera Comunión, Confirmación y Matrimonio relacionaban al ministro solo por `numero_identidad` (FK global). Esto permitía que un sacramento de la Parroquia A referenciara un ministro de la Parroquia B.
 
 ### Estado
-❌ Divergencia de seguridad/consistencia.
-
-### Acción v1
-Cambiar las relaciones Prisma de ministro a:
-- Bautismo: `[id_parroquia, numero_identidad_sacerdote]`.
+✅ **Resuelto en PR #8.** Las relaciones de ministro ahora son FK compuestas hacia `OrdenSacerdotal(id_parroquia, numero_identidad)`:
+- Bautismo: `@relation(fields: [id_parroquia, numero_identidad_sacerdote], references: [id_parroquia, numero_identidad])`.
 - Primera Comunión: `[id_parroquia, numero_identidad_sacerdote]`.
 - Confirmación: `[id_parroquia, numero_identidad_obispo]`.
 - Matrimonio: `[id_parroquia, numero_identidad_sacerdote]`.
 
-Referencias: `[id_parroquia, numero_identidad]` de `OrdenSacerdotal`.
+No se introdujo `id_sacerdote`: se conserva `numero_identidad` y sólo se hizo la FK tenant-safe apoyándose en `@@unique([id_parroquia, numero_identidad])`. La base de datos ahora impide, por constraint, que un sacramento apunte a un ministro de otra parroquia.
 
 ## Roles y permisos
 
@@ -158,6 +155,48 @@ No existe en el SQL v3 original ni en Prisma actual.
 🟡 Extensión propuesta de v1.
 
 Debe diseñarse respetando la regla central: la persona fallecida debe existir previamente en `Persona` y la relación debe permanecer dentro de `id_parroquia`.
+
+## Matriz por modelo
+
+Clasificación: **ALINEADO** (Prisma refleja el SQL v3) · **PARCIAL**
+(alineado en estructura, con lógica pendiente en migración SQL) ·
+**DIVERGENCIA** (difiere y debe corregirse) · **DELIBERADAMENTE
+DIFERENTE** (difiere por decisión documentada).
+
+| Modelo | Estado | Nota |
+|---|---|---|
+| Departamento | ALINEADO | Catálogo geográfico. |
+| Municipio | ALINEADO | PK `codigo_municipio` Char(4). |
+| Parroquia | ALINEADO | Tenant raíz. |
+| ParroquiaConfig | ALINEADO | Config 1:1 por parroquia. |
+| PlantillaConstancia | ALINEADO | Plantillas por parroquia. |
+| ParroquiaParametro | ALINEADO | Parámetros por parroquia. |
+| Numeradores | ALINEADO | Unicidad `(id_parroquia, modulo, scope)`. |
+| RolUsuario | ALINEADO | Catálogo de roles. |
+| Pagina | ALINEADO | Catálogo de páginas. |
+| TrRolPagina | ALINEADO | Permisos ver/crear/actualizar/borrar. |
+| Usuario | ALINEADO | Tenant por `id_parroquia`. |
+| OrdenReligiosa | PARCIAL | Falta CHECK nativo `rama IN ('F','M','N')` (validado en app). |
+| RangoOrdenSacerdotal | ALINEADO | Catálogo de rangos. |
+| OrdenSacerdotal | ALINEADO | PK global + `@@unique([id_parroquia, numero_identidad])`. |
+| TipoSectorParroquial | ALINEADO | Catálogo. |
+| SectorParroquial | ALINEADO | Tenant por `id_parroquia`. |
+| Persona | PARCIAL | Estructura/PK alineadas; faltan CHECK nativos `sexo`, `estado_vital`, `estado_activo_parroquia` (validados en app). |
+| GrupoParroquial | ALINEADO | Catálogo global en v1 (decisión: no añadir `id_parroquia`). |
+| RolParroquial | ALINEADO | Catálogo global. |
+| TrPersonaGrupoRol | ALINEADO | Membresía tenant + FK compuesta a Persona. |
+| Bautismo | ALINEADO | FK de ministro compuesta corregida en PR #8. |
+| PrimeraComunion | ALINEADO | FK de ministro compuesta corregida en PR #8. |
+| Confirmacion | ALINEADO | FK de obispo compuesta corregida en PR #8. |
+| Matrimonio | ALINEADO | FK de ministro compuesta corregida en PR #8. |
+| BitacoraCrud | PARCIAL | Estructura alineada; falta CHECK `accion IN ('C','R','U','D')` y RLS. |
+| BitacoraLogin | ALINEADO | Auditoría de login. |
+| BitacoraPersonaParroquia | ALINEADO | Auditoría de altas/bajas de Persona. |
+
+Transversal: **RLS** (persona, sacramentos, `bitacora_crud`) y los
+**CHECK constraints** se mantienen hoy en la capa de aplicación y se
+llevarán a migraciones SQL versionadas antes de producción. Ver
+`docs/RLS_STRATEGY.md`.
 
 ## Prioridades resultantes
 

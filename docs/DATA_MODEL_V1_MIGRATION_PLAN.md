@@ -84,13 +84,15 @@ Campos iniciales previstos:
 
 ## Ministros
 
-Para v1 no se hará un refactor general de `OrdenSacerdotal` a `id_sacerdote`. Se conserva el modelo existente mientras sea compatible con las reglas funcionales y el CI. Cualquier cambio posterior debe justificarse por una necesidad real del piloto.
+Para v1 **no** se introduce `id_sacerdote`: se conserva `numero_identidad` como identidad del ministro. Lo que sí se hace en PR #8 es **hacer tenant-safe la FK** de los sacramentos hacia `OrdenSacerdotal`, cambiándola de `numero_identidad` (global) a la clave compuesta `(id_parroquia, numero_identidad)` apoyada en `@@unique([id_parroquia, numero_identidad])`.
+
+Motivo: impedir por constraint de base de datos que un sacramento de la Parroquia A referencie un ministro de la Parroquia B (regla de aislamiento multi-tenant). Aplica a Bautismo y Matrimonio (`numero_identidad_sacerdote`), Primera Comunión (`numero_identidad_sacerdote`) y Confirmación (`numero_identidad_obispo`). No es el "refactor general a `id_sacerdote`" que v1 descarta; sólo endurece la integridad referencial existente.
 
 ## Grupos
 
-- `GrupoParroquial` debe pertenecer a una parroquia (`id_parroquia`).
+- `GrupoParroquial` es catálogo **global** en v1 (sin `id_parroquia`), tal como lo define el SQL v3 (fuente de verdad). No se le añade `id_parroquia` sin un requerimiento funcional nuevo del Product Owner.
 - `RolParroquial` permanece global en v1.
-- La membresía siempre apunta a una Persona existente en la misma parroquia.
+- El aislamiento por parroquia se aplica en la **membresía** `TrPersonaGrupoRol`, que conserva `id_parroquia` y FK compuesta hacia Persona: la membresía siempre apunta a una Persona existente en la misma parroquia.
 
 ## Validaciones obligatorias del servidor
 
