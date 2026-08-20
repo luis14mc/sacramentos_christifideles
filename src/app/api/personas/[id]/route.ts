@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
+import {
+  serializePersona,
+  normalizeSexo,
+  isEstadoVitalValido,
+  isEstadoActivoValido,
+} from '@/lib/persona';
 
-const prisma = new PrismaClient();
+const personaInclude = {
+  sector: { select: { nombre: true } },
+  orden_religiosa: { select: { nombre: true } },
+  municipio_nacimiento: {
+    select: {
+      nombre_municipio: true,
+      departamento: { select: { nombre_departamento: true } },
+    },
+  },
+} as const;
 
 async function getParishContext() {
   const session = await getServerSession(authOptions);
@@ -33,30 +48,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       where: {
         id_parroquia_numero_identidad: {
           id_parroquia: context.parishId,
-          numero_identidad: numeroIdentidad
-        }
+          numero_identidad: numeroIdentidad,
+        },
       },
-      include: {
-        sector: { select: { nombre: true } },
-        orden_religiosa: { select: { nombre: true } },
-        municipio_nacimiento: {
-          select: {
-            nombre_municipio: true,
-            departamento: { select: { nombre_departamento: true } }
-          }
-        }
-      }
+      include: personaInclude,
     });
 
+    // Una Persona de otra parroquia se comporta como 404 (no revelar existencia cross-tenant).
     if (!persona) {
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      ...persona,
-      id_sector_parroquial: persona.id_sector_parroquial?.toString(),
-      id_orden_religiosa: persona.id_orden_religiosa?.toString()
-    });
+    return NextResponse.json(serializePersona(persona));
   } catch (error) {
     console.error('Error al obtener persona:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -77,10 +80,115 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id: numeroIdentidad } = await params;
     const data = await req.json();
 
-    // Si se reasigna el sector, debe existir y pertenecer a la MISMA parroquia
-    // (nunca confiar en el id de sector recibido del cliente como autorización).
-    if (data.id_sector_parroquial !== undefined && data.id_sector_parroquial !== null && data.id_sector_parroquial !== '') {
-      let sectorId: bigint;
+    // El DNI es identidad estable: no se cambia desde un PUT normal.
+    if (
+      data.numero_identidad !== undefined &&
+      String(data.numero_identidad).trim() !== numeroIdentidad
+    ) {
+      return NextResponse.json(
+        { error: 'No se permite cambiar el número de identidad (DNI) desde esta operación' },
+        { status: 400 }
+      );
+    }
+
+    // La parroquia nunca se cambia desde el cliente; siempre proviene de la sesión.
+    if (
+      data.id_parroquia !== undefined &&
+      parseInt(String(data.id_parroquia), 10) !== context.parishId
+    ) {
+      return NextResponse.json(
+        { error: 'No se permite cambiar la parroquia de la persona' },
+        { status: 400 }
+      );
+    }
+
+    // La Persona objetivo debe existir dentro del tenant; si no, 404 (incluye cross-tenant).
+    const existente = await prisma.persona.findUnique({
+      where: {
+        id_parroquia_numero_identidad: {
+          id_parroquia: context.parishId,
+          numero_identidad: numeroIdentidad,
+        },
+      },
+      select: { numero_identidad: true },
+    });
+    if (!existente) {
+      return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
+    }
+
+    // Campos obligatorios de Persona: si se actualizan, no pueden vaciarse.
+    let nombres: string | undefined;
+    if (data.nombres !== undefined) {
+      nombres = typeof data.nombres === 'string' ? data.nombres.trim() : '';
+      if (!nombres) {
+        return NextResponse.json({ error: 'Los nombres no pueden estar vacíos' }, { status: 400 });
+      }
+    }
+
+    let apellidos: string | undefined;
+    if (data.apellidos !== undefined) {
+      apellidos = typeof data.apellidos === 'string' ? data.apellidos.trim() : '';
+      if (!apellidos) {
+        return NextResponse.json({ error: 'Los apellidos no pueden estar vacíos' }, { status: 400 });
+      }
+    }
+
+    let telefono: string | undefined;
+    if (data.telefono !== undefined) {
+      telefono = typeof data.telefono === 'string' ? data.telefono.trim() : '';
+      if (!telefono) {
+        return NextResponse.json({ error: 'El teléfono no puede estar vacío' }, { status: 400 });
+      }
+    }
+
+    let fechaNacimiento: Date | undefined;
+    if (data.fecha_nacimiento !== undefined) {
+      if (data.fecha_nacimiento === null || data.fecha_nacimiento === '') {
+        return NextResponse.json({ error: 'Fecha de nacimiento inválida' }, { status: 400 });
+      }
+      const fecha = new Date(data.fecha_nacimiento);
+      if (Number.isNaN(fecha.getTime())) {
+        return NextResponse.json({ error: 'Fecha de nacimiento inválida' }, { status: 400 });
+      }
+      fechaNacimiento = fecha;
+    }
+
+    // Sexo (si se envía): sólo F o M.
+    let sexo: 'F' | 'M' | undefined;
+    if (data.sexo !== undefined || data.genero !== undefined) {
+      const s = normalizeSexo(data.sexo, data.genero);
+      if (!s) {
+        return NextResponse.json({ error: 'Sexo inválido (debe ser F o M)' }, { status: 400 });
+      }
+      sexo = s;
+    }
+
+    // Estados (si se envían): rangos del SQL v3.
+    let estadoVital: number | undefined;
+    if (data.estado_vital !== undefined) {
+      estadoVital = parseInt(String(data.estado_vital), 10);
+      if (Number.isNaN(estadoVital) || !isEstadoVitalValido(estadoVital)) {
+        return NextResponse.json({ error: 'estado_vital inválido (0, 1 o 2)' }, { status: 400 });
+      }
+    }
+    let estadoActivo: number | undefined;
+    if (data.estado_activo_parroquia !== undefined) {
+      estadoActivo = parseInt(String(data.estado_activo_parroquia), 10);
+      if (Number.isNaN(estadoActivo) || !isEstadoActivoValido(estadoActivo)) {
+        return NextResponse.json(
+          { error: 'estado_activo_parroquia inválido (0 o 1)' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Sector (si se reasigna): debe existir y pertenecer a la MISMA parroquia.
+    let sectorId: bigint | undefined;
+    if (
+      data.id_sector_parroquial !== undefined &&
+      data.id_sector_parroquial !== null &&
+      data.id_sector_parroquial !== ''
+    ) {
       try {
         sectorId = BigInt(data.id_sector_parroquial);
       } catch {
@@ -88,7 +196,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
       const sector = await prisma.sectorParroquial.findUnique({
         where: { id_sector_parroquial: sectorId },
-        select: { id_parroquia: true }
+        select: { id_parroquia: true },
       });
       if (!sector) {
         return NextResponse.json({ error: 'El sector indicado no existe' }, { status: 400 });
@@ -98,46 +206,66 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    // Orden religiosa (si se envía): debe existir.
+    let idOrdenReligiosa: number | undefined;
+    if (
+      data.id_orden_religiosa !== undefined &&
+      data.id_orden_religiosa !== null &&
+      data.id_orden_religiosa !== ''
+    ) {
+      idOrdenReligiosa = parseInt(String(data.id_orden_religiosa), 10);
+      if (Number.isNaN(idOrdenReligiosa)) {
+        return NextResponse.json({ error: 'Orden religiosa inválida' }, { status: 400 });
+      }
+      const orden = await prisma.ordenReligiosa.findUnique({
+        where: { id_orden_religiosa: idOrdenReligiosa },
+        select: { id_orden_religiosa: true },
+      });
+      if (!orden) {
+        return NextResponse.json({ error: 'La orden religiosa indicada no existe' }, { status: 400 });
+      }
+    }
+
+    // Lugar de nacimiento (si se envía): municipio debe existir.
+    let lugarNacimiento: string | undefined;
+    if (data.lugar_nacimiento !== undefined && data.lugar_nacimiento !== null && data.lugar_nacimiento !== '') {
+      lugarNacimiento = String(data.lugar_nacimiento).trim();
+      const municipio = await prisma.municipio.findUnique({
+        where: { codigo_municipio: lugarNacimiento },
+        select: { codigo_municipio: true },
+      });
+      if (!municipio) {
+        return NextResponse.json({ error: 'El municipio de nacimiento no existe' }, { status: 400 });
+      }
+    }
+
     const personaActualizada = await prisma.persona.update({
       where: {
         id_parroquia_numero_identidad: {
           id_parroquia: context.parishId,
-          numero_identidad: numeroIdentidad
-        }
+          numero_identidad: numeroIdentidad,
+        },
       },
       data: {
-        nombres: data.nombres,
-        apellidos: data.apellidos,
-        fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
-        lugar_nacimiento: data.lugar_nacimiento,
-        sexo: data.sexo,
-        telefono: data.telefono,
+        nombres,
+        apellidos,
+        fecha_nacimiento: fechaNacimiento,
+        lugar_nacimiento: lugarNacimiento,
+        sexo,
+        telefono,
         email: data.email,
         direccion: data.direccion,
-        id_sector_parroquial: data.id_sector_parroquial ? BigInt(data.id_sector_parroquial) : undefined,
-        id_orden_religiosa: data.id_orden_religiosa ? parseInt(data.id_orden_religiosa, 10) : undefined,
-        estado_vital: data.estado_vital !== undefined ? parseInt(data.estado_vital, 10) : undefined,
-        estado_activo_parroquia: data.estado_activo_parroquia !== undefined ? parseInt(data.estado_activo_parroquia, 10) : undefined,
+        id_sector_parroquial: sectorId,
+        id_orden_religiosa: idOrdenReligiosa,
+        estado_vital: estadoVital,
+        estado_activo_parroquia: estadoActivo,
         otra_orden_religiosa: data.otra_orden_religiosa,
-        imagen: data.imagen
+        imagen: data.imagen,
       },
-      include: {
-        sector: { select: { nombre: true } },
-        orden_religiosa: { select: { nombre: true } },
-        municipio_nacimiento: {
-          select: {
-            nombre_municipio: true,
-            departamento: { select: { nombre_departamento: true } }
-          }
-        }
-      }
+      include: personaInclude,
     });
 
-    return NextResponse.json({
-      ...personaActualizada,
-      id_sector_parroquial: personaActualizada.id_sector_parroquial?.toString(),
-      id_orden_religiosa: personaActualizada.id_orden_religiosa?.toString()
-    });
+    return NextResponse.json(serializePersona(personaActualizada));
   } catch (error) {
     console.error('Error al actualizar persona:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -161,8 +289,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       where: {
         id_parroquia_numero_identidad: {
           id_parroquia: context.parishId,
-          numero_identidad: numeroIdentidad
-        }
+          numero_identidad: numeroIdentidad,
+        },
       },
       include: {
         _count: {
@@ -191,12 +319,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
             comuniones_madre: true,
             comuniones_padre: true,
             comuniones_persona: true,
-            grupos: true
-          }
-        }
-      }
+            grupos: true,
+          },
+        },
+      },
     });
 
+    // Cross-tenant / inexistente -> 404 (no revelar existencia de otra parroquia).
     if (!personaExistente) {
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
@@ -207,8 +336,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (referencias > 0) {
       return NextResponse.json(
         {
-          error: 'La persona tiene historial sacramental o de grupos y no puede eliminarse',
-          referencias
+          error: 'La Persona posee registros relacionados y no puede eliminarse.',
+          referencias,
         },
         { status: 409 }
       );
@@ -218,9 +347,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       where: {
         id_parroquia_numero_identidad: {
           id_parroquia: context.parishId,
-          numero_identidad: numeroIdentidad
-        }
-      }
+          numero_identidad: numeroIdentidad,
+        },
+      },
     });
 
     return NextResponse.json({ success: true });

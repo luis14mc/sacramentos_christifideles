@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-
-const prisma = new PrismaClient();
+import { serializePersona, normalizeSexo } from '@/lib/persona';
 
 export async function GET() {
   try {
@@ -35,10 +34,7 @@ export async function GET() {
       orderBy: [{ apellidos: 'asc' }, { nombres: 'asc' }]
     });
 
-    return NextResponse.json(personas.map(persona => ({
-      ...persona,
-      id_sector_parroquial: persona.id_sector_parroquial.toString()
-    })));
+    return NextResponse.json(personas.map(serializePersona));
   } catch (error) {
     console.error('Error al obtener personas:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
@@ -79,14 +75,8 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Sexo (solo F o M) ---
-    let sexo: 'F' | 'M';
-    if (data.sexo === 'F' || data.sexo === 'M') {
-      sexo = data.sexo;
-    } else if (data.genero === 'Masculino') {
-      sexo = 'M';
-    } else if (data.genero === 'Femenino') {
-      sexo = 'F';
-    } else {
+    const sexo = normalizeSexo(data.sexo, data.genero);
+    if (!sexo) {
       return NextResponse.json({ error: 'Sexo inválido (debe ser F o M)' }, { status: 400 });
     }
 
@@ -204,13 +194,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({
-      ...nuevaPersona,
-      numero_identidad: nuevaPersona.numero_identidad.toString(),
-      telefono: nuevaPersona.telefono ? nuevaPersona.telefono.toString() : null,
-      id_sector_parroquial: nuevaPersona.id_sector_parroquial?.toString() || null,
-      id_orden_religiosa: nuevaPersona.id_orden_religiosa?.toString() || null
-    }, { status: 201 });
+    return NextResponse.json(serializePersona(nuevaPersona), { status: 201 });
   } catch (error) {
     console.error('Error al crear persona:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
