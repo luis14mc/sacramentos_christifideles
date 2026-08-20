@@ -44,7 +44,7 @@ Congelar arquitectura y conocer el estado real de calidad de la aplicación.
 - lista de bugs P0/P1/P2;
 - backlog v1 definitivo;
 - criterios de aceptación transversales;
-- decisión del modelo para personas históricas.
+- confirmación del modelo de `Persona` con DNI obligatorio y PK compuesta `(id_parroquia, numero_identidad)`.
 
 ### Gate
 No inicia desarrollo sacramental hasta cerrar P0 de autenticación/multi-tenant/build.
@@ -59,15 +59,17 @@ Base segura y estable de identidad, permisos y personas.
 - corregir fallos de autenticación/autorización;
 - validar aislamiento entre parroquias;
 - estabilizar CRUD usuarios;
-- estabilizar CRUD personas;
-- adaptar Persona a registros históricos incompletos;
+- estabilizar CRUD personas con DNI obligatorio;
+- validar duplicados de Persona por parroquia;
+- validar tenant y sectores/catálogos existentes;
+- mantener la PK compuesta `(id_parroquia, numero_identidad)` y proteger la integridad histórica sacramental;
 - normalizar validaciones y errores;
 - eliminar/debug-gate de rutas de diagnóstico;
 - preparar migraciones Prisma formales.
 
 ### QA crítico
 - usuario parroquia A no puede consultar/modificar parroquia B;
-- persona sin DNI puede registrarse según reglas aprobadas;
+- no se permite registrar Persona sin DNI (el intento debe rechazarse);
 - duplicados detectables;
 - build/lint verdes.
 
@@ -85,7 +87,7 @@ Bautismo completo de extremo a extremo.
 - reglas de libro/folio/registro;
 - permisos;
 - auditoría;
-- pruebas de casos históricos.
+- pruebas con registros sacramentales realistas (todas las Personas con DNI).
 
 ### Entregable demostrable
 Secretaría registra y consulta un bautismo realista de principio a fin.

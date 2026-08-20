@@ -57,7 +57,7 @@ Pendientes principales para v1:
 - estabilización técnica del código existente;
 - validación completa de aislamiento multi-tenant;
 - CRUD/API/UI funcional de sacramentos;
-- soporte correcto para registros históricos incompletos;
+- captura posterior de datos complementarios (no-DNI) faltantes, manteniendo el DNI siempre obligatorio;
 - libros/folios/numeración operativa;
 - generación de constancias PDF;
 - auditoría realmente conectada a operaciones;
@@ -69,7 +69,7 @@ Pendientes principales para v1:
 ## Principios del dominio
 1. Un registro sacramental es información histórica sensible y no debe tratarse como un CRUD desechable.
 2. Las correcciones deben ser trazables.
-3. Los datos históricos pueden ser incompletos.
+3. Los datos complementarios (no-DNI) de una Persona pueden completarse después, pero el DNI (`numero_identidad`) es siempre obligatorio para registrarla.
 4. Una persona puede aparecer en múltiples sacramentos y roles familiares.
 5. La misma plataforma sirve a varias parroquias, pero cada usuario opera dentro de su alcance autorizado.
 6. El cliente nunca decide a qué parroquia tiene acceso; eso lo determina la sesión y autorización del servidor.
@@ -80,7 +80,7 @@ Pendientes principales para v1:
 1. Usuario inicia sesión.
 2. Sistema identifica parroquia y permisos.
 3. Secretaría busca una persona.
-4. Si no existe, crea persona con los datos realmente disponibles.
+4. Si no existe, crea la Persona con DNI obligatorio (`numero_identidad`) y los demás datos requeridos por el modelo.
 5. Registra sacramento.
 6. Sistema asigna/valida libro, folio, acta o número según reglas.
 7. Guarda con auditoría.
@@ -95,10 +95,22 @@ Pendientes principales para v1:
 - Las acciones globales requieren rol explícito de superadministración.
 - QA debe probar intentos de acceso cruzado entre dos parroquias.
 
-## Datos históricos
-Antes de completar los módulos sacramentales se debe revisar el modelo `Persona` para permitir casos reales donde no exista DNI, teléfono, correo, sector u otros datos modernos.
+## Persona y DNI (regla no negociable v1)
+En ChristiFidelis v1 **no puede existir una Persona sin DNI**. `numero_identidad` es obligatorio y forma parte de la PK compuesta `(id_parroquia, numero_identidad)`. No se introduce `id_persona` ni se generan DNIs ficticios o placeholder.
 
-La identificación de registros históricos no debe depender exclusivamente del DNI.
+Flujo obligatorio:
+
+```text
+Buscar Persona por DNI
+        ↓
+¿Existe en la parroquia?
+   ├─ NO → crear Persona con DNI obligatorio
+   └─ SÍ → continuar
+                    ↓
+              sacramento
+```
+
+Otros datos (teléfono, correo, sector, etc.) pueden requerir revisión o completado posterior, pero **el DNI nunca es opcional**.
 
 ## Seguridad mínima de v1
 - sesiones seguras;

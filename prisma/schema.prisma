@@ -349,7 +349,7 @@ model Bautismo {
   madrina                     Persona         @relation("MadrinaBautismo", fields: [id_parroquia, numero_identidad_madrina], references: [id_parroquia, numero_identidad])
   padre                       Persona         @relation("PadreBautismo", fields: [id_parroquia, numero_identidad_padre], references: [id_parroquia, numero_identidad])
   padrino                     Persona         @relation("PadrinoBautismo", fields: [id_parroquia, numero_identidad_padrino], references: [id_parroquia, numero_identidad])
-  sacerdote                   OrdenSacerdotal @relation(fields: [numero_identidad_sacerdote], references: [numero_identidad])
+  sacerdote                   OrdenSacerdotal @relation(fields: [id_parroquia, numero_identidad_sacerdote], references: [id_parroquia, numero_identidad])
 
   @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
   @@index([id_parroquia, fecha_bautismo])
@@ -375,7 +375,7 @@ model PrimeraComunion {
   madre                       Persona         @relation("MadreComunion", fields: [id_parroquia, numero_identidad_madre], references: [id_parroquia, numero_identidad])
   padre                       Persona         @relation("PadreComunion", fields: [id_parroquia, numero_identidad_padre], references: [id_parroquia, numero_identidad])
   persona                     Persona         @relation("PersonaComunion", fields: [id_parroquia, numero_identidad_persona], references: [id_parroquia, numero_identidad])
-  sacerdote                   OrdenSacerdotal @relation(fields: [numero_identidad_sacerdote], references: [numero_identidad])
+  sacerdote                   OrdenSacerdotal @relation(fields: [id_parroquia, numero_identidad_sacerdote], references: [id_parroquia, numero_identidad])
 
   @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
   @@index([id_parroquia, fecha_primera_comunion])
@@ -405,7 +405,7 @@ model Confirmacion {
   madrina                     Persona         @relation("MadrinaConfirmacion", fields: [id_parroquia, numero_identidad_madrina], references: [id_parroquia, numero_identidad])
   padre                       Persona         @relation("PadreConfirmacion", fields: [id_parroquia, numero_identidad_padre], references: [id_parroquia, numero_identidad])
   padrino                     Persona         @relation("PadrinoConfirmacion", fields: [id_parroquia, numero_identidad_padrino], references: [id_parroquia, numero_identidad])
-  obispo                      OrdenSacerdotal @relation(fields: [numero_identidad_obispo], references: [numero_identidad])
+  obispo                      OrdenSacerdotal @relation(fields: [id_parroquia, numero_identidad_obispo], references: [id_parroquia, numero_identidad])
 
   @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
   @@index([id_parroquia, fecha_confirmacion])
@@ -439,7 +439,7 @@ model Matrimonio {
   padre_esposa                  Persona?        @relation("PadreEsposa", fields: [id_parroquia, numero_identidad_padre_esposa], references: [id_parroquia, numero_identidad])
   padre_esposo                  Persona?        @relation("PadreEsposo", fields: [id_parroquia, numero_identidad_padre_esposo], references: [id_parroquia, numero_identidad])
   padrino                       Persona         @relation("PadrinoMatrimonio", fields: [id_parroquia, numero_identidad_padrino], references: [id_parroquia, numero_identidad])
-  sacerdote                     OrdenSacerdotal @relation(fields: [numero_identidad_sacerdote], references: [numero_identidad])
+  sacerdote                     OrdenSacerdotal @relation(fields: [id_parroquia, numero_identidad_sacerdote], references: [id_parroquia, numero_identidad])
 
   @@unique([id_parroquia, numero_libro, numero_pagina, numero_registro])
   @@index([id_parroquia, fecha_matrimonio])
