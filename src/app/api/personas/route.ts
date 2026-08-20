@@ -16,7 +16,7 @@ const personaInclude = {
   },
 } as const;
 
-export async function GET(req?: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.parishId) {
@@ -31,7 +31,7 @@ export async function GET(req?: NextRequest) {
       return NextResponse.json({ error: 'Parroquia de sesión inválida' }, { status: 400 });
     }
 
-    const { searchParams } = new URL(req?.url ?? 'http://localhost/api/personas');
+    const { searchParams } = new URL(req.url);
     const q = searchParams.get('q')?.trim() || '';
     const requestedLimit = parseInt(searchParams.get('limit') || '0', 10);
     const limit = requestedLimit > 0 ? Math.min(requestedLimit, 50) : undefined;
