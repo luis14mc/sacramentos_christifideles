@@ -116,6 +116,43 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 });
     }
 
+    // Campos obligatorios de Persona: si se actualizan, no pueden vaciarse.
+    let nombres: string | undefined;
+    if (data.nombres !== undefined) {
+      nombres = typeof data.nombres === 'string' ? data.nombres.trim() : '';
+      if (!nombres) {
+        return NextResponse.json({ error: 'Los nombres no pueden estar vacíos' }, { status: 400 });
+      }
+    }
+
+    let apellidos: string | undefined;
+    if (data.apellidos !== undefined) {
+      apellidos = typeof data.apellidos === 'string' ? data.apellidos.trim() : '';
+      if (!apellidos) {
+        return NextResponse.json({ error: 'Los apellidos no pueden estar vacíos' }, { status: 400 });
+      }
+    }
+
+    let telefono: string | undefined;
+    if (data.telefono !== undefined) {
+      telefono = typeof data.telefono === 'string' ? data.telefono.trim() : '';
+      if (!telefono) {
+        return NextResponse.json({ error: 'El teléfono no puede estar vacío' }, { status: 400 });
+      }
+    }
+
+    let fechaNacimiento: Date | undefined;
+    if (data.fecha_nacimiento !== undefined) {
+      if (data.fecha_nacimiento === null || data.fecha_nacimiento === '') {
+        return NextResponse.json({ error: 'Fecha de nacimiento inválida' }, { status: 400 });
+      }
+      const fecha = new Date(data.fecha_nacimiento);
+      if (Number.isNaN(fecha.getTime())) {
+        return NextResponse.json({ error: 'Fecha de nacimiento inválida' }, { status: 400 });
+      }
+      fechaNacimiento = fecha;
+    }
+
     // Sexo (si se envía): sólo F o M.
     let sexo: 'F' | 'M' | undefined;
     if (data.sexo !== undefined || data.genero !== undefined) {
@@ -210,12 +247,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         },
       },
       data: {
-        nombres: data.nombres,
-        apellidos: data.apellidos,
-        fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
+        nombres,
+        apellidos,
+        fecha_nacimiento: fechaNacimiento,
         lugar_nacimiento: lugarNacimiento,
         sexo,
-        telefono: data.telefono,
+        telefono,
         email: data.email,
         direccion: data.direccion,
         id_sector_parroquial: sectorId,
