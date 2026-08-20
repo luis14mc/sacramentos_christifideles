@@ -216,6 +216,34 @@ describe('UPDATE /api/personas/[id]', () => {
     const res = await updatePersona(makeReq({ numero_identidad: 'OTRO' }), ctx('A3003'));
     expect(res.status).toBe(400);
   });
+
+  it('rechaza nombres vacíos -> 400', async () => {
+    await seedPersona(parishA, 'A3004', sectorA);
+    setSession(parishA);
+    const res = await updatePersona(makeReq({ nombres: '   ' }), ctx('A3004'));
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza apellidos vacíos -> 400', async () => {
+    await seedPersona(parishA, 'A3005', sectorA);
+    setSession(parishA);
+    const res = await updatePersona(makeReq({ apellidos: '' }), ctx('A3005'));
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza teléfono vacío -> 400', async () => {
+    await seedPersona(parishA, 'A3006', sectorA);
+    setSession(parishA);
+    const res = await updatePersona(makeReq({ telefono: '   ' }), ctx('A3006'));
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza fecha de nacimiento inválida -> 400', async () => {
+    await seedPersona(parishA, 'A3007', sectorA);
+    setSession(parishA);
+    const res = await updatePersona(makeReq({ fecha_nacimiento: 'fecha-invalida' }), ctx('A3007'));
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('DELETE /api/personas/[id]', () => {
@@ -259,6 +287,20 @@ describe('RBAC', () => {
   it('solo lectura NO puede crear -> 403', async () => {
     setSession(parishA, 'solo lectura');
     const res = await createPersona(makeReq(validBody('A5001', sectorA)));
+    expect(res.status).toBe(403);
+  });
+
+  it('solo lectura NO puede editar -> 403', async () => {
+    await seedPersona(parishA, 'A5003', sectorA);
+    setSession(parishA, 'solo lectura');
+    const res = await updatePersona(makeReq({ nombres: 'No permitido' }), ctx('A5003'));
+    expect(res.status).toBe(403);
+  });
+
+  it('solo lectura NO puede eliminar -> 403', async () => {
+    await seedPersona(parishA, 'A5004', sectorA);
+    setSession(parishA, 'solo lectura');
+    const res = await deletePersona({} as NextRequest, ctx('A5004'));
     expect(res.status).toBe(403);
   });
 
