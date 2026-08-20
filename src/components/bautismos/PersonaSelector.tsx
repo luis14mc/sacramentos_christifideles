@@ -16,46 +16,70 @@ interface Props {
   required?: boolean;
 }
 
-// Selector de Persona: SOLO permite elegir Personas ya registradas en la
-// parroquia autenticada (GET /api/personas es tenant-safe). Nunca crea
-// Personas inline; si no existe, indica registrarla primero en Personas.
+// Selector tenant-safe: consulta /api/personas con búsqueda limitada en backend.
+// Nunca crea Personas inline; si no existe, el usuario debe registrarla primero.
 export default function PersonaSelector({ label, value, onChange, required }: Props) {
-  const [personas, setPersonas] = useState<PersonaLite[]>([]);
+  const [resultados, setResultados] = useState<PersonaLite[]>([]);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [seleccionada, setSeleccionada] = useState<PersonaLite | null>(null);
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    fetch('/api/personas')
+    if (!value) {
+      setSeleccionada(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(`/api/personas?q=${encodeURIComponent(value)}&limit=8&lite=1`, {
+      signal: controller.signal,
+    })
       .then((r) => (r.ok ? r.json() : []))
-      .then((data) => {
-        if (active) setPersonas(Array.isArray(data) ? data : []);
+      .then((data: PersonaLite[]) => {
+        if (!Array.isArray(data)) return;
+        const exacta = data.find((p) => p.numero_identidad === value) || null;
+        setSeleccionada(exacta);
       })
-      .catch(() => active && setPersonas([]))
-      .finally(() => active && setLoading(false));
+      .catch((error) => {
+        if (error?.name !== 'AbortError') setSeleccionada(null);
+      });
+
+    return () => controller.abort();
+  }, [value]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResultados([]);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      fetch(`/api/personas?q=${encodeURIComponent(q)}&limit=8&lite=1`, {
+        signal: controller.signal,
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => setResultados(Array.isArray(data) ? data : []))
+        .catch((error) => {
+          if (error?.name !== 'AbortError') setResultados([]);
+        })
+        .finally(() => setLoading(false));
+    }, 250);
+
     return () => {
-      active = false;
+      window.clearTimeout(timer);
+      controller.abort();
     };
-  }, []);
+  }, [query]);
 
-  const seleccionada = useMemo(
-    () => personas.find((p) => p.numero_identidad === value),
-    [personas, value]
+  const sinResultados = useMemo(
+    () => Boolean(query.trim()) && !loading && resultados.length === 0,
+    [query, loading, resultados.length]
   );
-
-  const resultados = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return personas.slice(0, 8);
-    return personas
-      .filter(
-        (p) =>
-          p.numero_identidad.toLowerCase().includes(q) ||
-          `${p.nombres} ${p.apellidos}`.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [personas, query]);
 
   return (
     <div className="form-control">
@@ -73,7 +97,16 @@ export default function PersonaSelector({ label, value, onChange, required }: Pr
             </span>{' '}
             <span className="text-base-content/60">· DNI {seleccionada.numero_identidad}</span>
           </span>
-          <button type="button" className="btn btn-ghost btn-xs" onClick={() => onChange('')}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={() => {
+              setSeleccionada(null);
+              setQuery('');
+              setResultados([]);
+              onChange('');
+            }}
+          >
             <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
@@ -86,36 +119,46 @@ export default function PersonaSelector({ label, value, onChange, required }: Pr
               className="w-full bg-transparent text-sm outline-none"
               placeholder="Buscar por DNI o nombre…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setOpen(true);
+              }}
               onFocus={() => setOpen(true)}
+              autoComplete="off"
             />
           </div>
-          {open && (
+
+          {open && query.trim() && (
             <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-base-300 bg-base-100 shadow">
-              {loading && <li className="px-3 py-2 text-sm text-base-content/60">Cargando…</li>}
-              {!loading && resultados.length === 0 && (
+              {loading && (
+                <li className="px-3 py-2 text-sm text-base-content/60">Buscando…</li>
+              )}
+              {sinResultados && (
                 <li className="px-3 py-2 text-sm text-warning">
                   No existe esa Persona. Regístrela primero en el módulo Personas.
                 </li>
               )}
-              {resultados.map((p) => (
-                <li key={p.numero_identidad}>
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-base-200"
-                    onClick={() => {
-                      onChange(p.numero_identidad);
-                      setOpen(false);
-                      setQuery('');
-                    }}
-                  >
-                    <span className="font-medium">
-                      {p.nombres} {p.apellidos}
-                    </span>{' '}
-                    <span className="text-base-content/60">· {p.numero_identidad}</span>
-                  </button>
-                </li>
-              ))}
+              {!loading &&
+                resultados.map((p) => (
+                  <li key={p.numero_identidad}>
+                    <button
+                      type="button"
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-base-200"
+                      onClick={() => {
+                        setSeleccionada(p);
+                        onChange(p.numero_identidad);
+                        setOpen(false);
+                        setQuery('');
+                        setResultados([]);
+                      }}
+                    >
+                      <span className="font-medium">
+                        {p.nombres} {p.apellidos}
+                      </span>{' '}
+                      <span className="text-base-content/60">· {p.numero_identidad}</span>
+                    </button>
+                  </li>
+                ))}
             </ul>
           )}
         </div>
