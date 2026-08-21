@@ -31,21 +31,31 @@ Motivo P1: falta una estrategia/migración baseline formal y probada en base lim
 - Runbook de backup/restore añadido.
 - Guía de deployment staging añadida.
 
+## Evidencia automática
+GitHub Actions `ChristiFideles CI` run **#26** ejecutado sobre el PR #15 pasó completamente:
+- instalación de dependencias: PASS;
+- Prisma generate: PASS;
+- Prisma validate: PASS;
+- aplicación del schema a DB CI: PASS;
+- lint: PASS;
+- tests/regresión: PASS;
+- production build: PASS.
+
 ## Matriz QA
 | Área | Prueba | Resultado | Evidencia |
 |---|---|---|---|
 | Prisma | Singleton en route handlers pendientes | PASS | Diff Sprint 7 |
-| Health | Query `SELECT 1` y respuesta segura | PENDING CI | `tests/health.test.ts` |
-| Regresión | Suite completa Vitest | PENDING CI | GitHub Actions del PR |
-| Prisma schema | `prisma generate` / `validate` | PENDING CI | GitHub Actions del PR |
-| Lint | ESLint | PENDING CI | GitHub Actions del PR |
-| Build | Next production build | PENDING CI | GitHub Actions del PR |
-| Multi-tenant | Regresión automatizada existente | PENDING CI | Suites Personas/Sacramentos/Libros/PDF/Auditoría/Búsqueda/Dashboard |
-| RBAC | Regresión automatizada existente | PENDING CI | suites vigentes |
-| Numeradores | Concurrencia / separación tenant | PENDING CI | `tests/numeradores.test.ts` |
-| PDF | tenant / fallback / content-type | PENDING CI | `tests/constancias.test.ts` |
-| Auditoría | filtros / tenant / permisos | PENDING CI | `tests/auditoria.test.ts` |
-| Búsqueda | DNI/nombre/fecha/libro/registro/tenant | PENDING CI | `tests/busqueda.test.ts` |
+| Health | Query `SELECT 1` y respuesta segura | PASS | `tests/health.test.ts`, CI #26 |
+| Regresión | Suite completa Vitest | PASS | GitHub Actions CI #26 |
+| Prisma schema | `prisma generate` / `validate` | PASS | GitHub Actions CI #26 |
+| Lint | ESLint | PASS | GitHub Actions CI #26 |
+| Build | Next production build | PASS | GitHub Actions CI #26 |
+| Multi-tenant | Regresión automatizada existente | PASS | suites Personas/Sacramentos/Libros/PDF/Auditoría/Búsqueda/Dashboard, CI #26 |
+| RBAC | Regresión automatizada existente | PASS | suites vigentes, CI #26 |
+| Numeradores | Concurrencia / separación tenant | PASS | `tests/numeradores.test.ts`, CI #26 |
+| PDF | tenant / fallback / content-type | PASS | `tests/constancias.test.ts`, CI #26 |
+| Auditoría | filtros / tenant / permisos | PASS | `tests/auditoria.test.ts`, CI #26 |
+| Búsqueda | DNI/nombre/fecha/libro/registro/tenant | PASS | `tests/busqueda.test.ts`, CI #26 |
 | Migraciones | `prisma migrate deploy` en DB limpia | FAIL/PENDING | `prisma/migrations/` ausente |
 | Neon staging | DB separada | PENDING | requiere credenciales externas |
 | Vercel staging | Deploy real | PENDING | requiere acceso/configuración externa |
