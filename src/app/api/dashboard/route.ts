@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
-import { getParroquiaData, getDashboardStats } from '@/lib/dashboard';
+import { getParroquiaData, getDashboardStats, getRegistrosRecientes } from '@/lib/dashboard';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
@@ -30,9 +30,15 @@ export async function GET() {
       );
     }
 
-    const stats = await getDashboardStats(parishId);
+    const [stats, recientes] = await Promise.all([
+      getDashboardStats(parishId),
+      getRegistrosRecientes(parishId),
+    ]);
 
-    return NextResponse.json({ parroquiaData, stats });
+    return NextResponse.json(
+      { parroquiaData, stats, recientes },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (error) {
     console.error('Error en API dashboard:', error);
     return NextResponse.json(
