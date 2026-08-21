@@ -7,20 +7,21 @@ import { jsonSafe } from '@/lib/serialize';
 import type { Prisma } from '@prisma/client';
 
 const ACCIONES = ['C', 'R', 'U', 'D'];
+const NO_STORE = { 'Cache-Control': 'no-store' };
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.parishId) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401, headers: NO_STORE });
     }
     // La auditoría es sensible: se restringe a quien puede ver reportes.
     if (!hasPermission(session.user.rol, 'canViewReportes')) {
-      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403, headers: NO_STORE });
     }
     const parishId = parseInt(session.user.parishId, 10);
     if (Number.isNaN(parishId)) {
-      return NextResponse.json({ error: 'Parroquia de sesión inválida' }, { status: 400 });
+      return NextResponse.json({ error: 'Parroquia de sesión inválida' }, { status: 400, headers: NO_STORE });
     }
 
     const { searchParams } = new URL(req.url);
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
       try {
         where.id_usuario = BigInt(usuario);
       } catch {
-        return NextResponse.json({ error: 'Usuario inválido' }, { status: 400 });
+        return NextResponse.json({ error: 'Usuario inválido' }, { status: 400, headers: NO_STORE });
       }
     }
 
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       try {
         where.id_tabla_afectado = BigInt(idAfectado);
       } catch {
-        return NextResponse.json({ error: 'Id afectado inválido' }, { status: 400 });
+        return NextResponse.json({ error: 'Id afectado inválido' }, { status: 400, headers: NO_STORE });
       }
     }
 
@@ -91,13 +92,16 @@ export async function GET(req: NextRequest) {
     const nombrePorId = new Map(usuarios.map((u) => [u.id_usuario.toString(), u.nombre]));
 
     const data = items.map((i) => ({
-      ...jsonSafe(i) as Record<string, unknown>,
+      ...(jsonSafe(i) as Record<string, unknown>),
       usuario_nombre: nombrePorId.get(i.id_usuario.toString()) ?? null,
     }));
 
-    return NextResponse.json({ data, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+    return NextResponse.json(
+      { data, page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      { headers: NO_STORE }
+    );
   } catch (error) {
     console.error('Error al consultar auditoría:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500, headers: NO_STORE });
   }
 }
