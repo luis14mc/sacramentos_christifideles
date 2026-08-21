@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { usePermissions } from '@/hooks/usePermissions';
+import ConstanciaButton from '@/components/sacramentos/ConstanciaButton';
 import { ArrowLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 
 interface PersonaLite { numero_identidad: string; nombres: string; apellidos: string; }
@@ -50,8 +51,13 @@ export default function DetalleConfirmacionPage() {
             <Link href="/confirmaciones" className="btn btn-ghost btn-sm"><ArrowLeftIcon className="h-4 w-4" /></Link>
             <h1 className="text-2xl font-bold">Detalle de Confirmación</h1>
           </div>
-          {b && permissions.canEditSacramentos && (
-            <Link href={`/confirmaciones/${id}/editar`} className="btn btn-primary btn-sm"><PencilSquareIcon className="h-4 w-4" /> Editar</Link>
+          {b && (
+            <div className="flex gap-2">
+              <ConstanciaButton sacramento="confirmacion" id={id} />
+              {permissions.canEditSacramentos && (
+                <Link href={`/confirmaciones/${id}/editar`} className="btn btn-primary btn-sm"><PencilSquareIcon className="h-4 w-4" /> Editar</Link>
+              )}
+            </div>
           )}
         </div>
         {loading && <p className="text-base-content/60">Cargando…</p>}

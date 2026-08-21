@@ -65,11 +65,17 @@ export const navigationConfig: NavigationItem[] = [
     icon: HeartIcon,
     requiredPermission: 'canViewSacramentos'
   },
-  { 
-    name: 'Constancias', 
-    href: '/constancias', 
+  {
+    name: 'Libros',
+    href: '/libros',
+    icon: BookOpenIcon,
+    requiredPermission: 'canViewSacramentos'
+  },
+  {
+    name: 'Plantillas de constancia',
+    href: '/configuracion/constancias',
     icon: DocumentTextIcon,
-    requiredPermission: 'canViewConstancias'
+    requiredPermission: 'canViewConfiguracion'
   },
   { 
     name: 'Reportes', 
