@@ -126,12 +126,14 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  await prisma.bitacoraCrud.deleteMany({});
   await prisma.trPersonaGrupoRol.deleteMany({});
   await prisma.persona.deleteMany({});
   vi.clearAllMocks();
 });
 
 afterAll(async () => {
+  await prisma.bitacoraCrud.deleteMany({});
   await prisma.trPersonaGrupoRol.deleteMany({});
   await prisma.persona.deleteMany({});
   await prisma.sectorParroquial.deleteMany({});
