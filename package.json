@@ -9,6 +9,8 @@
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "npx prisma db push --force-reset && npm run db:seed",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "smoke": "node scripts/smoke-test.mjs",
     "studio": "npx prisma studio",
     "test": "vitest run"
   },

@@ -1,39 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-
-const prisma = new PrismaClient();
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.parishId) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    if (!hasPermission(session.user.rol, 'canViewConfiguracion')) {
-      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
-    }
+    if (!session?.user?.parishId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!hasPermission(session.user.rol, 'canViewConfiguracion')) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
 
     const parishId = parseInt(session.user.parishId, 10);
+    if (Number.isNaN(parishId)) return NextResponse.json({ error: 'Parroquia de sesión inválida' }, { status: 400 });
 
     const sacerdotes = await prisma.ordenSacerdotal.findMany({
       where: { id_parroquia: parishId },
       include: {
         rango: { select: { nombre: true } },
         orden_religiosa: { select: { nombre: true } },
-        parroquia: { select: { nombre: true } }
+        parroquia: { select: { nombre: true } },
       },
-      orderBy: [
-        { es_parroco: 'desc' },
-        { apellidos: 'asc' },
-        { nombres: 'asc' }
-      ]
+      orderBy: [{ es_parroco: 'desc' }, { apellidos: 'asc' }, { nombres: 'asc' }],
     });
-
     return NextResponse.json(sacerdotes);
   } catch (error) {
     console.error('Error al obtener sacerdotes:', error);
@@ -44,16 +32,13 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.parishId) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
+    if (!session?.user?.parishId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     if (!hasPermission(session.user.rol, 'canManageConfiguracion')) {
       return NextResponse.json({ error: 'No tienes permiso para modificar configuración' }, { status: 403 });
     }
 
     const parishId = parseInt(session.user.parishId, 10);
+    if (Number.isNaN(parishId)) return NextResponse.json({ error: 'Parroquia de sesión inválida' }, { status: 400 });
     const data = await req.json();
 
     const nuevoSacerdote = await prisma.ordenSacerdotal.create({
@@ -71,14 +56,10 @@ export async function POST(req: NextRequest) {
         otra_orden_religiosa: data.otra_orden_religiosa,
         es_parroco: data.es_parroco || 0,
         estado_vital: data.estado_vital || 1,
-        imagen: data.imagen
+        imagen: data.imagen,
       },
-      include: {
-        rango: { select: { nombre: true } },
-        orden_religiosa: { select: { nombre: true } }
-      }
+      include: { rango: { select: { nombre: true } }, orden_religiosa: { select: { nombre: true } } },
     });
-
     return NextResponse.json(nuevoSacerdote, { status: 201 });
   } catch (error) {
     console.error('Error al crear sacerdote:', error);
