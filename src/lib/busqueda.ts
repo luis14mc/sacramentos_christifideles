@@ -31,22 +31,36 @@ function nombreFiltro(q: string) {
   };
 }
 
+function rangoFechaExacta(q: string): { gte: Date; lt: Date } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(q)) return null;
+  const inicio = new Date(`${q}T00:00:00.000Z`);
+  if (Number.isNaN(inicio.getTime())) return null;
+  const fin = new Date(inicio);
+  fin.setUTCDate(fin.getUTCDate() + 1);
+  return { gte: inicio, lt: fin };
+}
+
 const persona = (p: { numero_identidad: string; nombres: string; apellidos: string } | null) =>
   p ? `${p.nombres} ${p.apellidos}` : '—';
 
 /**
- * Búsqueda global tenant-safe por DNI, nombres, apellidos, libro y registro.
- * Consultas Prisma explícitas por módulo (sin SQL dinámico). Límite por
- * categoría. El tenant proviene SIEMPRE de parishId (sesión).
+ * Búsqueda global tenant-safe por DNI, nombres, apellidos, libro, registro y
+ * fecha exacta (YYYY-MM-DD). Consultas Prisma explícitas por módulo (sin SQL
+ * dinámico). Límite por categoría. El tenant proviene SIEMPRE de parishId.
  */
 export async function buscarGlobal(parishId: number, q: string, limite = 15): Promise<BusquedaAgrupada> {
   const take = Math.min(50, Math.max(1, limite));
+  const fecha = rangoFechaExacta(q);
 
   const [personas, bautismos, comuniones, confirmaciones, matrimonios] = await Promise.all([
     prisma.persona.findMany({
       where: {
         id_parroquia: parishId,
-        OR: [{ numero_identidad: { contains: q } }, nombreFiltro(q)],
+        OR: [
+          { numero_identidad: { contains: q } },
+          nombreFiltro(q),
+          ...(fecha ? [{ fecha_nacimiento: fecha }] : []),
+        ],
       },
       select: { numero_identidad: true, nombres: true, apellidos: true },
       take,
@@ -60,6 +74,7 @@ export async function buscarGlobal(parishId: number, q: string, limite = 15): Pr
           { numero_libro: q },
           { numero_registro: q },
           { bautizado: nombreFiltro(q) },
+          ...(fecha ? [{ fecha_bautismo: fecha }] : []),
         ],
       },
       include: { bautizado: { select: { numero_identidad: true, nombres: true, apellidos: true } } },
@@ -74,6 +89,7 @@ export async function buscarGlobal(parishId: number, q: string, limite = 15): Pr
           { numero_libro: q },
           { numero_registro: q },
           { persona: nombreFiltro(q) },
+          ...(fecha ? [{ fecha_primera_comunion: fecha }] : []),
         ],
       },
       include: { persona: { select: { numero_identidad: true, nombres: true, apellidos: true } } },
@@ -88,6 +104,7 @@ export async function buscarGlobal(parishId: number, q: string, limite = 15): Pr
           { numero_libro: q },
           { numero_registro: q },
           { confirmado: nombreFiltro(q) },
+          ...(fecha ? [{ fecha_confirmacion: fecha }] : []),
         ],
       },
       include: { confirmado: { select: { numero_identidad: true, nombres: true, apellidos: true } } },
@@ -104,6 +121,7 @@ export async function buscarGlobal(parishId: number, q: string, limite = 15): Pr
           { numero_registro: q },
           { esposa: nombreFiltro(q) },
           { esposo: nombreFiltro(q) },
+          ...(fecha ? [{ fecha_matrimonio: fecha }] : []),
         ],
       },
       include: {
