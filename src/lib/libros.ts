@@ -14,7 +14,6 @@ export interface PersonaLite {
   apellidos: string;
 }
 
-// Registro normalizado para que la UI de Libros no dependa de 4 modelos.
 export interface LibroRegistro {
   id: string;
   sacramento: SacramentoLibro;
@@ -53,11 +52,6 @@ function nombreFiltro(nombre: string) {
   };
 }
 
-/**
- * Consulta unificada de registros sacramentales agrupables por libro.
- * Tenant-safe: SIEMPRE filtra por parishId. Usa un switch explícito por
- * sacramento (nunca nombres de modelo dinámicos desde input).
- */
 export async function consultarLibro(
   parishId: number,
   sacramento: SacramentoLibro,
@@ -166,8 +160,26 @@ export async function consultarLibro(
       if (filtros.libro) where.numero_libro = filtros.libro;
       if (filtros.pagina) where.numero_pagina = filtros.pagina;
       if (filtros.registro) where.numero_registro = filtros.registro;
-      if (filtros.dni) where.OR = [{ numero_identidad_esposa: filtros.dni }, { numero_identidad_esposo: filtros.dni }];
-      if (filtros.nombre) where.OR = [{ esposa: nombreFiltro(filtros.nombre) }, { esposo: nombreFiltro(filtros.nombre) }];
+
+      const and: import('@prisma/client').Prisma.MatrimonioWhereInput[] = [];
+      if (filtros.dni) {
+        and.push({
+          OR: [
+            { numero_identidad_esposa: filtros.dni },
+            { numero_identidad_esposo: filtros.dni },
+          ],
+        });
+      }
+      if (filtros.nombre) {
+        and.push({
+          OR: [
+            { esposa: nombreFiltro(filtros.nombre) },
+            { esposo: nombreFiltro(filtros.nombre) },
+          ],
+        });
+      }
+      if (and.length) where.AND = and;
+
       const [t, items] = await Promise.all([
         prisma.matrimonio.count({ where }),
         prisma.matrimonio.findMany({
