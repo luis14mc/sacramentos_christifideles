@@ -39,13 +39,15 @@ Se revisaron los 27 route handlers bajo `src/app/api`. Todos los endpoints opera
 - Auditoría de escrituras en Personas y Usuarios (C/U/D) en transacción.
 - `usuarios` migrado a singleton `@/lib/prisma`.
 - Dashboard: eliminado el placeholder "actividad reciente" (dato mock) → datos reales del tenant; `Cache-Control: no-store` en la respuesta.
+- Búsqueda global: DNI, nombre, apellido, libro, registro y **fecha exacta `YYYY-MM-DD`** para Personas/sacramentos.
+- `Cache-Control: no-store` explícito en auditoría y búsqueda global.
 - Confirmado: sin endpoints `/api/debug` ni `/api/test`; `setup` deshabilitado salvo `ALLOW_INITIAL_SETUP === "true"`.
 
 ## Validación de input (revisada)
 - `parseInt`/`BigInt` protegidos (try/catch → 400/404) en auditoría, numeradores, constancias, libros y detalles de sacramentos.
 - Paginación con límite máximo (`pageSize` ≤ 100) en todos los listados.
 - Allowlists explícitas: módulos de numeración, sacramentos de libros y de constancias (switch, sin nombres de modelo dinámicos).
-- Fechas validadas (`Number.isNaN(getTime())`).
+- Fechas validadas (`Number.isNaN(getTime())`); búsqueda por fecha solo activa para patrón exacto `YYYY-MM-DD`.
 
 ## PDF (constancias) — revisado
 - Sesión + RBAC (`canViewSacramentos`) + tenant de sesión + allowlist de sacramento.
@@ -61,8 +63,8 @@ Se revisaron los 27 route handlers bajo `src/app/api`. Todos los endpoints opera
 - No hay `console.log` de DNI, emails, contraseñas, tokens ni sesión. Se conserva `console.error` para errores técnicos sin secretos.
 
 ## Cache / headers
-- Endpoints con datos sensibles del tenant devueltos por route handlers dinámicos (no cacheables por Next por usar sesión). Se añadió `Cache-Control: no-store` explícito en dashboard y constancias.
-- **Recomendación Sprint 7:** añadir `no-store` explícito también a `auditoria` y `busqueda` por defensa en profundidad.
+- `Cache-Control: no-store` explícito en dashboard, constancias, auditoría y búsqueda global.
+- Los demás route handlers operativos usan sesión y datos tenant-scoped; no se detectó cache público de datos parroquiales sensibles.
 
 ## Rate limiting (candidatos, no implementado)
 No se introdujo infraestructura nueva (sin Redis). Endpoints candidatos a rate limiting en Sprint 7 / staging:
@@ -87,6 +89,5 @@ El modelo ya define índices útiles para las consultas globales:
 ## Recomendaciones para Sprint 7
 1. Migrar las 7 rutas de catálogo al singleton `@/lib/prisma`.
 2. Añadir rate limiting ligero a login/búsqueda/PDF al preparar staging.
-3. `no-store` explícito en auditoría y búsqueda.
-4. Preparar staging (env, migraciones versionadas, `prisma migrate deploy`).
-5. Evaluar activación gradual de RLS (ver `docs/RLS_STRATEGY.md`).
+3. Preparar staging (env, migraciones versionadas, `prisma migrate deploy`).
+4. Evaluar activación gradual de RLS (ver `docs/RLS_STRATEGY.md`).
