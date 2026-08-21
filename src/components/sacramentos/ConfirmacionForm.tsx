@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import PersonaSelector from '@/components/bautismos/PersonaSelector';
 import MinistroSelector from '@/components/sacramentos/MinistroSelector';
+import NumeracionAutomaticaControl from '@/components/sacramentos/NumeracionAutomaticaControl';
 
 interface FormState {
   numero_identidad_confirmado: string;
@@ -47,7 +48,6 @@ const PARTICIPANTES: [keyof FormState, string][] = [
   ['numero_identidad_catequista', 'Catequista'],
 ];
 
-// numero_pagina es opcional (String? en SQL v3); el resto obligatorio.
 const REGISTRALES: [keyof FormState, string, boolean][] = [
   ['numero_acta', 'Acta', true],
   ['numero_libro', 'Libro', true],
@@ -59,6 +59,7 @@ export default function ConfirmacionForm({ registroId }: { registroId?: string }
   const router = useRouter();
   const [form, setForm] = useState<FormState>(empty);
   const [loading, setLoading] = useState(false);
+  const [numeracionAutomatica, setNumeracionAutomatica] = useState(false);
   const isEdit = Boolean(registroId);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ export default function ConfirmacionForm({ registroId }: { registroId?: string }
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(isEdit ? form : { ...form, numeracion_automatica: numeracionAutomatica }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -132,6 +133,14 @@ export default function ConfirmacionForm({ registroId }: { registroId?: string }
             </label>
             <input type="date" className="input input-bordered w-full" value={form.fecha_confirmacion} onChange={(e) => setField('fecha_confirmacion', e.target.value)} required />
           </div>
+          {!isEdit && (
+            <NumeracionAutomaticaControl
+              modulo="confirmacion"
+              enabled={numeracionAutomatica}
+              onEnabledChange={setNumeracionAutomatica}
+              onSuggestion={(s) => setForm((prev) => ({ ...prev, numero_libro: s.numero_libro, numero_registro: s.numero_registro }))}
+            />
+          )}
           {REGISTRALES.map(([field, label, req]) => (
             <div className="form-control" key={field}>
               <label className="label">
