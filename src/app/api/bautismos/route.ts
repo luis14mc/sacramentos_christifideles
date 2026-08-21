@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
 import { jsonSafe } from '@/lib/serialize';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
+import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeBautismoInput,
   validarReferenciasTenant,
@@ -101,6 +102,9 @@ export async function POST(req: NextRequest) {
     const { parishId } = context;
 
     const data = await req.json();
+    // Numeración automática opcional: si el cliente la solicita, el número de
+    // registro se reserva de forma atómica dentro de la transacción.
+    const auto = data.numeracion_automatica === true;
     const parsed = normalizeBautismoInput(data);
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -113,38 +117,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: refError }, { status: 400 });
     }
 
-    // Unicidad registral: pre-check para UX; el constraint es la garantía final.
-    const duplicado = await prisma.bautismo.findUnique({
-      where: {
-        id_parroquia_numero_libro_numero_pagina_numero_registro: {
-          id_parroquia: parishId,
-          numero_libro: input.numero_libro,
-          numero_pagina: input.numero_pagina,
-          numero_registro: input.numero_registro,
+    // Unicidad registral: pre-check para UX (modo manual); el constraint es la
+    // garantía final. En modo automático el número lo asigna el numerador.
+    if (!auto) {
+      const duplicado = await prisma.bautismo.findUnique({
+        where: {
+          id_parroquia_numero_libro_numero_pagina_numero_registro: {
+            id_parroquia: parishId,
+            numero_libro: input.numero_libro,
+            numero_pagina: input.numero_pagina,
+            numero_registro: input.numero_registro,
+          },
         },
-      },
-      select: { id_bautismo: true },
-    });
-    if (duplicado) {
-      return NextResponse.json(
-        { error: 'Ya existe un bautismo con este libro, página y número de registro en la parroquia.' },
-        { status: 409 }
-      );
+        select: { id_bautismo: true },
+      });
+      if (duplicado) {
+        return NextResponse.json(
+          { error: 'Ya existe un bautismo con este libro, página y número de registro en la parroquia.' },
+          { status: 409 }
+        );
+      }
     }
 
     const userId = BigInt(context.session.user.id);
     const { actorIp, userAgent } = contextoAuditoria(req);
 
-    const newValues: Prisma.InputJsonValue = {
-      ...input,
-      fecha_bautismo: input.fecha_bautismo.toISOString(),
-    };
-
     const creado = await prisma.$transaction(async (tx) => {
+      const numeroRegistro = auto
+        ? String(await siguienteRegistro({ tx, parishId, modulo: 'bautismo' }))
+        : input.numero_registro;
       const bautismo = await tx.bautismo.create({
-        data: { id_parroquia: parishId, ...input },
+        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
         include: bautismoInclude,
       });
+      const newValues: Prisma.InputJsonValue = {
+        ...input,
+        numero_registro: numeroRegistro,
+        fecha_bautismo: input.fecha_bautismo.toISOString(),
+      };
       await registrarBitacora(tx, {
         parishId,
         userId,
