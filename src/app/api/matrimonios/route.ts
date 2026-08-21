@@ -6,6 +6,7 @@ import { hasPermission } from '@/lib/permissions';
 import { jsonSafe } from '@/lib/serialize';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { isPrismaUniqueError } from '@/lib/sacramentos';
+import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeMatrimonioInput,
   validarReferenciasMatrimonio,
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
     const { parishId } = context;
 
     const data = await req.json();
+    const auto = data.numeracion_automatica === true;
     const parsed = normalizeMatrimonioInput(data);
     if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
     const input: MatrimonioInput = parsed.input;
@@ -104,26 +106,31 @@ export async function POST(req: NextRequest) {
     const refError = await validarReferenciasMatrimonio(parishId, input);
     if (refError) return NextResponse.json({ error: refError }, { status: 400 });
 
-    const duplicado = await prisma.matrimonio.findFirst({
-      where: {
-        id_parroquia: parishId,
-        numero_libro: input.numero_libro,
-        numero_pagina: input.numero_pagina,
-        numero_registro: input.numero_registro,
-      },
-      select: { id_matrimonio: true },
-    });
-    if (duplicado) return NextResponse.json({ error: DUPLICADO }, { status: 409 });
+    if (!auto) {
+      const duplicado = await prisma.matrimonio.findFirst({
+        where: {
+          id_parroquia: parishId,
+          numero_libro: input.numero_libro,
+          numero_pagina: input.numero_pagina,
+          numero_registro: input.numero_registro,
+        },
+        select: { id_matrimonio: true },
+      });
+      if (duplicado) return NextResponse.json({ error: DUPLICADO }, { status: 409 });
+    }
 
     const userId = BigInt(context.session.user.id);
     const { actorIp, userAgent } = contextoAuditoria(req);
-    const newValues: Prisma.InputJsonValue = { ...input, fecha_matrimonio: input.fecha_matrimonio.toISOString() };
 
     const creado = await prisma.$transaction(async (tx) => {
+      const numeroRegistro = auto
+        ? String(await siguienteRegistro({ tx, parishId, modulo: 'matrimonio' }))
+        : input.numero_registro;
       const registro = await tx.matrimonio.create({
-        data: { id_parroquia: parishId, ...input },
+        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
         include: matrimonioInclude,
       });
+      const newValues: Prisma.InputJsonValue = { ...input, numero_registro: numeroRegistro, fecha_matrimonio: input.fecha_matrimonio.toISOString() };
       await registrarBitacora(tx, {
         parishId,
         userId,
