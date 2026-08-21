@@ -40,7 +40,15 @@ export async function registrarBitacora(
 
 /** Extrae IP y user-agent de la request para trazabilidad (best-effort). */
 export function contextoAuditoria(req: Request): { actorIp: string | null; userAgent: string | null } {
-  const fwd = req.headers.get('x-forwarded-for');
-  const actorIp = fwd ? fwd.split(',')[0].trim() : req.headers.get('x-real-ip');
-  return { actorIp: actorIp || null, userAgent: req.headers.get('user-agent') };
+  try {
+    const headers = (req as Request | undefined)?.headers;
+    if (!headers || typeof headers.get !== 'function') {
+      return { actorIp: null, userAgent: null };
+    }
+    const fwd = headers.get('x-forwarded-for');
+    const actorIp = fwd ? fwd.split(',')[0].trim() : headers.get('x-real-ip');
+    return { actorIp: actorIp || null, userAgent: headers.get('user-agent') };
+  } catch {
+    return { actorIp: null, userAgent: null };
+  }
 }
