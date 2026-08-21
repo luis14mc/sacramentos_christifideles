@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import PersonaSelector from './PersonaSelector';
+import NumeracionAutomaticaControl from '@/components/sacramentos/NumeracionAutomaticaControl';
 
 interface SacerdoteLite {
   numero_identidad: string;
@@ -58,6 +59,7 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [sacerdotes, setSacerdotes] = useState<SacerdoteLite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [numeracionAutomatica, setNumeracionAutomatica] = useState(false);
   const isEdit = Boolean(bautismoId);
 
   useEffect(() => {
@@ -103,7 +105,7 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
       const res = await fetch(url, {
         method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(isEdit ? form : { ...form, numeracion_automatica: numeracionAutomatica }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -172,6 +174,15 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
               required
             />
           </div>
+
+          {!isEdit && (
+            <NumeracionAutomaticaControl
+              modulo="bautismo"
+              enabled={numeracionAutomatica}
+              onEnabledChange={setNumeracionAutomatica}
+              onSuggestion={(s) => setForm((prev) => ({ ...prev, numero_libro: s.numero_libro, numero_registro: s.numero_registro }))}
+            />
+          )}
 
           {([
             ['numero_libro', 'Libro'],
