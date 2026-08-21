@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 import { hasPermission, normalizeRole } from '@/lib/permissions';
-
-const prisma = new PrismaClient();
+import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 
 // Super Admin es un rol de alcance global: solo un Super Admin puede asignarlo.
 // Evita escalación de privilegios desde Admin Parroquia u otros roles locales.
@@ -112,21 +111,37 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        nombre,
-        email,
-        telefono,
-        contrasena: Buffer.from(hashedPassword),
-        id_rol: rolData.id_rol,
-        estado: activo !== false ? 1 : 0,
-        id_parroquia: context.parishId,
-        id_usuario_creacion: BigInt(context.session.user.id)
-      },
-      include: {
-        parroquia: { select: { id_parroquia: true, nombre: true } },
-        rol: { select: { nombre: true } }
-      }
+    const userId = BigInt(context.session.user.id);
+    const { actorIp, userAgent } = contextoAuditoria(req);
+
+    const nuevoUsuario = await prisma.$transaction(async (tx) => {
+      const usuario = await tx.usuario.create({
+        data: {
+          nombre,
+          email,
+          telefono,
+          contrasena: Buffer.from(hashedPassword),
+          id_rol: rolData.id_rol,
+          estado: activo !== false ? 1 : 0,
+          id_parroquia: context.parishId,
+          id_usuario_creacion: userId
+        },
+        include: {
+          parroquia: { select: { id_parroquia: true, nombre: true } },
+          rol: { select: { nombre: true } }
+        }
+      });
+      await registrarBitacora(tx, {
+        parishId: context.parishId,
+        userId,
+        accion: 'C',
+        nombreTabla: 'usuario',
+        idAfectado: usuario.id_usuario,
+        newValues: { nombre, email, rol: rolData.nombre },
+        actorIp,
+        userAgent
+      });
+      return usuario;
     });
 
     return NextResponse.json(formatUsuario(nuevoUsuario), { status: 201 });
@@ -189,13 +204,29 @@ export async function PUT(req: NextRequest) {
       updateData.contrasena = Buffer.from(await bcrypt.hash(password, 12));
     }
 
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id_usuario: BigInt(id) },
-      data: updateData,
-      include: {
-        parroquia: { select: { id_parroquia: true, nombre: true } },
-        rol: { select: { nombre: true } }
-      }
+    const userId = BigInt(context.session.user.id);
+    const { actorIp, userAgent } = contextoAuditoria(req);
+
+    const usuarioActualizado = await prisma.$transaction(async (tx) => {
+      const usuario = await tx.usuario.update({
+        where: { id_usuario: BigInt(id) },
+        data: updateData,
+        include: {
+          parroquia: { select: { id_parroquia: true, nombre: true } },
+          rol: { select: { nombre: true } }
+        }
+      });
+      await registrarBitacora(tx, {
+        parishId: context.parishId,
+        userId,
+        accion: 'U',
+        nombreTabla: 'usuario',
+        idAfectado: BigInt(id),
+        newValues: { campos: Object.keys(updateData) },
+        actorIp,
+        userAgent
+      });
+      return usuario;
     });
 
     return NextResponse.json(formatUsuario(usuarioActualizado));
@@ -235,7 +266,23 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'No puedes eliminar tu propio usuario' }, { status: 400 });
     }
 
-    await prisma.usuario.delete({ where: { id_usuario: BigInt(id) } });
+    const userId = BigInt(context.session.user.id);
+    const { actorIp, userAgent } = contextoAuditoria(req);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.usuario.delete({ where: { id_usuario: BigInt(id) } });
+      await registrarBitacora(tx, {
+        parishId: context.parishId,
+        userId,
+        accion: 'D',
+        nombreTabla: 'usuario',
+        idAfectado: BigInt(id),
+        oldValues: { nombre: existingUser.nombre, email: existingUser.email },
+        actorIp,
+        userAgent
+      });
+    });
+
     return NextResponse.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
     console.error('Error deleting usuario:', error);
