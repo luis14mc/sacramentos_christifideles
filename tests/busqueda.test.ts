@@ -30,7 +30,7 @@ beforeAll(async () => {
       id_parroquia: cat.parishA,
       numero_identidad_bautizado: P.b, numero_identidad_madre: P.m, numero_identidad_padre: P.p,
       numero_identidad_madrina: P.mn, numero_identidad_padrino: P.pn, numero_identidad_catequista: P.c,
-      numero_identidad_sacerdote: SAC, fecha_bautismo: new Date('2026-06-01'),
+      numero_identidad_sacerdote: SAC, fecha_bautismo: new Date('2026-06-01T12:00:00.000Z'),
       numero_folio: '1', numero_libro: '70', numero_pagina: '1', numero_registro: '77',
     },
   });
@@ -52,7 +52,9 @@ describe('GET /api/busqueda', () => {
   });
   it('DNI exacto encuentra Persona y su bautismo', async () => {
     setSession(cat.parishA);
-    const json = await (await getBusqueda(req('BZ1'))).json();
+    const res = await getBusqueda(req('BZ1'));
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    const json = await res.json();
     expect(json.personas.length).toBe(1);
     expect(json.bautismos.length).toBe(1);
   });
@@ -71,6 +73,11 @@ describe('GET /api/busqueda', () => {
   it('busca por registro', async () => {
     setSession(cat.parishA);
     expect((await (await getBusqueda(req('77'))).json()).bautismos.length).toBe(1);
+  });
+  it('busca por fecha exacta YYYY-MM-DD', async () => {
+    setSession(cat.parishA);
+    const json = await (await getBusqueda(req('2026-06-01'))).json();
+    expect(json.bautismos.length).toBe(1);
   });
   it('tenant B no ve resultados de A', async () => {
     setSession(cat.parishB);
