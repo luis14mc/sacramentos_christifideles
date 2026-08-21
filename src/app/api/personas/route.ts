@@ -4,6 +4,7 @@ import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
 import { serializePersona, normalizeSexo } from '@/lib/persona';
+import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 
 const personaInclude = {
   sector: { select: { nombre: true } },
@@ -185,26 +186,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const nuevaPersona = await prisma.persona.create({
-      data: {
-        numero_identidad: numeroIdentidad,
-        id_parroquia: parishId,
-        id_sector_parroquial: sectorId,
-        id_orden_religiosa: orden.id_orden_religiosa,
-        nombres,
-        apellidos,
-        fecha_nacimiento: fechaNacimiento,
-        lugar_nacimiento: lugarNacimiento,
-        sexo,
-        telefono,
-        email: data.email ? String(data.email).trim() : null,
-        direccion: data.direccion ? String(data.direccion).trim() : null,
-        estado_vital: 1,
-        estado_activo_parroquia: 1,
-        otra_orden_religiosa: null,
-        imagen: null,
-      },
-      include: personaInclude,
+    const userId = BigInt(session.user.id);
+    const { actorIp, userAgent } = contextoAuditoria(req);
+
+    const nuevaPersona = await prisma.$transaction(async (tx) => {
+      const persona = await tx.persona.create({
+        data: {
+          numero_identidad: numeroIdentidad,
+          id_parroquia: parishId,
+          id_sector_parroquial: sectorId,
+          id_orden_religiosa: orden.id_orden_religiosa,
+          nombres,
+          apellidos,
+          fecha_nacimiento: fechaNacimiento,
+          lugar_nacimiento: lugarNacimiento,
+          sexo,
+          telefono,
+          email: data.email ? String(data.email).trim() : null,
+          direccion: data.direccion ? String(data.direccion).trim() : null,
+          estado_vital: 1,
+          estado_activo_parroquia: 1,
+          otra_orden_religiosa: null,
+          imagen: null,
+        },
+        include: personaInclude,
+      });
+      await registrarBitacora(tx, {
+        parishId,
+        userId,
+        accion: 'C',
+        nombreTabla: 'persona',
+        newValues: { numero_identidad: numeroIdentidad, nombres, apellidos, sexo, id_sector_parroquial: sectorId.toString() },
+        actorIp,
+        userAgent,
+      });
+      return persona;
     });
 
     return NextResponse.json(serializePersona(nuevaPersona), { status: 201 });

@@ -9,6 +9,7 @@ import {
   isEstadoVitalValido,
   isEstadoActivoValido,
 } from '@/lib/persona';
+import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 
 const personaInclude = {
   sector: { select: { nombre: true } },
@@ -239,30 +240,45 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    const personaActualizada = await prisma.persona.update({
-      where: {
-        id_parroquia_numero_identidad: {
-          id_parroquia: context.parishId,
-          numero_identidad: numeroIdentidad,
+    const userId = BigInt(context.session.user.id);
+    const { actorIp, userAgent } = contextoAuditoria(req);
+
+    const personaActualizada = await prisma.$transaction(async (tx) => {
+      const persona = await tx.persona.update({
+        where: {
+          id_parroquia_numero_identidad: {
+            id_parroquia: context.parishId,
+            numero_identidad: numeroIdentidad,
+          },
         },
-      },
-      data: {
-        nombres,
-        apellidos,
-        fecha_nacimiento: fechaNacimiento,
-        lugar_nacimiento: lugarNacimiento,
-        sexo,
-        telefono,
-        email: data.email,
-        direccion: data.direccion,
-        id_sector_parroquial: sectorId,
-        id_orden_religiosa: idOrdenReligiosa,
-        estado_vital: estadoVital,
-        estado_activo_parroquia: estadoActivo,
-        otra_orden_religiosa: data.otra_orden_religiosa,
-        imagen: data.imagen,
-      },
-      include: personaInclude,
+        data: {
+          nombres,
+          apellidos,
+          fecha_nacimiento: fechaNacimiento,
+          lugar_nacimiento: lugarNacimiento,
+          sexo,
+          telefono,
+          email: data.email,
+          direccion: data.direccion,
+          id_sector_parroquial: sectorId,
+          id_orden_religiosa: idOrdenReligiosa,
+          estado_vital: estadoVital,
+          estado_activo_parroquia: estadoActivo,
+          otra_orden_religiosa: data.otra_orden_religiosa,
+          imagen: data.imagen,
+        },
+        include: personaInclude,
+      });
+      await registrarBitacora(tx, {
+        parishId: context.parishId,
+        userId,
+        accion: 'U',
+        nombreTabla: 'persona',
+        newValues: { numero_identidad: numeroIdentidad },
+        actorIp,
+        userAgent,
+      });
+      return persona;
     });
 
     return NextResponse.json(serializePersona(personaActualizada));
@@ -343,13 +359,27 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       );
     }
 
-    await prisma.persona.delete({
-      where: {
-        id_parroquia_numero_identidad: {
-          id_parroquia: context.parishId,
-          numero_identidad: numeroIdentidad,
+    const userId = BigInt(context.session.user.id);
+    const { actorIp, userAgent } = contextoAuditoria(_req);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.persona.delete({
+        where: {
+          id_parroquia_numero_identidad: {
+            id_parroquia: context.parishId,
+            numero_identidad: numeroIdentidad,
+          },
         },
-      },
+      });
+      await registrarBitacora(tx, {
+        parishId: context.parishId,
+        userId,
+        accion: 'D',
+        nombreTabla: 'persona',
+        oldValues: { numero_identidad: numeroIdentidad },
+        actorIp,
+        userAgent,
+      });
     });
 
     return NextResponse.json({ success: true });
