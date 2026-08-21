@@ -77,9 +77,21 @@ export const navigationConfig: NavigationItem[] = [
     icon: DocumentTextIcon,
     requiredPermission: 'canViewConfiguracion'
   },
-  { 
-    name: 'Reportes', 
-    href: '/reportes', 
+  {
+    name: 'Buscar',
+    href: '/buscar',
+    icon: DocumentTextIcon,
+    requiredPermission: 'canViewPersonas'
+  },
+  {
+    name: 'Auditoría',
+    href: '/auditoria',
+    icon: ClipboardDocumentListIcon,
+    requiredPermission: 'canViewReportes'
+  },
+  {
+    name: 'Reportes',
+    href: '/reportes',
     icon: ChartBarIcon,
     requiredPermission: 'canViewReportes'
   },

@@ -44,6 +44,14 @@ interface DashboardStats {
   totalMatrimonios: number;
   totalUsuarios: number;
   usuariosActivos: number;
+  sacramentosDelMes: number;
+}
+
+interface RegistroReciente {
+  tipo: string;
+  titulo: string;
+  fecha: string | null;
+  href: string;
 }
 
 export default function DashboardPage() {
@@ -57,8 +65,10 @@ export default function DashboardPage() {
     totalConfirmaciones: 0,
     totalMatrimonios: 0,
     totalUsuarios: 0,
-    usuariosActivos: 0
+    usuariosActivos: 0,
+    sacramentosDelMes: 0
   });
+  const [recientes, setRecientes] = useState<RegistroReciente[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +87,7 @@ export default function DashboardPage() {
           const data = await response.json();
           setParroquiaData(data.parroquiaData);
           setStats(data.stats);
+          setRecientes(Array.isArray(data.recientes) ? data.recientes : []);
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -137,6 +148,13 @@ export default function DashboardPage() {
       icon: HeartIcon,
       color: 'text-accent',
       bgColor: 'bg-accent/10'
+    },
+    {
+      name: 'Sacramentos del mes',
+      value: stats.sacramentosDelMes,
+      icon: ClipboardDocumentListIcon,
+      color: 'text-primary',
+      bgColor: 'bg-primary/10'
     },
     {
       name: 'Usuarios del Sistema',
@@ -249,21 +267,33 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Recent activity placeholder */}
+          {/* Registros recientes (datos reales del tenant) */}
           <div className="bg-base-100 rounded-lg sm:rounded-xl shadow-sm border border-base-300 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base sm:text-lg font-semibold text-base-content">
-                Actividad Reciente
+                Registros recientes
               </h2>
-              <button className="text-sm text-primary hover:text-primary/80 transition-colors">
-                Ver todo
-              </button>
             </div>
-            <div className="text-center py-8 sm:py-12">
-              <p className="text-base-content/60 text-sm sm:text-base">
-                No hay actividad reciente para mostrar
-              </p>
-            </div>
+            {recientes.length === 0 ? (
+              <div className="text-center py-8 sm:py-12">
+                <p className="text-base-content/60 text-sm sm:text-base">
+                  No hay registros recientes.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-base-300">
+                {recientes.map((r, i) => (
+                  <li key={i}>
+                    <a href={r.href} className="flex items-center justify-between py-2 hover:bg-base-200 rounded px-2">
+                      <span className="text-sm font-medium">{r.titulo}</span>
+                      <span className="text-xs text-base-content/60">
+                        {r.tipo}{r.fecha ? ` · ${String(r.fecha).slice(0, 10)}` : ''}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
