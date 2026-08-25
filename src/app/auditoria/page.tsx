@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import { PageCard, PageHeader } from '@/components/layout/PageHeader';
 import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 
 interface Registro {
@@ -50,53 +51,69 @@ export default function AuditoriaPage() {
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <ClipboardDocumentListIcon className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl font-bold">Auditoría</h1>
-        </div>
+        <PageHeader
+          icon={<ClipboardDocumentListIcon className="h-6 w-6 text-primary" />}
+          title="Auditoría"
+          subtitle="Trazabilidad de cambios en registros parroquiales"
+        />
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <input type="date" className="input input-bordered input-sm" value={f.desde} onChange={(e) => setF({ ...f, desde: e.target.value })} />
-          <input type="date" className="input input-bordered input-sm" value={f.hasta} onChange={(e) => setF({ ...f, hasta: e.target.value })} />
-          <input className="input input-bordered input-sm" placeholder="Tabla/módulo" value={f.tabla} onChange={(e) => setF({ ...f, tabla: e.target.value })} />
-          <select className="select select-bordered select-sm" value={f.accion} onChange={(e) => setF({ ...f, accion: e.target.value })}>
-            <option value="">Toda acción</option>
-            <option value="C">Creación</option>
-            <option value="U">Actualización</option>
-            <option value="D">Eliminación</option>
-            <option value="R">Lectura</option>
-          </select>
-          <button className="btn btn-primary btn-sm" onClick={() => { setPage(1); cargar(1); }}>Filtrar</button>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-base-300">
-          <table className="table table-sm">
-            <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Registro</th><th></th></tr></thead>
-            <tbody>
-              {loading && <tr><td colSpan={6} className="text-center text-base-content/60">Cargando…</td></tr>}
-              {!loading && rows.length === 0 && <tr><td colSpan={6} className="text-center text-base-content/60">Sin registros.</td></tr>}
-              {rows.map((r) => (
-                <tr key={r.id_accion}>
-                  <td>{new Date(r.fecha).toLocaleString('es')}</td>
-                  <td>{r.usuario_nombre ?? `#${r.id_usuario}`}</td>
-                  <td><span className="badge badge-ghost">{ACCION_LABEL[r.accion] ?? r.accion}</span></td>
-                  <td>{r.nombre_tabla}</td>
-                  <td>{r.id_tabla_afectado ?? '—'}</td>
-                  <td className="text-right"><button className="btn btn-ghost btn-xs" onClick={() => setDetalle(r)}>Ver</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-base-content/60">{total} registros</span>
-          <div className="flex gap-2">
-            <button className="btn btn-sm" disabled={page <= 1} onClick={() => { const p = page - 1; setPage(p); cargar(p); }}>Anterior</button>
-            <span className="px-2 py-1">{page} / {totalPages}</span>
-            <button className="btn btn-sm" disabled={page >= totalPages} onClick={() => { const p = page + 1; setPage(p); cargar(p); }}>Siguiente</button>
+        <PageCard>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+            <input type="date" className="input input-bordered" value={f.desde} onChange={(e) => setF({ ...f, desde: e.target.value })} />
+            <input type="date" className="input input-bordered" value={f.hasta} onChange={(e) => setF({ ...f, hasta: e.target.value })} />
+            <input className="input input-bordered" placeholder="Tabla/módulo" value={f.tabla} onChange={(e) => setF({ ...f, tabla: e.target.value })} />
+            <select className="select select-bordered" value={f.accion} onChange={(e) => setF({ ...f, accion: e.target.value })}>
+              <option value="">Toda acción</option>
+              <option value="C">Creación</option>
+              <option value="U">Actualización</option>
+              <option value="D">Eliminación</option>
+              <option value="R">Lectura</option>
+            </select>
+            <button className="btn btn-primary" onClick={() => { setPage(1); cargar(1); }}>Filtrar</button>
           </div>
-        </div>
+        </PageCard>
+
+        <PageCard padding={false} className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table table-zebra table-sm">
+              <thead className="bg-base-200/50">
+                <tr>
+                  <th className="font-semibold">Fecha</th>
+                  <th className="font-semibold">Usuario</th>
+                  <th className="font-semibold">Acción</th>
+                  <th className="font-semibold">Módulo</th>
+                  <th className="font-semibold">Registro</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && <tr><td colSpan={6} className="text-center text-base-content/60 py-12">Cargando…</td></tr>}
+                {!loading && rows.length === 0 && <tr><td colSpan={6} className="text-center text-base-content/60 py-12">Sin registros.</td></tr>}
+                {rows.map((r) => (
+                  <tr key={r.id_accion} className="hover:bg-base-200/30">
+                    <td>{new Date(r.fecha).toLocaleString('es')}</td>
+                    <td>{r.usuario_nombre ?? `#${r.id_usuario}`}</td>
+                    <td><span className="badge badge-ghost">{ACCION_LABEL[r.accion] ?? r.accion}</span></td>
+                    <td>{r.nombre_tabla}</td>
+                    <td>{r.id_tabla_afectado ?? '—'}</td>
+                    <td className="text-right"><button className="btn btn-ghost btn-xs" onClick={() => setDetalle(r)}>Ver</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </PageCard>
+
+        <PageCard>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
+            <span className="text-base-content/60">{total} registros</span>
+            <div className="flex gap-2 items-center">
+              <button className="btn btn-sm" disabled={page <= 1} onClick={() => { const p = page - 1; setPage(p); cargar(p); }}>Anterior</button>
+              <span className="px-2 py-1">{page} / {totalPages}</span>
+              <button className="btn btn-sm" disabled={page >= totalPages} onClick={() => { const p = page + 1; setPage(p); cargar(p); }}>Siguiente</button>
+            </div>
+          </div>
+        </PageCard>
       </div>
 
       {detalle && (

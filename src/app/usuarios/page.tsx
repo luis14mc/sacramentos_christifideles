@@ -144,7 +144,7 @@ export default function UsuariosPage() {
     return (
       <div className="flex h-screen bg-base-200 overflow-hidden">
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Header setSidebarOpen={setSidebarOpen} parroquiaNombre={parroquiaData?.parroquia?.nombre} />
           <main className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="flex items-center justify-center h-full">
@@ -165,7 +165,7 @@ export default function UsuariosPage() {
       <div className="flex h-screen bg-base-200 overflow-hidden">
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Header 
             setSidebarOpen={setSidebarOpen} 
             parroquiaNombre={parroquiaData?.parroquia?.nombre}

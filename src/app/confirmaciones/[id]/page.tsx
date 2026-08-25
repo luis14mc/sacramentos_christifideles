@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import { PageCard } from '@/components/layout/PageHeader';
 import { usePermissions } from '@/hooks/usePermissions';
 import ConstanciaButton from '@/components/sacramentos/ConstanciaButton';
 import { ArrowLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
@@ -46,28 +47,32 @@ export default function DetalleConfirmacionPage() {
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/confirmaciones" className="btn btn-ghost btn-sm"><ArrowLeftIcon className="h-4 w-4" /></Link>
-            <h1 className="text-2xl font-bold">Detalle de Confirmación</h1>
-          </div>
-          {b && (
-            <div className="flex gap-2">
-              <ConstanciaButton sacramento="confirmacion" id={id} />
-              {permissions.canEditSacramentos && (
-                <Link href={`/confirmaciones/${id}/editar`} className="btn btn-primary btn-sm"><PencilSquareIcon className="h-4 w-4" /> Editar</Link>
-              )}
+        <PageCard>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <Link href="/confirmaciones" className="btn btn-ghost btn-sm"><ArrowLeftIcon className="h-4 w-4" /></Link>
+              <h1 className="text-2xl font-bold">Detalle de Confirmación</h1>
             </div>
-          )}
-        </div>
-        {loading && <p className="text-base-content/60">Cargando…</p>}
-        {notFound && <p className="text-error">Registro no encontrado.</p>}
-        {b && (
-          <div className="overflow-hidden rounded-lg border border-base-300">
-            <table className="table">
-              <tbody>{filas.map(([k, v]) => (<tr key={k}><th className="w-56 bg-base-200">{k}</th><td>{v}</td></tr>))}</tbody>
-            </table>
+            {b && (
+              <div className="flex gap-2 shrink-0">
+                <ConstanciaButton sacramento="confirmacion" id={id} />
+                {permissions.canEditSacramentos && (
+                  <Link href={`/confirmaciones/${id}/editar`} className="btn btn-primary btn-sm"><PencilSquareIcon className="h-4 w-4" /> Editar</Link>
+                )}
+              </div>
+            )}
           </div>
+        </PageCard>
+        {loading && <PageCard><p className="text-base-content/60">Cargando…</p></PageCard>}
+        {notFound && <PageCard><p className="text-error">Registro no encontrado.</p></PageCard>}
+        {b && (
+          <PageCard padding={false} className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table">
+                <tbody>{filas.map(([k, v]) => (<tr key={k}><th className="w-56 bg-base-200">{k}</th><td>{v}</td></tr>))}</tbody>
+              </table>
+            </div>
+          </PageCard>
         )}
       </div>
     </AuthenticatedLayout>

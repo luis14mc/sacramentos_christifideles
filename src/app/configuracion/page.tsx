@@ -50,8 +50,6 @@ export default function Configuracion() {
 
   return (
     <AuthenticatedLayout>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6 sm:mb-8">
             <div className="flex items-center mb-4">
@@ -127,8 +125,6 @@ export default function Configuracion() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </AuthenticatedLayout>
   );
 }

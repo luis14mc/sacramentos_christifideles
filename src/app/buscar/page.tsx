@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import { PageCard, PageHeader } from '@/components/layout/PageHeader';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface Resultado {
@@ -56,24 +57,33 @@ export default function BuscarPage() {
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Búsqueda global</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center gap-2 rounded-lg border border-base-300 px-3 py-2">
-            <MagnifyingGlassIcon className="h-5 w-5 text-base-content/50" />
-            <input
-              className="w-full bg-transparent outline-none"
-              placeholder="DNI, nombre, apellido, libro o registro…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && buscar()}
-              autoFocus
-            />
-          </div>
-          <button className="btn btn-primary" onClick={buscar}>Buscar</button>
-        </div>
+        <PageHeader
+          icon={<MagnifyingGlassIcon className="h-6 w-6 text-primary" />}
+          title="Búsqueda global"
+          subtitle="Buscar personas y sacramentos por DNI, nombre, libro o registro"
+        />
 
-        {loading && <p className="text-base-content/60">Buscando…</p>}
-        {buscado && !loading && res && res.total === 0 && <p className="text-base-content/60">Sin resultados.</p>}
+        <PageCard>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50" />
+              <input
+                className="input input-bordered w-full pl-10"
+                placeholder="DNI, nombre, apellido, libro o registro…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && buscar()}
+                autoFocus
+              />
+            </div>
+            <button className="btn btn-primary" onClick={buscar}>Buscar</button>
+          </div>
+        </PageCard>
+
+        {loading && <PageCard><p className="text-base-content/60">Buscando…</p></PageCard>}
+        {buscado && !loading && res && res.total === 0 && (
+          <PageCard><p className="text-base-content/60">Sin resultados.</p></PageCard>
+        )}
 
         {res && res.total > 0 && (
           <div className="space-y-6">
@@ -81,11 +91,13 @@ export default function BuscarPage() {
               const items = res[key] as Resultado[];
               if (!items.length) return null;
               return (
-                <div key={key}>
-                  <h2 className="mb-2 font-semibold">{label} <span className="text-base-content/50">({items.length})</span></h2>
-                  <div className="divide-y divide-base-300 rounded-lg border border-base-300">
+                <PageCard key={key} padding={false} className="overflow-hidden">
+                  <div className="px-6 py-4 border-b border-base-300">
+                    <h2 className="font-semibold">{label} <span className="text-base-content/50">({items.length})</span></h2>
+                  </div>
+                  <div className="divide-y divide-base-300">
                     {items.map((r) => (
-                      <Link key={`${r.tipo}-${r.id}`} href={r.href} className="flex items-center justify-between px-4 py-2 hover:bg-base-200">
+                      <Link key={`${r.tipo}-${r.id}`} href={r.href} className="flex items-center justify-between px-6 py-3 hover:bg-base-200">
                         <div>
                           <div className="font-medium">{r.titulo}</div>
                           <div className="text-sm text-base-content/60">
@@ -98,7 +110,7 @@ export default function BuscarPage() {
                       </Link>
                     ))}
                   </div>
-                </div>
+                </PageCard>
               );
             })}
           </div>

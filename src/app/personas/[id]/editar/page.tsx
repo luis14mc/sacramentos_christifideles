@@ -230,8 +230,7 @@ export default function EditarPersona() {
 
   return (
     <AuthenticatedLayout>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-4 mb-6">
             <button
@@ -450,7 +449,6 @@ export default function EditarPersona() {
             </form>
           </div>
         </div>
-      </div>
     </AuthenticatedLayout>
   );
 }

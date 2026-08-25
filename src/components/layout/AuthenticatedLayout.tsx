@@ -54,17 +54,18 @@ export default function AuthenticatedLayout({
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
-        <Header 
-          setSidebarOpen={setSidebarOpen} 
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <Header
+          setSidebarOpen={setSidebarOpen}
           parroquiaNombre={parroquiaNombre}
         />
-        
-        {/* Page content */}
+
         <main className="flex-1 overflow-y-auto">
-          {children}
+          <div className="min-h-full p-4 sm:p-6">
+            <div className="mx-auto w-full max-w-7xl">
+              {children}
+            </div>
+          </div>
         </main>
       </div>
     </div>

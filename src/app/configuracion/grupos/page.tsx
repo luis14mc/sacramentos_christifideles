@@ -63,8 +63,6 @@ export default function GruposParroquialesAdmin() {
 
   return (
     <AuthenticatedLayout>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
             <div className="flex items-center mb-4 sm:mb-0">
@@ -212,8 +210,6 @@ export default function GruposParroquialesAdmin() {
               ))}
             </div>
           )}
-        </div>
-      </div>
     </AuthenticatedLayout>
   );
 }

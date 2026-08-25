@@ -232,9 +232,7 @@ export default function PersonasPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="min-h-screen bg-base-200/30">
-        <div className="p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
             {/* Header mejorado */}
             <div className="bg-base-100 rounded-xl shadow-sm border border-base-300">
               <div className="p-6">
@@ -549,8 +547,6 @@ export default function PersonasPage() {
           onEdit={handleEditFromView}
           onDelete={eliminarPersona}
         />
-      </div>
-      </div>
     </AuthenticatedLayout>
   );
 }

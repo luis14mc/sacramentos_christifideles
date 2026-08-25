@@ -106,7 +106,7 @@ export default function ComunionForm({ registroId }: { registroId?: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="rounded-lg border border-base-300 p-4">
+      <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Participantes (Personas registradas)</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {PARTICIPANTES.map(([field, label]) => (
@@ -115,7 +115,7 @@ export default function ComunionForm({ registroId }: { registroId?: string }) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-base-300 p-4">
+      <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Ministro y datos registrales</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <MinistroSelector label="Sacerdote" required value={form.numero_identidad_sacerdote} onChange={(v) => setField('numero_identidad_sacerdote', v)} />

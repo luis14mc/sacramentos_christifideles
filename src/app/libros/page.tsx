@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import { PageCard, PageHeader } from '@/components/layout/PageHeader';
 import { BookOpenIcon, EyeIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 
 interface PersonaLite { numero_identidad: string; nombres: string; apellidos: string; }
@@ -57,57 +58,69 @@ export default function LibrosPage() {
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <BookOpenIcon className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl font-bold">Libros sacramentales</h1>
-        </div>
+        <PageHeader
+          icon={<BookOpenIcon className="h-6 w-6 text-primary" />}
+          title="Libros sacramentales"
+          subtitle="Consulta de libros, folios y registros por sacramento"
+        />
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div className="form-control">
-            <label className="label"><span className="label-text">Sacramento</span></label>
-            <select className="select select-bordered" value={sacramento} onChange={(e) => setSacramento(e.target.value)}>
-              {SACRAMENTOS.map(([v, l]) => (<option key={v} value={v}>{l}</option>))}
-            </select>
+        <PageCard>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="form-control">
+              <label className="label"><span className="label-text">Sacramento</span></label>
+              <select className="select select-bordered w-full" value={sacramento} onChange={(e) => setSacramento(e.target.value)}>
+                {SACRAMENTOS.map(([v, l]) => (<option key={v} value={v}>{l}</option>))}
+              </select>
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text">Libro</span></label>
+              <input className="input input-bordered w-full" value={libro} onChange={(e) => setLibro(e.target.value)} placeholder="N.º de libro" />
+            </div>
+            <div className="form-control md:col-span-2">
+              <label className="label"><span className="label-text">Persona (nombre)</span></label>
+              <input className="input input-bordered w-full" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cargar()} placeholder="Buscar por nombre…" />
+            </div>
           </div>
-          <div className="form-control">
-            <label className="label"><span className="label-text">Libro</span></label>
-            <input className="input input-bordered" value={libro} onChange={(e) => setLibro(e.target.value)} placeholder="N.º de libro" />
+          <div className="mt-4">
+            <button className="btn btn-primary" onClick={cargar}>Consultar libro</button>
           </div>
-          <div className="form-control md:col-span-2">
-            <label className="label"><span className="label-text">Persona (nombre)</span></label>
-            <input className="input input-bordered" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cargar()} placeholder="Buscar por nombre…" />
-          </div>
-        </div>
-        <button className="btn btn-primary btn-sm" onClick={cargar}>Consultar libro</button>
+        </PageCard>
 
-        <div className="overflow-x-auto rounded-lg border border-base-300">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Persona</th><th>Fecha</th><th>Libro</th><th>Página</th><th>Registro</th><th className="text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && <tr><td colSpan={6} className="text-center text-base-content/60">Cargando…</td></tr>}
-              {!loading && rows.length === 0 && <tr><td colSpan={6} className="text-center text-base-content/60">Sin registros.</td></tr>}
-              {rows.map((r) => (
-                <tr key={`${r.sacramento}-${r.id}`}>
-                  <td>{nom(r.personaPrincipal)}{r.personaSecundaria ? ` & ${nom(r.personaSecundaria)}` : ''}</td>
-                  <td>{r.fecha ? String(r.fecha).slice(0, 10) : '—'}</td>
-                  <td>{r.numero_libro}</td>
-                  <td>{r.numero_pagina ?? '—'}</td>
-                  <td>{r.numero_registro}</td>
-                  <td className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Link href={`${RUTA_DETALLE[r.sacramento]}/${r.id}`} className="btn btn-ghost btn-xs" title="Ver"><EyeIcon className="h-4 w-4" /></Link>
-                      <a href={`/api/constancias/${r.sacramento}/${r.id}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs" title="Constancia PDF"><DocumentArrowDownIcon className="h-4 w-4" /></a>
-                    </div>
-                  </td>
+        <PageCard padding={false} className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table table-zebra">
+              <thead className="bg-base-200/50">
+                <tr>
+                  <th className="font-semibold">Persona</th>
+                  <th className="font-semibold">Fecha</th>
+                  <th className="font-semibold">Libro</th>
+                  <th className="font-semibold">Página</th>
+                  <th className="font-semibold">Registro</th>
+                  <th className="font-semibold text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {loading && <tr><td colSpan={6} className="text-center text-base-content/60 py-12">Cargando…</td></tr>}
+                {!loading && rows.length === 0 && <tr><td colSpan={6} className="text-center text-base-content/60 py-12">Sin registros.</td></tr>}
+                {rows.map((r) => (
+                  <tr key={`${r.sacramento}-${r.id}`} className="hover:bg-base-200/30">
+                    <td>{nom(r.personaPrincipal)}{r.personaSecundaria ? ` & ${nom(r.personaSecundaria)}` : ''}</td>
+                    <td>{r.fecha ? String(r.fecha).slice(0, 10) : '—'}</td>
+                    <td>{r.numero_libro}</td>
+                    <td>{r.numero_pagina ?? '—'}</td>
+                    <td>{r.numero_registro}</td>
+                    <td className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Link href={`${RUTA_DETALLE[r.sacramento]}/${r.id}`} className="btn btn-ghost btn-xs" title="Ver"><EyeIcon className="h-4 w-4" /></Link>
+                        <a href={`/api/constancias/${r.sacramento}/${r.id}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs" title="Constancia PDF"><DocumentArrowDownIcon className="h-4 w-4" /></a>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </PageCard>
       </div>
     </AuthenticatedLayout>
   );
