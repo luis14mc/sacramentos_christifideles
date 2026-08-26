@@ -144,11 +144,14 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  await prisma.bitacoraLogin.deleteMany({});
   await prisma.bitacoraCrud.deleteMany({});
   await prisma.bautismo.deleteMany({});
   await prisma.ordenSacerdotal.deleteMany({});
   await prisma.persona.deleteMany({});
   await prisma.sectorParroquial.deleteMany({});
+  await prisma.parroquiaConfig.deleteMany({});
+  await prisma.usuario.deleteMany({});
   await prisma.parroquia.deleteMany({});
   await prisma.rangoOrdenSacerdotal.deleteMany({});
   await prisma.ordenReligiosa.deleteMany({});

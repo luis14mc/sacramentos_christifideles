@@ -45,8 +45,6 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await prisma.bautismo.deleteMany({});
-  await prisma.usuario.deleteMany({});
-  await prisma.rolUsuario.deleteMany({});
   await limpiarCatalogo();
   await prisma.$disconnect();
 });
