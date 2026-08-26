@@ -183,25 +183,11 @@ CREATE TABLE rango_orden_sacerdotal (
   nombre VARCHAR(55) NOT NULL,
   descripcion VARCHAR(200)
 );
+-- Catálogo administrable. No hay código/tipo estable para "obispo":
+-- la UI de Confirmación filtra por nombre (contains 'obispo'), sin IDs hardcodeados.
 
-CREATE TABLE orden_sacerdotal (
-  numero_identidad VARCHAR(20) NOT NULL,
-  id_rango_sacerdotal SMALLINT NOT NULL REFERENCES rango_orden_sacerdotal(id_rango_sacerdotal),
-  id_parroquia SMALLINT NOT NULL REFERENCES parroquia(id_parroquia) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  id_orden_religiosa SMALLINT NOT NULL REFERENCES orden_religiosa(id_orden_religiosa) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  nombres VARCHAR(55) NOT NULL,
-  apellidos VARCHAR(55) NOT NULL,
-  fecha_nacimiento DATE,
-  lugar_nacimiento CHAR(4),  -- FK sugerida: municipio(codigo_municipio)
-  telefono VARCHAR(100),
-  email VARCHAR(255),
-  otra_orden_religiosa VARCHAR(255),
-  es_parroco SMALLINT NOT NULL DEFAULT 0,      -- 0=No, 1=Si
-  estado_vital SMALLINT NOT NULL DEFAULT 1 CHECK (estado_vital IN (0,1,2)),
-  imagen VARCHAR(300),
-  PRIMARY KEY (numero_identidad),              -- conservamos PK original
-  UNIQUE (id_parroquia, numero_identidad)      -- habilita FKs compuestas por parroquia + identidad
-);
+-- orden_sacerdotal se crea DESPUÉS de persona: es extensión clerical de Persona
+-- (PK/FK compuesta). No duplica nombres, contacto, imagen ni estado_vital.
 
 -- ============================================================================
 -- SECTORES PARROQUIALES
@@ -252,6 +238,20 @@ CREATE TABLE persona (
 );
 
 CREATE INDEX persona_apellidos_idx ON persona(id_parroquia, apellidos);
+
+-- ============================================================================
+-- CLERO (extensión de Persona; mismo tenant)
+-- ============================================================================
+CREATE TABLE orden_sacerdotal (
+  id_parroquia SMALLINT NOT NULL REFERENCES parroquia(id_parroquia) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  numero_identidad VARCHAR(20) NOT NULL,
+  id_rango_sacerdotal SMALLINT NOT NULL REFERENCES rango_orden_sacerdotal(id_rango_sacerdotal),
+  id_orden_religiosa SMALLINT NOT NULL REFERENCES orden_religiosa(id_orden_religiosa) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  es_parroco SMALLINT NOT NULL DEFAULT 0 CHECK (es_parroco IN (0, 1)),
+  estado_ministerial SMALLINT NOT NULL DEFAULT 1 CHECK (estado_ministerial IN (0, 1)),  -- 0=inactivo, 1=activo
+  PRIMARY KEY (id_parroquia, numero_identidad),
+  FOREIGN KEY (id_parroquia, numero_identidad) REFERENCES persona(id_parroquia, numero_identidad) ON DELETE RESTRICT ON UPDATE RESTRICT
+);
 
 -- ============================================================================
 -- GRUPOS PARROQUIALES
@@ -308,7 +308,7 @@ CREATE TABLE bautismo (
   FOREIGN KEY (id_parroquia, numero_identidad_madrina)   REFERENCES persona(id_parroquia, numero_identidad),
   FOREIGN KEY (id_parroquia, numero_identidad_padrino)   REFERENCES persona(id_parroquia, numero_identidad),
   FOREIGN KEY (id_parroquia, numero_identidad_catequista)REFERENCES persona(id_parroquia, numero_identidad),
-  -- Compuesta hacia orden_sacerdotal (habilitada por UNIQUE(id_parroquia, numero_identidad))
+  -- Compuesta hacia orden_sacerdotal (PK parroquia + identidad; mismo tenant)
   FOREIGN KEY (id_parroquia, numero_identidad_sacerdote) REFERENCES orden_sacerdotal(id_parroquia, numero_identidad),
   -- Unicidad por parroquia del registro en libro/folio/página
   UNIQUE (id_parroquia, numero_libro, numero_pagina, numero_registro)
