@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 
-// Fixtures compartidos por las suites de sacramentos (comunión, confirmación).
 export const DEP = '08';
 export const MUN = '0801';
 
@@ -52,17 +51,43 @@ export async function seedPersona(parishId: number, dni: string, sectorId: bigin
   });
 }
 
-export async function seedSacerdote(parishId: number, dni: string, rangoId: number, ordenId: number) {
+export async function seedSacerdote(
+  parishId: number,
+  dni: string,
+  rangoId: number,
+  ordenId: number,
+  sectorId: bigint,
+  extras?: { estado_ministerial?: number; estado_vital?: number }
+) {
+  await seedPersona(parishId, dni, sectorId, ordenId);
+  if (extras?.estado_vital !== undefined && extras.estado_vital !== 1) {
+    await prisma.persona.update({
+      where: { id_parroquia_numero_identidad: { id_parroquia: parishId, numero_identidad: dni } },
+      data: { estado_vital: extras.estado_vital },
+    });
+  }
   await prisma.ordenSacerdotal.create({
-    data: { numero_identidad: dni, id_rango_sacerdotal: rangoId, id_parroquia: parishId, id_orden_religiosa: ordenId, nombres: 'Ministro', apellidos: dni },
+    data: {
+      numero_identidad: dni,
+      id_rango_sacerdotal: rangoId,
+      id_parroquia: parishId,
+      id_orden_religiosa: ordenId,
+      estado_ministerial: extras?.estado_ministerial ?? 1,
+    },
   });
 }
 
 export async function limpiarCatalogo() {
   await prisma.bitacoraCrud.deleteMany({});
+  await prisma.bautismo.deleteMany({});
+  await prisma.primeraComunion.deleteMany({});
+  await prisma.confirmacion.deleteMany({});
+  await prisma.matrimonio.deleteMany({});
+  await prisma.numeradores.deleteMany({});
   await prisma.ordenSacerdotal.deleteMany({});
   await prisma.persona.deleteMany({});
   await prisma.sectorParroquial.deleteMany({});
+  await prisma.parroquiaConfig.deleteMany({});
   await prisma.parroquia.deleteMany({});
   await prisma.rangoOrdenSacerdotal.deleteMany({});
   await prisma.ordenReligiosa.deleteMany({});

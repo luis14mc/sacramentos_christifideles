@@ -24,7 +24,7 @@ function req(qs: string): NextRequest {
 beforeAll(async () => {
   cat = await setupCatalogo();
   for (const dni of Object.values(P)) await seedPersona(cat.parishA, dni, cat.sectorA, cat.ordenId);
-  await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId);
+  await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId, cat.sectorA);
   await prisma.bautismo.create({
     data: {
       id_parroquia: cat.parishA,

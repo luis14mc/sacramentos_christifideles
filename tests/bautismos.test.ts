@@ -127,9 +127,14 @@ beforeAll(async () => {
   // Persona en B (para probar participante de otra parroquia)
   await seedPersona(parishB, PERSONA_B, sectorB);
 
-  // Sacerdotes
-  await prisma.ordenSacerdotal.create({ data: { numero_identidad: SAC_A, id_rango_sacerdotal: rangoId, id_parroquia: parishA, id_orden_religiosa: ordenId, nombres: 'Padre', apellidos: 'A' } });
-  await prisma.ordenSacerdotal.create({ data: { numero_identidad: SAC_B, id_rango_sacerdotal: rangoId, id_parroquia: parishB, id_orden_religiosa: ordenId, nombres: 'Padre', apellidos: 'B' } });
+  await seedPersona(parishA, SAC_A, sectorA);
+  await seedPersona(parishB, SAC_B, sectorB);
+  await prisma.ordenSacerdotal.create({
+    data: { numero_identidad: SAC_A, id_rango_sacerdotal: rangoId, id_parroquia: parishA, id_orden_religiosa: ordenId },
+  });
+  await prisma.ordenSacerdotal.create({
+    data: { numero_identidad: SAC_B, id_rango_sacerdotal: rangoId, id_parroquia: parishB, id_orden_religiosa: ordenId },
+  });
 });
 
 afterEach(async () => {
