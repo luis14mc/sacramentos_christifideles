@@ -9,6 +9,7 @@ import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeBautismoInput,
   validarReferenciasTenant,
+  bautismoCreateData,
   bautismoInclude,
   type BautismoInput,
 } from '@/lib/bautismo';
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
         ? String(await siguienteRegistro({ tx, parishId, modulo: 'bautismo' }))
         : input.numero_registro;
       const bautismo = await tx.bautismo.create({
-        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
+        data: bautismoCreateData(input, parishId, { numero_registro: numeroRegistro }) as Prisma.BautismoCreateInput,
         include: bautismoInclude,
       });
       const newValues: Prisma.InputJsonValue = {

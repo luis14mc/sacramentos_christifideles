@@ -43,9 +43,14 @@ const PARTICIPANTES: [keyof FormState, string][] = [
   ['numero_identidad_bautizado', 'Bautizado'],
   ['numero_identidad_madre', 'Madre'],
   ['numero_identidad_padre', 'Padre'],
+  ['numero_identidad_catequista', 'Catequista'],
+];
+
+// Padrino y madrina son opcionales individualmente: se requiere AL MENOS UNO.
+// Se renderizan aparte para mostrar mensaje contextual y permitir vacío.
+const PADRINOS: [keyof FormState, string][] = [
   ['numero_identidad_madrina', 'Madrina'],
   ['numero_identidad_padrino', 'Padrino'],
-  ['numero_identidad_catequista', 'Catequista'],
 ];
 
 export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
@@ -84,6 +89,17 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Regla v1: al menos uno entre padrino y madrina.
+    if (!form.numero_identidad_madrina && !form.numero_identidad_padrino) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Falta padrino o madrina',
+        text: 'Debe registrar al menos un padrino o una madrina para el bautismo.',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const url = isEdit ? `/api/bautismos/${bautismoId}` : '/api/bautismos';
@@ -118,6 +134,25 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
               key={field}
               label={label}
               required
+              value={form[field]}
+              onChange={(v) => setField(field, v)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h3 className="font-semibold">Padrino y Madrina</h3>
+          <span className="text-xs text-base-content/60">
+            Debe registrar al menos uno de los dos.
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {PADRINOS.map(([field, label]) => (
+            <PersonaSelector
+              key={field}
+              label={label}
               value={form[field]}
               onChange={(v) => setField(field, v)}
             />
