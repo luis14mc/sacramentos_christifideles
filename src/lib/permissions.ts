@@ -4,6 +4,8 @@ export interface UserPermissions {
   canManagePersonas: boolean;
   canViewUsuarios: boolean;
   canManageUsuarios: boolean;
+  canViewSacerdotes: boolean;
+  canManageSacerdotes: boolean;
   canViewSacramentos: boolean;
   canCreateSacramentos: boolean;
   canEditSacramentos: boolean;
@@ -21,6 +23,8 @@ export const defaultPermissions: UserPermissions = {
   canManagePersonas: false,
   canViewUsuarios: false,
   canManageUsuarios: false,
+  canViewSacerdotes: false,
+  canManageSacerdotes: false,
   canViewSacramentos: false,
   canCreateSacramentos: false,
   canEditSacramentos: false,
@@ -38,6 +42,8 @@ const fullAccess: UserPermissions = {
   canManagePersonas: true,
   canViewUsuarios: true,
   canManageUsuarios: true,
+  canViewSacerdotes: true,
+  canManageSacerdotes: true,
   canViewSacramentos: true,
   canCreateSacramentos: true,
   canEditSacramentos: true,
@@ -62,6 +68,7 @@ export const rolePermissions: Record<string, UserPermissions> = {
     ...fullAccess,
     canViewUsuarios: false,
     canManageUsuarios: false,
+    canManageSacerdotes: false,
     canViewConfiguracion: false,
     canManageConfiguracion: false,
   },
@@ -69,6 +76,7 @@ export const rolePermissions: Record<string, UserPermissions> = {
     ...fullAccess,
     canViewUsuarios: false,
     canManageUsuarios: false,
+    canManageSacerdotes: false,
     canViewReportes: false,
     canViewConfiguracion: false,
     canManageConfiguracion: false,
@@ -77,6 +85,7 @@ export const rolePermissions: Record<string, UserPermissions> = {
     ...fullAccess,
     canViewUsuarios: false,
     canManageUsuarios: false,
+    canManageSacerdotes: false,
     canViewReportes: false,
     canViewConfiguracion: false,
     canManageConfiguracion: false,
@@ -87,6 +96,8 @@ export const rolePermissions: Record<string, UserPermissions> = {
     canManagePersonas: false,
     canViewUsuarios: false,
     canManageUsuarios: false,
+    canViewSacerdotes: true,
+    canManageSacerdotes: true,
     canViewSacramentos: true,
     canCreateSacramentos: true,
     canEditSacramentos: false,
@@ -105,6 +116,7 @@ export const rolePermissions: Record<string, UserPermissions> = {
   'solo lectura': {
     ...defaultPermissions,
     canViewPersonas: true,
+    canViewSacerdotes: true,
     canViewSacramentos: true,
     canViewConstancias: true,
   },
