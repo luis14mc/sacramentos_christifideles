@@ -10,6 +10,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup/database-guard.ts'],
     // Tests de integración comparten una base de datos: ejecutar en serie.
     fileParallelism: false,
     testTimeout: 30000,
