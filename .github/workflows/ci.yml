@@ -30,6 +30,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/christifideles_ci?schema=public
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/christifideles_ci?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/christifideles_ci?schema=public
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-only-secret-not-for-production-000000000000
       ALLOW_INITIAL_SETUP: "false"
@@ -59,6 +60,11 @@ jobs:
 
       - name: Apply schema to CI database
         run: pnpm exec prisma db push --skip-generate
+
+      - name: Seed and verify CI database
+        run: |
+          NODE_ENV=test pnpm db:seed
+          NODE_ENV=test pnpm db:seed:verify:ci
 
       - name: Lint
         run: pnpm run lint
