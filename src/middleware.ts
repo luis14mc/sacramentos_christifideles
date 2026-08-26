@@ -28,6 +28,7 @@ export const config = {
     '/constancias/:path*',
     '/reportes/:path*',
     '/configuracion/:path*',
-    '/usuarios/:path*'
+    '/usuarios/:path*',
+    '/sacerdotes/:path*',
   ]
 };

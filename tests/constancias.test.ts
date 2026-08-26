@@ -30,7 +30,7 @@ function ctx(sacramento: string, id: string) {
 beforeAll(async () => {
   cat = await setupCatalogo();
   for (const dni of Object.values(A)) await seedPersona(cat.parishA, dni, cat.sectorA, cat.ordenId);
-  await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId);
+  await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId, cat.sectorA);
   const b = await prisma.bautismo.create({
     data: {
       id_parroquia: cat.parishA,

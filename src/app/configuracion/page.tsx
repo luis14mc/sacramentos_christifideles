@@ -12,12 +12,20 @@ import {
 
 const configurationModules = [
   {
-    name: 'Sacerdotes',
-    description: 'Administrar sacerdotes, diáconos y religiosos',
-    href: '/configuracion/sacerdotes',
+    name: 'Rangos sacerdotales',
+    description: 'Catálogo de diácono, presbítero, obispo y demás rangos',
+    href: '/configuracion/rangos-sacerdotales',
     icon: UserCircleIcon,
     color: 'bg-primary hover:bg-primary/80',
-    stats: '0 registrados'
+    stats: 'Catálogo'
+  },
+  {
+    name: 'Órdenes religiosas',
+    description: 'Catálogo diocesano, salesiano, franciscano y otras órdenes',
+    href: '/configuracion/ordenes-religiosas',
+    icon: UsersIcon,
+    color: 'bg-secondary hover:bg-secondary/80',
+    stats: 'Catálogo'
   },
   {
     name: 'Grupos Parroquiales',
@@ -59,7 +67,7 @@ export default function Configuracion() {
               </h1>
             </div>
             <p className="text-base-content/70 text-sm sm:text-base">
-              Administra la configuración de tu parroquia, desde sacerdotes hasta grupos parroquiales
+              Administra los catálogos y la configuración de tu parroquia
             </p>
           </div>
 

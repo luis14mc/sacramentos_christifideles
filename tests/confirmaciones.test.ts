@@ -64,8 +64,8 @@ beforeAll(async () => {
   cat = await setupCatalogo();
   for (const dni of Object.values(P)) await seedPersona(cat.parishA, dni, cat.sectorA, cat.ordenId);
   await seedPersona(cat.parishB, PERSONA_B, cat.sectorB, cat.ordenId);
-  await seedSacerdote(cat.parishA, OB_A, cat.rangoId, cat.ordenId);
-  await seedSacerdote(cat.parishB, OB_B, cat.rangoId, cat.ordenId);
+  await seedSacerdote(cat.parishA, OB_A, cat.rangoId, cat.ordenId, cat.sectorA);
+  await seedSacerdote(cat.parishB, OB_B, cat.rangoId, cat.ordenId, cat.sectorB);
 });
 afterEach(async () => {
   await prisma.bitacoraCrud.deleteMany({});

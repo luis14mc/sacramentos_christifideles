@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { jsonSafe } from '@/lib/serialize';
+import { jsonSafeSacramento as jsonSafe, ministroSelect } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { isPrismaUniqueError } from '@/lib/sacramentos';
 import { siguienteRegistro } from '@/lib/numeradores';
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         include: {
           esposa: { select: { numero_identidad: true, nombres: true, apellidos: true } },
           esposo: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-          sacerdote: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+          sacerdote: { select: ministroSelect },
         },
         orderBy: [{ fecha_matrimonio: 'desc' }, { numero_registro: 'desc' }],
         skip: (page - 1) * pageSize,

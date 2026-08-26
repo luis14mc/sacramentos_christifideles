@@ -3,6 +3,7 @@ import {
   normalizarFecha,
   validarPersonasTenant,
   validarMinistroTenant,
+  ministroSelect,
 } from '@/lib/sacramentos';
 
 export interface ConfirmacionInput {
@@ -106,5 +107,5 @@ export const confirmacionInclude = {
   madrina: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   padrino: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   catequista: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-  obispo: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+  obispo: { select: ministroSelect },
 } as const;

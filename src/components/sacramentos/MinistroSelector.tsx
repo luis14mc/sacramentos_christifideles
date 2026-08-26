@@ -14,20 +14,27 @@ interface Props {
   value: string;
   onChange: (numeroIdentidad: string) => void;
   required?: boolean;
+  /**
+   * Filtro opcional por nombre de rango (contains, case-insensitive).
+   * Confirmación usa `obispo` para priorizar obispos/arzobispos.
+   * No hay código/tipo estable de rango: no se hardcodean IDs.
+   */
+  rango?: string;
 }
 
-// Selector de ministro (sacerdote/obispo). Lista solo los ministros de la
-// parroquia autenticada (GET /api/sacerdotes es tenant-safe). Reusable por
-// todos los sacramentos.
-export default function MinistroSelector({ label, value, onChange, required }: Props) {
+// Selector de ministro. GET /api/sacerdotes?lite=1 es tenant-safe y solo
+// incluye clero activo (estado_ministerial=1) con Persona viva.
+export default function MinistroSelector({ label, value, onChange, required, rango }: Props) {
   const [ministros, setMinistros] = useState<MinistroLite[]>([]);
 
   useEffect(() => {
-    fetch('/api/sacerdotes')
+    const params = new URLSearchParams({ lite: '1' });
+    if (rango) params.set('rango', rango);
+    fetch(`/api/sacerdotes?${params.toString()}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setMinistros(Array.isArray(d) ? d : []))
       .catch(() => setMinistros([]));
-  }, []);
+  }, [rango]);
 
   return (
     <div className="form-control">

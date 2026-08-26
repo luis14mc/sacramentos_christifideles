@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { prisma } from '@/lib/prisma';
+import { flattenMinistro, ministroSelect } from '@/lib/sacramentos';
 
 export const SACRAMENTOS_CONSTANCIA = ['bautismo', 'primera_comunion', 'confirmacion', 'matrimonio'] as const;
 export type SacramentoConstancia = (typeof SACRAMENTOS_CONSTANCIA)[number];
@@ -72,7 +73,7 @@ export async function cargarDatosConstancia(
     case 'bautismo': {
       const r = await prisma.bautismo.findFirst({
         where: { id_bautismo: id, id_parroquia: parishId },
-        include: { bautizado: personaSel, sacerdote: personaSel },
+        include: { bautizado: personaSel, sacerdote: { select: ministroSelect } },
       });
       if (!r) return null;
       return {
@@ -81,7 +82,7 @@ export async function cargarDatosConstancia(
         id: r.id_bautismo.toString(),
         personaPrincipal: r.bautizado,
         conyuge: null,
-        ministro: r.sacerdote,
+        ministro: flattenMinistro(r.sacerdote),
         fecha: r.fecha_bautismo,
         numero_acta: null,
         numero_libro: r.numero_libro,
@@ -93,7 +94,7 @@ export async function cargarDatosConstancia(
     case 'primera_comunion': {
       const r = await prisma.primeraComunion.findFirst({
         where: { id_primera_comunion: id, id_parroquia: parishId },
-        include: { persona: personaSel, sacerdote: personaSel },
+        include: { persona: personaSel, sacerdote: { select: ministroSelect } },
       });
       if (!r) return null;
       return {
@@ -102,7 +103,7 @@ export async function cargarDatosConstancia(
         id: r.id_primera_comunion.toString(),
         personaPrincipal: r.persona,
         conyuge: null,
-        ministro: r.sacerdote,
+        ministro: flattenMinistro(r.sacerdote),
         fecha: r.fecha_primera_comunion,
         numero_acta: r.numero_acta,
         numero_libro: r.numero_libro,
@@ -114,7 +115,7 @@ export async function cargarDatosConstancia(
     case 'confirmacion': {
       const r = await prisma.confirmacion.findFirst({
         where: { id_confirmacion: id, id_parroquia: parishId },
-        include: { confirmado: personaSel, obispo: personaSel },
+        include: { confirmado: personaSel, obispo: { select: ministroSelect } },
       });
       if (!r) return null;
       return {
@@ -123,7 +124,7 @@ export async function cargarDatosConstancia(
         id: r.id_confirmacion.toString(),
         personaPrincipal: r.confirmado,
         conyuge: null,
-        ministro: r.obispo,
+        ministro: flattenMinistro(r.obispo),
         fecha: r.fecha_confirmacion,
         numero_acta: r.numero_acta,
         numero_libro: r.numero_libro,
@@ -135,7 +136,7 @@ export async function cargarDatosConstancia(
     case 'matrimonio': {
       const r = await prisma.matrimonio.findFirst({
         where: { id_matrimonio: id, id_parroquia: parishId },
-        include: { esposa: personaSel, esposo: personaSel, sacerdote: personaSel },
+        include: { esposa: personaSel, esposo: personaSel, sacerdote: { select: ministroSelect } },
       });
       if (!r) return null;
       return {
@@ -144,7 +145,7 @@ export async function cargarDatosConstancia(
         id: r.id_matrimonio.toString(),
         personaPrincipal: r.esposa,
         conyuge: r.esposo,
-        ministro: r.sacerdote,
+        ministro: flattenMinistro(r.sacerdote),
         fecha: r.fecha_matrimonio,
         numero_acta: r.numero_acta,
         numero_libro: r.numero_libro,

@@ -32,7 +32,7 @@ beforeAll(async () => {
   usuarioB = uB.id_usuario.toString();
 
   for (const dni of Object.values(P)) await seedPersona(cat.parishA, dni, cat.sectorA, cat.ordenId);
-  await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId);
+  await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId, cat.sectorA);
   await prisma.bautismo.create({
     data: {
       id_parroquia: cat.parishA,
@@ -65,7 +65,8 @@ describe('GET /api/dashboard', () => {
     const res = await getDashboard();
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.stats.totalPersonas).toBe(6);
+    // 6 participantes + el sacerdote, que ahora también existe como Persona.
+    expect(json.stats.totalPersonas).toBe(7);
     expect(json.stats.totalBautismos).toBe(1);
     expect(json.stats.sacramentosDelMes).toBeGreaterThanOrEqual(1);
     expect(json.recientes.length).toBe(1);

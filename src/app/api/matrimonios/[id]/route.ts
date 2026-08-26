@@ -3,9 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { jsonSafe } from '@/lib/serialize';
+import { jsonSafeSacramento as jsonSafe, isPrismaUniqueError } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
-import { isPrismaUniqueError } from '@/lib/sacramentos';
 import {
   normalizeMatrimonioInput,
   validarReferenciasMatrimonio,
