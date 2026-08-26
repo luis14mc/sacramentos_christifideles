@@ -14,6 +14,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:verify:ci": "tsx scripts/verify-ci-seed.ts",
     "db:reset:dev": "tsx scripts/reset-dev-db.ts",
     "db:migrate:deploy": "prisma migrate deploy",
     "smoke": "node scripts/smoke-test.mjs",
