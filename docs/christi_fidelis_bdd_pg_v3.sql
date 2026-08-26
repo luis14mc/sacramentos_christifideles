@@ -291,8 +291,13 @@ CREATE TABLE bautismo (
   numero_identidad_bautizado VARCHAR(20) NOT NULL,
   numero_identidad_madre VARCHAR(20) NOT NULL,
   numero_identidad_padre VARCHAR(20) NOT NULL,
-  numero_identidad_madrina VARCHAR(20) NOT NULL,
-  numero_identidad_padrino VARCHAR(20) NOT NULL,
+  -- Regla v1: se exige al menos UNO entre padrino y madrina (no ambos).
+  -- Cada uno puede quedar en NULL si el otro está presente.
+  numero_identidad_madrina   VARCHAR(20),
+  numero_identidad_padrino   VARCHAR(20),
+  -- Restricción de dominio: garantiza el requisito funcional.
+  CONSTRAINT bautismo_padrino_o_madrina_chk
+    CHECK (numero_identidad_madrina IS NOT NULL OR numero_identidad_padrino IS NOT NULL),
   numero_identidad_catequista VARCHAR(20) NOT NULL,
   numero_identidad_sacerdote VARCHAR(20) NOT NULL,
   fecha_bautismo TIMESTAMPTZ NOT NULL,
