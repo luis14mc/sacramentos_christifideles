@@ -4,8 +4,6 @@ import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
 
-const RAMAS = new Set(['F', 'M', 'N']);
-
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -13,13 +11,13 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const ordenes = await prisma.ordenReligiosa.findMany({
-      include: { _count: { select: { orden_sacerdotal: true, personas: true } } },
+    const rangos = await prisma.rangoOrdenSacerdotal.findMany({
+      include: { _count: { select: { orden_sacerdotal: true } } },
       orderBy: { nombre: 'asc' },
     });
-    return NextResponse.json(ordenes);
+    return NextResponse.json(rangos);
   } catch (error) {
-    console.error('Error al obtener órdenes religiosas:', error);
+    console.error('Error al listar rangos sacerdotales:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
@@ -39,27 +37,18 @@ export async function POST(req: NextRequest) {
     if (!nombre) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
-    const ramaRaw = typeof data.rama === 'string' ? data.rama.trim().toUpperCase() : 'N';
-    if (!RAMAS.has(ramaRaw)) {
-      return NextResponse.json({ error: 'Rama inválida (debe ser F, M o N)' }, { status: 400 });
-    }
+    const descripcion =
+      typeof data.descripcion === 'string' && data.descripcion.trim()
+        ? data.descripcion.trim()
+        : null;
 
-    const creado = await prisma.ordenReligiosa.create({
-      data: {
-        nombre,
-        rama: ramaRaw,
-        nombre_latin:
-          typeof data.nombre_latin === 'string' ? data.nombre_latin.trim() || null : null,
-        abreviatura:
-          typeof data.abreviatura === 'string' ? data.abreviatura.trim() || null : null,
-        descripcion:
-          typeof data.descripcion === 'string' ? data.descripcion.trim() || null : null,
-      },
-      include: { _count: { select: { orden_sacerdotal: true, personas: true } } },
+    const creado = await prisma.rangoOrdenSacerdotal.create({
+      data: { nombre, descripcion },
+      include: { _count: { select: { orden_sacerdotal: true } } },
     });
     return NextResponse.json(creado, { status: 201 });
   } catch (error) {
-    console.error('Error al crear orden religiosa:', error);
+    console.error('Error al crear rango sacerdotal:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
