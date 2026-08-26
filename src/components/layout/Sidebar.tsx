@@ -60,6 +60,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
     { name: 'Dashboard', href: '/', icon: DashboardIcon },
     { name: 'Personas', href: '/personas', icon: PersonasIcon },
     { name: 'Usuarios', href: '/usuarios', icon: UsuariosIcon },
+    { name: 'Sacerdotes', href: '/sacerdotes', icon: PersonasIcon },
     { name: 'Bautismos', href: '/bautismos', icon: BautismosIcon },
     { name: 'Constancias', href: '/constancias', icon: ConstanciasIcon },
     { name: 'Configuración', href: '/configuracion', icon: ConfiguracionIcon }

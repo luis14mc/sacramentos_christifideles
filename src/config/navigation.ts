@@ -1,6 +1,5 @@
 import {
   HomeIcon,
-  UsersIcon,
   DocumentTextIcon,
   ChartBarIcon,
   CogIcon,
@@ -8,7 +7,8 @@ import {
   BookOpenIcon,
   ClipboardDocumentListIcon,
   ShieldCheckIcon,
-  UserIcon
+  UserIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
 import { UserPermissions } from '@/hooks/usePermissions';
@@ -40,6 +40,12 @@ export const navigationConfig: NavigationItem[] = [
     href: '/usuarios', 
     icon: ShieldCheckIcon,
     requiredPermission: 'canViewUsuarios'
+  },
+  {
+    name: 'Sacerdotes',
+    href: '/sacerdotes',
+    icon: UserCircleIcon,
+    requiredPermission: 'canViewSacerdotes'
   },
   { 
     name: 'Bautismos', 
