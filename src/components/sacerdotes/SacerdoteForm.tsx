@@ -23,6 +23,8 @@ export default function SacerdoteForm({ dni }: Props) {
   const router = useRouter();
   const isEdit = Boolean(dni);
   const [loading, setLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
   const [rangos, setRangos] = useState<CatalogoRango[]>([]);
   const [ordenes, setOrdenes] = useState<CatalogoOrden[]>([]);
   const [personaLabel, setPersonaLabel] = useState('');
@@ -35,14 +37,20 @@ export default function SacerdoteForm({ dni }: Props) {
   });
 
   useEffect(() => {
-    fetch('/api/rangos-sacerdotales')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setRangos(Array.isArray(d) ? d : []))
-      .catch(() => setRangos([]));
-    fetch('/api/ordenes-religiosas')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setOrdenes(Array.isArray(d) ? d : []))
-      .catch(() => setOrdenes([]));
+    Promise.all([fetch('/api/rangos-sacerdotales'), fetch('/api/ordenes-religiosas')])
+      .then(async ([rangosResponse, ordenesResponse]) => {
+        if (!rangosResponse.ok || !ordenesResponse.ok) throw new Error();
+        const [rangosData, ordenesData] = await Promise.all([rangosResponse.json(), ordenesResponse.json()]);
+        if (!Array.isArray(rangosData) || !Array.isArray(ordenesData) || !rangosData.length || !ordenesData.length) throw new Error();
+        setRangos(rangosData);
+        setOrdenes(ordenesData);
+      })
+      .catch(() => {
+        setRangos([]);
+        setOrdenes([]);
+        setCatalogError('No se pudieron cargar los catálogos clericales. Intente nuevamente.');
+      })
+      .finally(() => setCatalogLoading(false));
   }, []);
 
   useEffect(() => {
@@ -72,6 +80,14 @@ export default function SacerdoteForm({ dni }: Props) {
       await Swal.fire({ icon: 'warning', title: 'Seleccione una persona' });
       return;
     }
+    if (catalogError || !rangos.length || !ordenes.length) {
+      await Swal.fire({ icon: 'error', title: 'Catálogos no disponibles', text: catalogError || 'No hay catálogos clericales disponibles.' });
+      return;
+    }
+    if (!form.id_rango_sacerdotal || !form.id_orden_religiosa) {
+      await Swal.fire({ icon: 'warning', title: 'Complete los datos clericales' });
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -95,6 +111,8 @@ export default function SacerdoteForm({ dni }: Props) {
         return;
       }
       router.push(`/sacerdotes/${encodeURIComponent(form.numero_identidad)}`);
+    } catch {
+      await Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: 'Error de red. Intente nuevamente.' });
     } finally {
       setLoading(false);
     }
@@ -120,6 +138,8 @@ export default function SacerdoteForm({ dni }: Props) {
             <PersonaSelector
               label="Persona (sexo masculino, ya registrada)"
               required
+              sexo="M"
+              estadoVital={1}
               value={form.numero_identidad}
               onChange={(v) => setField('numero_identidad', v)}
             />
@@ -132,6 +152,8 @@ export default function SacerdoteForm({ dni }: Props) {
 
       <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Datos clericales</h3>
+        {catalogLoading && <p className="mb-3 text-sm text-base-content/60">Cargando catálogos…</p>}
+        {catalogError && <p className="mb-3 text-sm text-error" role="alert">{catalogError}</p>}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="form-control">
             <label className="label">
@@ -206,7 +228,7 @@ export default function SacerdoteForm({ dni }: Props) {
         <Link href="/sacerdotes" className="btn btn-ghost">
           Cancelar
         </Link>
-        <button className="btn btn-primary" onClick={guardar} disabled={loading}>
+        <button className="btn btn-primary" onClick={guardar} disabled={loading || catalogLoading || Boolean(catalogError) || !rangos.length || !ordenes.length}>
           {loading ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Registrar'}
         </button>
       </div>

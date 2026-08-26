@@ -37,9 +37,19 @@ export async function GET(req: NextRequest) {
     const requestedLimit = parseInt(searchParams.get('limit') || '0', 10);
     const limit = requestedLimit > 0 ? Math.min(requestedLimit, 50) : undefined;
     const lite = searchParams.get('lite') === '1';
+    const sexo = searchParams.get('sexo');
+    const estadoVitalRaw = searchParams.get('estado_vital');
+    if (sexo !== null && sexo !== 'M' && sexo !== 'F') {
+      return NextResponse.json({ error: 'Filtro sexo inválido (debe ser F o M)' }, { status: 400 });
+    }
+    if (estadoVitalRaw !== null && estadoVitalRaw !== '0' && estadoVitalRaw !== '1') {
+      return NextResponse.json({ error: 'Filtro estado_vital inválido (debe ser 0 o 1)' }, { status: 400 });
+    }
 
     const where = {
       id_parroquia: parishId,
+      ...(sexo ? { sexo } : {}),
+      ...(estadoVitalRaw !== null ? { estado_vital: Number(estadoVitalRaw) } : {}),
       ...(q
         ? {
             OR: [
