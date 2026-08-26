@@ -228,6 +228,12 @@ describe('CREATE /api/bautismos', () => {
     expect((await createBautismo(makeReq(body))).status).toBe(400);
   });
 
+  it('padrino/madrina en blanco no cuentan -> 400', async () => {
+    setSession(parishA);
+    const body = validBody({ numero_identidad_madrina: '   ', numero_identidad_padrino: '  ' });
+    expect((await createBautismo(makeReq(body))).status).toBe(400);
+  });
+
   it('padrino de otra parroquia -> 400', async () => {
     setSession(parishA);
     const body = validBody({ numero_identidad_madrina: '', numero_identidad_padrino: PERSONA_B });

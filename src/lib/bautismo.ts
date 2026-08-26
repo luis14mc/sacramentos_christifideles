@@ -1,4 +1,8 @@
-import { validarPersonasTenant, validarMinistroTenant } from '@/lib/sacramentos';
+import {
+  validarPersonasTenant,
+  validarMinistroTenant,
+  ministroSelect,
+} from '@/lib/sacramentos';
 
 // Roles que deben existir como Persona dentro de la MISMA parroquia.
 // Padrino y madrina son OPCIONALES individualmente: la regla de negocio v1
@@ -204,7 +208,6 @@ export function bautismoUpdateData(
   });
 
   const data: Record<string, unknown> = {
-    id_parroquia: parishId,
     bautizado: connectPersona(input.numero_identidad_bautizado),
     madre: connectPersona(input.numero_identidad_madre),
     padre: connectPersona(input.numero_identidad_padre),
@@ -247,5 +250,5 @@ export const bautismoInclude = {
   madrina: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   padrino: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   catequista: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-  sacerdote: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+  sacerdote: { select: ministroSelect },
 } as const;
