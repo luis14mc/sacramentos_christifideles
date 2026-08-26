@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { jsonSafe } from '@/lib/serialize';
 
 // Helpers de dominio compartidos por los sacramentos (Bautismo, Primera
 // Comunión, Confirmación). Mantiene una sola implementación de la validación
@@ -20,6 +21,46 @@ export function normalizarFecha(value: unknown): Date | null {
   if (!value) return null;
   const d = new Date(value as string);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+
+export const ministroSelect = {
+  numero_identidad: true,
+  persona: { select: { nombres: true, apellidos: true } },
+} as const;
+
+export function flattenMinistro(
+  m: { numero_identidad: string; persona: { nombres: string; apellidos: string } } | null | undefined
+) {
+  if (!m) return null;
+  return {
+    numero_identidad: m.numero_identidad,
+    nombres: m.persona.nombres,
+    apellidos: m.persona.apellidos,
+  };
+}
+
+export function flattenMinistroRelacion(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(flattenMinistroRelacion);
+  if (!value || typeof value !== 'object') return value;
+  const row = value as Record<string, unknown>;
+  const next = { ...row };
+  for (const key of ['sacerdote', 'obispo'] as const) {
+    const m = next[key];
+    if (m && typeof m === 'object' && 'persona' in m) {
+      const rel = m as { numero_identidad?: string; persona?: { nombres?: string; apellidos?: string } };
+      next[key] = {
+        numero_identidad: rel.numero_identidad,
+        nombres: rel.persona?.nombres ?? '',
+        apellidos: rel.persona?.apellidos ?? '',
+      };
+    }
+  }
+  return next;
+}
+
+export function jsonSafeSacramento(value: unknown): unknown {
+  return jsonSafe(flattenMinistroRelacion(value));
 }
 
 export function isPrismaUniqueError(error: unknown): boolean {
@@ -61,11 +102,25 @@ export async function validarPersonasTenant(
 export async function validarMinistroTenant(
   parishId: number,
   dni: string,
-  label = 'sacerdote'
+  label = 'sacerdote',
+  paraNuevaAlta = true
 ): Promise<string | null> {
   const ministro = await prisma.ordenSacerdotal.findUnique({
     where: { id_parroquia_numero_identidad: { id_parroquia: parishId, numero_identidad: dni } },
-    select: { numero_identidad: true },
+    select: {
+      numero_identidad: true,
+      estado_ministerial: true,
+      persona: { select: { estado_vital: true } },
+    },
   });
-  return ministro ? null : `El ${label} (DNI ${dni}) no existe en tu parroquia.`;
+  if (!ministro) return `El ${label} (DNI ${dni}) no existe en tu parroquia.`;
+  if (paraNuevaAlta) {
+    if (ministro.estado_ministerial !== 1) {
+      return `El ${label} (DNI ${dni}) no está activo ministerialmente.`;
+    }
+    if (ministro.persona.estado_vital !== 1) {
+      return `El ${label} (DNI ${dni}) no está disponible: la persona no figura como viva.`;
+    }
+  }
+  return null;
 }

@@ -3,6 +3,7 @@ import {
   normalizarFecha,
   validarPersonasTenant,
   validarMinistroTenant,
+  ministroSelect,
 } from '@/lib/sacramentos';
 
 export interface ComunionInput {
@@ -95,5 +96,5 @@ export const comunionInclude = {
   madre: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   padre: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   catequista: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-  sacerdote: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+  sacerdote: { select: ministroSelect },
 } as const;

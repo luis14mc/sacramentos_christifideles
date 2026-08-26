@@ -1,4 +1,4 @@
-import { validarPersonasTenant, validarMinistroTenant } from '@/lib/sacramentos';
+import { validarPersonasTenant, validarMinistroTenant, ministroSelect } from '@/lib/sacramentos';
 
 // Roles que deben existir como Persona dentro de la MISMA parroquia.
 export const ROLES_PERSONA = [
@@ -121,5 +121,5 @@ export const bautismoInclude = {
   madrina: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   padrino: { select: { numero_identidad: true, nombres: true, apellidos: true } },
   catequista: { select: { numero_identidad: true, nombres: true, apellidos: true } },
-  sacerdote: { select: { numero_identidad: true, nombres: true, apellidos: true } },
+  sacerdote: { select: ministroSelect },
 } as const;

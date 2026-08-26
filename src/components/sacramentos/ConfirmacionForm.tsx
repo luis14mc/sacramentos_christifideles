@@ -126,7 +126,13 @@ export default function ConfirmacionForm({ registroId }: { registroId?: string }
       <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Ministro y datos registrales</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <MinistroSelector label="Obispo" required value={form.numero_identidad_obispo} onChange={(v) => setField('numero_identidad_obispo', v)} />
+          <MinistroSelector
+            label="Obispo"
+            required
+            rango="obispo"
+            value={form.numero_identidad_obispo}
+            onChange={(v) => setField('numero_identidad_obispo', v)}
+          />
           <div className="form-control">
             <label className="label">
               <span className="label-text font-medium">Fecha de Confirmación <span className="text-error">*</span></span>

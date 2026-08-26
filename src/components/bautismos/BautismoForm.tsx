@@ -4,14 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import PersonaSelector from './PersonaSelector';
+import MinistroSelector from '@/components/sacramentos/MinistroSelector';
 import NumeracionAutomaticaControl from '@/components/sacramentos/NumeracionAutomaticaControl';
-
-interface SacerdoteLite {
-  numero_identidad: string;
-  nombres: string;
-  apellidos: string;
-  rango?: { nombre: string } | null;
-}
 
 interface FormState {
   numero_identidad_bautizado: string;
@@ -57,17 +51,9 @@ const PARTICIPANTES: [keyof FormState, string][] = [
 export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [sacerdotes, setSacerdotes] = useState<SacerdoteLite[]>([]);
   const [loading, setLoading] = useState(false);
   const [numeracionAutomatica, setNumeracionAutomatica] = useState(false);
   const isEdit = Boolean(bautismoId);
-
-  useEffect(() => {
-    fetch('/api/sacerdotes')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setSacerdotes(Array.isArray(d) ? d : []))
-      .catch(() => setSacerdotes([]));
-  }, []);
 
   useEffect(() => {
     if (!bautismoId) return;
@@ -142,25 +128,12 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
       <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Ministro y datos registrales</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-medium">Sacerdote <span className="text-error">*</span></span>
-            </label>
-            <select
-              className="select select-bordered w-full"
-              value={form.numero_identidad_sacerdote}
-              onChange={(e) => setField('numero_identidad_sacerdote', e.target.value)}
-              required
-            >
-              <option value="">Seleccionar sacerdote…</option>
-              {sacerdotes.map((s) => (
-                <option key={s.numero_identidad} value={s.numero_identidad}>
-                  {s.nombres} {s.apellidos}
-                  {s.rango?.nombre ? ` (${s.rango.nombre})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MinistroSelector
+            label="Sacerdote"
+            required
+            value={form.numero_identidad_sacerdote}
+            onChange={(v) => setField('numero_identidad_sacerdote', v)}
+          />
 
           <div className="form-control">
             <label className="label">

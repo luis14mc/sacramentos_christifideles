@@ -3,6 +3,7 @@ import {
   normalizarFecha,
   validarPersonasTenant,
   validarMinistroTenant,
+  ministroSelect,
   type RolPersona,
 } from '@/lib/sacramentos';
 
@@ -135,5 +136,5 @@ export const matrimonioInclude = {
   padre_esposa: personaSel,
   madre_esposo: personaSel,
   padre_esposo: personaSel,
-  sacerdote: personaSel,
+  sacerdote: { select: ministroSelect },
 } as const;
