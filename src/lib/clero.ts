@@ -139,6 +139,9 @@ export async function resolverPersonaClerical(
       'Solo una persona de sexo masculino puede registrarse como miembro del clero en esta versión.'
     );
   }
+  if (persona.estado_vital !== 1) {
+    throw new CleroError(400, 'No se puede registrar como clero a una persona fallecida.');
+  }
   return persona;
 }
 

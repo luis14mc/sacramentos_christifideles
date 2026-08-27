@@ -14,11 +14,13 @@ interface Props {
   value: string;
   onChange: (numeroIdentidad: string) => void;
   required?: boolean;
+  sexo?: 'M' | 'F';
+  estadoVital?: 0 | 1 | 2;
 }
 
 // Selector tenant-safe: consulta /api/personas con búsqueda limitada en backend.
 // Nunca crea Personas inline; si no existe, el usuario debe registrarla primero.
-export default function PersonaSelector({ label, value, onChange, required }: Props) {
+export default function PersonaSelector({ label, value, onChange, required, sexo, estadoVital }: Props) {
   const [resultados, setResultados] = useState<PersonaLite[]>([]);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -32,7 +34,8 @@ export default function PersonaSelector({ label, value, onChange, required }: Pr
     }
 
     const controller = new AbortController();
-    fetch(`/api/personas?q=${encodeURIComponent(value)}&limit=8&lite=1`, {
+    const filters = `${sexo ? `&sexo=${sexo}` : ''}${estadoVital !== undefined ? `&estado_vital=${estadoVital}` : ''}`;
+    fetch(`/api/personas?q=${encodeURIComponent(value)}&limit=8&lite=1${filters}`, {
       signal: controller.signal,
     })
       .then((r) => (r.ok ? r.json() : []))
@@ -46,7 +49,7 @@ export default function PersonaSelector({ label, value, onChange, required }: Pr
       });
 
     return () => controller.abort();
-  }, [value]);
+  }, [value, sexo, estadoVital]);
 
   useEffect(() => {
     const q = query.trim();
@@ -59,7 +62,8 @@ export default function PersonaSelector({ label, value, onChange, required }: Pr
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setLoading(true);
-      fetch(`/api/personas?q=${encodeURIComponent(q)}&limit=8&lite=1`, {
+      const filters = `${sexo ? `&sexo=${sexo}` : ''}${estadoVital !== undefined ? `&estado_vital=${estadoVital}` : ''}`;
+      fetch(`/api/personas?q=${encodeURIComponent(q)}&limit=8&lite=1${filters}`, {
         signal: controller.signal,
       })
         .then((r) => (r.ok ? r.json() : []))
@@ -74,7 +78,7 @@ export default function PersonaSelector({ label, value, onChange, required }: Pr
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, sexo, estadoVital]);
 
   const sinResultados = useMemo(
     () => Boolean(query.trim()) && !loading && resultados.length === 0,

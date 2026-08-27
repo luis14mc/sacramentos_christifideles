@@ -8,6 +8,7 @@ vi.mock('@/lib/auth', () => ({ default: {}, authOptions: {} }));
 import { prisma } from '@/lib/prisma';
 import { GET as listClero, POST as createClero } from '@/app/api/sacerdotes/route';
 import { GET as getClero, PUT as updateClero } from '@/app/api/sacerdotes/[dni]/route';
+import { GET as listPersonas } from '@/app/api/personas/route';
 import { POST as createBautismo } from '@/app/api/bautismos/route';
 import { POST as createComunion } from '@/app/api/primeras-comuniones/route';
 import { POST as createConfirmacion } from '@/app/api/confirmaciones/route';
@@ -25,6 +26,12 @@ const DEAD = 'CL-DEAD';
 const OBISPO = 'CL-OBI';
 const ACTIVE = 'CL-ACT';
 const BONLY = 'CL-BONLY';
+const SEED_LIKE_MEN = [
+  ['CL-QA-A', 'Juan Carlos', 'Martínez', '1990-05-18'],
+  ['CL-QA-B', 'José Antonio', 'López', '1985-09-12'],
+  ['CL-QA-C', 'Miguel Ángel', 'Rodríguez', '1970-03-24'],
+  ['CL-QA-F', 'Carlos', 'Mejía', '1995-01-29'],
+] as const;
 const P = {
   bautizado: 'CL-BZ',
   madre: 'CL-MD',
@@ -98,6 +105,25 @@ beforeAll(async () => {
   await seedSacerdote(cat.parishA, OBISPO, rangoObispoId, cat.ordenId, cat.sectorA);
   await seedSacerdote(cat.parishA, ACTIVE, cat.rangoId, cat.ordenId, cat.sectorA);
   await seedSacerdote(cat.parishB, BONLY, cat.rangoId, cat.ordenId, cat.sectorB);
+  for (const [dni, nombres, apellidos, fechaNacimiento] of SEED_LIKE_MEN) {
+    await prisma.persona.create({
+      data: {
+        numero_identidad: dni,
+        id_parroquia: cat.parishA,
+        id_sector_parroquial: cat.sectorA,
+        id_orden_religiosa: cat.ordenId,
+        nombres,
+        apellidos,
+        fecha_nacimiento: new Date(fechaNacimiento),
+        lugar_nacimiento: '0801',
+        sexo: 'M',
+        telefono: '9999-0000',
+        direccion: 'Distrito Central',
+        estado_vital: 1,
+        estado_activo_parroquia: 1,
+      },
+    });
+  }
   for (const dni of Object.values(P)) await seedPersona(cat.parishA, dni, cat.sectorA, cat.ordenId);
 });
 
@@ -108,7 +134,7 @@ afterEach(async () => {
   await prisma.confirmacion.deleteMany({});
   await prisma.matrimonio.deleteMany({});
   await prisma.ordenSacerdotal.deleteMany({
-    where: { numero_identidad: { in: [MALE, SAME] } },
+    where: { numero_identidad: { in: [MALE, SAME, ...SEED_LIKE_MEN.map(([dni]) => dni)] } },
   });
   vi.clearAllMocks();
 });
@@ -156,6 +182,15 @@ describe('API /api/sacerdotes', () => {
     const body = await res.json();
     expect(body.nombres).toBe('N' + MALE);
     expect(body.estado_ministerial).toBe(1);
+  });
+
+  it('crea clero para los cuatro perfiles masculinos vivos solicitados', async () => {
+    setSession(cat.parishA);
+    for (const [dni, nombres, apellidos] of SEED_LIKE_MEN) {
+      const res = await createClero(req(cleroBody(dni)));
+      expect(res.status).toBe(201);
+      expect(await res.json()).toMatchObject({ numero_identidad: dni, nombres, apellidos, sexo: 'M', estado_vital: 1 });
+    }
   });
 
   it('7. mismo DNI clerical en parroquias distintas', async () => {
@@ -231,6 +266,81 @@ describe('API /api/sacerdotes', () => {
     setSession(cat.parishA, 'catequista');
     const lite = await (await listClero(getReq('http://t/api/sacerdotes?lite=1'))).json();
     expect(lite.some((r: { numero_identidad: string }) => r.numero_identidad === DEAD)).toBe(false);
+  });
+
+  it('rechaza crear clero para una Persona fallecida con error claro', async () => {
+    setSession(cat.parishA);
+    const res = await createClero(req(cleroBody(DEAD)));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/fallecida/i);
+  });
+
+  it('conserva clero fallecido inactivo y rechaza su reactivación', async () => {
+    setSession(cat.parishA);
+    await prisma.ordenSacerdotal.update({
+      where: { id_parroquia_numero_identidad: { id_parroquia: cat.parishA, numero_identidad: DEAD } },
+      data: { estado_ministerial: 0 },
+    });
+    const res = await updateClero(req({ estado_ministerial: 1 }, 'http://t', 'PUT'), ctx(DEAD));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/fallecida/i);
+    const historico = await prisma.ordenSacerdotal.findUniqueOrThrow({
+      where: { id_parroquia_numero_identidad: { id_parroquia: cat.parishA, numero_identidad: DEAD } },
+    });
+    expect(historico.estado_ministerial).toBe(0);
+  });
+
+  it('PUT cambia solo datos clericales y mantiene inmutables los datos personales', async () => {
+    setSession(cat.parishA);
+    await createClero(req(cleroBody(MALE)));
+    const res = await updateClero(
+      req({ id_rango_sacerdotal: rangoObispoId, es_parroco: 1, nombres: 'Alterado', sexo: 'F' }, 'http://t', 'PUT'),
+      ctx(MALE)
+    );
+    expect(res.status).toBe(200);
+    const detail = await res.json();
+    expect(detail.id_rango_sacerdotal).toBe(rangoObispoId);
+    expect(detail.es_parroco).toBe(1);
+    expect(detail.nombres).toBe('N' + MALE);
+    expect(detail.sexo).toBe('M');
+    const persona = await prisma.persona.findUniqueOrThrow({
+      where: { id_parroquia_numero_identidad: { id_parroquia: cat.parishA, numero_identidad: MALE } },
+    });
+    expect(persona.nombres).toBe('N' + MALE);
+    expect(persona.sexo).toBe('M');
+  });
+
+  it('detalle separa datos personales, clericales y conteos sacramentales', async () => {
+    setSession(cat.parishA);
+    await createClero(req(cleroBody(MALE)));
+    const res = await getClero(getReq(`http://t/api/sacerdotes/${MALE}`), ctx(MALE));
+    const detail = await res.json();
+    expect(detail).toMatchObject({
+      numero_identidad: MALE,
+      nombres: 'N' + MALE,
+      sexo: 'M',
+      id_rango_sacerdotal: cat.rangoId,
+      id_orden_religiosa: cat.ordenId,
+      estado_ministerial: 1,
+      sacramentos: { bautismos: 0, primeras_comuniones: 0, confirmaciones: 0, matrimonios: 0 },
+    });
+  });
+
+  it('selector de Personas filtra sexo y estado vital sin cruzar tenant', async () => {
+    setSession(cat.parishA);
+    const res = await listPersonas(getReq('http://t/api/personas?lite=1&sexo=M&estado_vital=1'));
+    expect(res.status).toBe(200);
+    const personas = await res.json();
+    expect(personas.some((p: { numero_identidad: string }) => p.numero_identidad === MALE)).toBe(true);
+    expect(personas.some((p: { numero_identidad: string }) => p.numero_identidad === FEMALE)).toBe(false);
+    expect(personas.some((p: { numero_identidad: string }) => p.numero_identidad === DEAD)).toBe(false);
+    expect(personas.some((p: { numero_identidad: string }) => p.numero_identidad === BONLY)).toBe(false);
+  });
+
+  it('selector de Personas acepta estado desaparecido y rechaza filtros inválidos', async () => {
+    setSession(cat.parishA);
+    expect((await listPersonas(getReq('http://t/api/personas?lite=1&sexo=X'))).status).toBe(400);
+    expect((await listPersonas(getReq('http://t/api/personas?lite=1&estado_vital=2'))).status).toBe(200);
   });
 });
 

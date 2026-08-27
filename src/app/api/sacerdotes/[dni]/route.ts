@@ -75,6 +75,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ dni:
         id_orden_religiosa: true,
         es_parroco: true,
         estado_ministerial: true,
+        persona: { select: { estado_vital: true } },
       },
     });
     if (!existente) {
@@ -95,6 +96,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ dni:
     }
     if (!isEstadoMinisterialValido(estadoMinisterial)) {
       return NextResponse.json({ error: 'estado_ministerial debe ser 0 o 1' }, { status: 400 });
+    }
+    if (estadoMinisterial === 1 && existente.persona.estado_vital !== 1) {
+      return NextResponse.json(
+        { error: 'No se puede activar el ministerio de una persona fallecida.' },
+        { status: 400 }
+      );
     }
 
     await asegurarCatalogosClero(idRango, idOrden);
