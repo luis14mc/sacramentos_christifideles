@@ -15,7 +15,7 @@ interface Props {
   onChange: (numeroIdentidad: string) => void;
   required?: boolean;
   sexo?: 'M' | 'F';
-  estadoVital?: 0 | 1;
+  estadoVital?: 0 | 1 | 2;
 }
 
 // Selector tenant-safe: consulta /api/personas con búsqueda limitada en backend.

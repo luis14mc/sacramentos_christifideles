@@ -42,8 +42,8 @@ export async function GET(req: NextRequest) {
     if (sexo !== null && sexo !== 'M' && sexo !== 'F') {
       return NextResponse.json({ error: 'Filtro sexo inválido (debe ser F o M)' }, { status: 400 });
     }
-    if (estadoVitalRaw !== null && estadoVitalRaw !== '0' && estadoVitalRaw !== '1') {
-      return NextResponse.json({ error: 'Filtro estado_vital inválido (debe ser 0 o 1)' }, { status: 400 });
+    if (estadoVitalRaw !== null && estadoVitalRaw !== '0' && estadoVitalRaw !== '1' && estadoVitalRaw !== '2') {
+      return NextResponse.json({ error: 'Filtro estado_vital inválido (debe ser 0, 1 o 2)' }, { status: 400 });
     }
 
     const where = {

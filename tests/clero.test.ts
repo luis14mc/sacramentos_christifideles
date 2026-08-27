@@ -337,10 +337,10 @@ describe('API /api/sacerdotes', () => {
     expect(personas.some((p: { numero_identidad: string }) => p.numero_identidad === BONLY)).toBe(false);
   });
 
-  it('selector de Personas rechaza filtros no permitidos', async () => {
+  it('selector de Personas acepta estado desaparecido y rechaza filtros inválidos', async () => {
     setSession(cat.parishA);
     expect((await listPersonas(getReq('http://t/api/personas?lite=1&sexo=X'))).status).toBe(400);
-    expect((await listPersonas(getReq('http://t/api/personas?lite=1&estado_vital=2'))).status).toBe(400);
+    expect((await listPersonas(getReq('http://t/api/personas?lite=1&estado_vital=2'))).status).toBe(200);
   });
 });
 
