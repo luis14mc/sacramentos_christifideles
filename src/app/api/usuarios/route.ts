@@ -208,9 +208,16 @@ export async function PUT(req: NextRequest) {
     const { actorIp, userAgent } = contextoAuditoria(req);
 
     const usuarioActualizado = await prisma.$transaction(async (tx) => {
-      const usuario = await tx.usuario.update({
+      // Scoping compuesto: solo actualiza si el usuario pertenece a la parroquia de sesión.
+      const { count } = await tx.usuario.updateMany({
+        where: { id_usuario: BigInt(id), id_parroquia: context.parishId },
+        data: updateData
+      });
+      if (count === 0) {
+        throw new Error('USUARIO_FUERA_DE_ALCANCE');
+      }
+      const usuario = await tx.usuario.findUniqueOrThrow({
         where: { id_usuario: BigInt(id) },
-        data: updateData,
         include: {
           parroquia: { select: { id_parroquia: true, nombre: true } },
           rol: { select: { nombre: true } }
@@ -231,6 +238,9 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(formatUsuario(usuarioActualizado));
   } catch (error) {
+    if (error instanceof Error && error.message === 'USUARIO_FUERA_DE_ALCANCE') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
     console.error('Error updating usuario:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
@@ -270,7 +280,13 @@ export async function DELETE(req: NextRequest) {
     const { actorIp, userAgent } = contextoAuditoria(req);
 
     await prisma.$transaction(async (tx) => {
-      await tx.usuario.delete({ where: { id_usuario: BigInt(id) } });
+      // Scoping compuesto: solo elimina si pertenece a la parroquia de sesión.
+      const { count } = await tx.usuario.deleteMany({
+        where: { id_usuario: BigInt(id), id_parroquia: context.parishId }
+      });
+      if (count === 0) {
+        throw new Error('USUARIO_FUERA_DE_ALCANCE');
+      }
       await registrarBitacora(tx, {
         parishId: context.parishId,
         userId,
@@ -285,6 +301,9 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
+    if (error instanceof Error && error.message === 'USUARIO_FUERA_DE_ALCANCE') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
     console.error('Error deleting usuario:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }

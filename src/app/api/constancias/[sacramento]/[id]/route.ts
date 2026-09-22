@@ -20,7 +20,7 @@ export async function GET(
     if (!session?.user?.parishId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    if (!hasPermission(session.user.rol, 'canViewSacramentos')) {
+    if (!hasPermission(session.user.rol, 'canGenerateConstancias')) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
     const parishId = parseInt(session.user.parishId, 10);

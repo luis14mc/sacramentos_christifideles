@@ -22,5 +22,7 @@ declare module 'next-auth/jwt' {
     rol: string;  // Cambiar a 'rol' para consistencia
     parish: string;
     parishId: string;
+    sessionRevoked?: boolean;
+    lastVerifiedAt?: number;
   }
 }

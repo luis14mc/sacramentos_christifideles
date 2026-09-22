@@ -122,7 +122,15 @@ export async function PUT(req: NextRequest) {
     const { actorIp, userAgent } = contextoAuditoria(req);
 
     const actualizada = await prisma.$transaction(async (tx) => {
-      const p = await tx.plantillaConstancia.update({ where: { id }, data: update });
+      // Scoping compuesto: solo actualiza plantillas de la parroquia de sesión.
+      const { count } = await tx.plantillaConstancia.updateMany({
+        where: { id, id_parroquia: parishId },
+        data: update,
+      });
+      if (count === 0) {
+        throw new Error('PLANTILLA_FUERA_DE_ALCANCE');
+      }
+      const p = await tx.plantillaConstancia.findUniqueOrThrow({ where: { id } });
       await registrarBitacora(tx, {
         parishId,
         userId,
@@ -139,6 +147,9 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(jsonSafe(actualizada));
   } catch (error) {
+    if (error instanceof Error && error.message === 'PLANTILLA_FUERA_DE_ALCANCE') {
+      return NextResponse.json({ error: 'Plantilla no encontrada' }, { status: 404 });
+    }
     if (isPrismaUniqueError(error)) return NextResponse.json({ error: DUPLICADO }, { status: 409 });
     console.error('Error al actualizar plantilla:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });

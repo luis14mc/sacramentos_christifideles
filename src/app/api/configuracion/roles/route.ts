@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!hasPermission(session.user.rol, 'canViewConfiguracion')) {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
 
     const roles = await prisma.rolParroquial.findMany({
       include: { _count: { select: { miembros: true } } },
@@ -23,6 +27,9 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!hasPermission(session.user.rol, 'canManageConfiguracion')) {
+      return NextResponse.json({ error: 'No tienes permiso para modificar catálogos' }, { status: 403 });
+    }
 
     const data = await req.json();
     const nuevoRol = await prisma.rolParroquial.create({

@@ -58,8 +58,8 @@ jobs:
       - name: Validate Prisma schema
         run: pnpm exec prisma validate
 
-      - name: Apply schema to CI database
-        run: pnpm exec prisma db push --skip-generate
+      - name: Apply migrations to CI database
+        run: pnpm exec prisma migrate deploy
 
       - name: Seed and verify CI database
         run: |

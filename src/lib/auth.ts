@@ -1,9 +1,34 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaClient } from '@prisma/client';
 import { compare } from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
+async function loadSessionUser(userId: string) {
+  let id: bigint;
+  try {
+    id = BigInt(userId);
+  } catch {
+    return null;
+  }
+
+  const user = await prisma.usuario.findUnique({
+    where: { id_usuario: id },
+    include: { parroquia: true, rol: true },
+  });
+
+  if (!user || user.estado !== 1) {
+    return null;
+  }
+
+  return {
+    id: user.id_usuario.toString(),
+    email: user.email,
+    name: user.nombre,
+    role: user.rol.nombre.toLowerCase(),
+    parish: user.parroquia.nombre,
+    parishId: user.id_parroquia.toString(),
+  };
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -11,7 +36,7 @@ export const authOptions: NextAuthOptions = {
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -19,27 +44,24 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Buscar usuario por email
           const user = await prisma.usuario.findUnique({
             where: {
-              email: credentials.email
+              email: credentials.email,
             },
             include: {
               parroquia: true,
-              rol: true
-            }
+              rol: true,
+            },
           });
 
           if (!user) {
             return null;
           }
 
-          // Verificar que el usuario esté activo
           if (user.estado !== 1) {
             return null;
           }
 
-          // Verificar contraseña
           const passwordsMatch = await compare(
             credentials.password,
             Buffer.from(user.contrasena).toString('utf8')
@@ -49,75 +71,103 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // Registrar login en bitácora
           await prisma.bitacoraLogin.create({
             data: {
               id_usuario: user.id_usuario,
-              fecha_ingreso: new Date()
-            }
-          });
-
-          console.log('Usuario autenticado:', {
-            nombre: user.nombre,
-            rol: user.rol.nombre,
-            rolId: user.rol.id_rol
+              fecha_ingreso: new Date(),
+            },
           });
 
           return {
             id: user.id_usuario.toString(),
             email: user.email,
             name: user.nombre,
-            role: user.rol.nombre.toLowerCase(), // Convertir a minúsculas para consistencia
+            role: user.rol.nombre.toLowerCase(),
             parish: user.parroquia.nombre,
-            parishId: user.id_parroquia.toString()
+            parishId: user.id_parroquia.toString(),
           };
         } catch (error) {
           console.error('Error during authentication:', error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt',
   },
   jwt: {
-    secret: process.env.NEXTAUTH_SECRET
+    secret: process.env.NEXTAUTH_SECRET,
   },
   pages: {
-    signIn: '/login'
+    signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
-        token.rol = user.role; // Cambiar 'role' a 'rol' para consistencia
+        token.rol = user.role;
         token.parish = user.parish;
         token.parishId = user.parishId;
+        token.sessionRevoked = false;
+        token.lastVerifiedAt = Date.now();
+        return token;
       }
+
+      if (!token.sub) {
+        return token;
+      }
+
+      // Revalidar contra BD como máximo cada REVALIDATE_INTERVAL_MS, o siempre que
+      // la sesión se actualice explícitamente (trigger 'update'). Equilibra
+      // revocación oportuna con carga de base de datos por request.
+      const REVALIDATE_INTERVAL_MS = 60_000;
+      const last = typeof token.lastVerifiedAt === 'number' ? token.lastVerifiedAt : 0;
+      const stale = Date.now() - last > REVALIDATE_INTERVAL_MS;
+      if (!stale && trigger !== 'update' && !token.sessionRevoked) {
+        return token;
+      }
+
+      const fresh = await loadSessionUser(token.sub);
+      if (!fresh) {
+        token.sessionRevoked = true;
+        token.rol = '';
+        token.parish = '';
+        token.parishId = '';
+        return token;
+      }
+
+      token.sessionRevoked = false;
+      token.rol = fresh.role;
+      token.parish = fresh.parish;
+      token.parishId = fresh.parishId;
+      token.lastVerifiedAt = Date.now();
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub!;
-        session.user.rol = token.rol; // Cambiar 'role' a 'rol' para consistencia
-        session.user.parish = token.parish;
-        session.user.parishId = token.parishId;
+      if (token.sessionRevoked || !token.sub || !token.parishId) {
+        return {
+          ...session,
+          user: undefined,
+          expires: new Date(0).toISOString(),
+        };
       }
+
+      session.user.id = token.sub;
+      session.user.rol = token.rol;
+      session.user.parish = token.parish;
+      session.user.parishId = token.parishId;
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Si la URL es relativa, agregar el baseUrl
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
-      // Si la URL ya es del mismo origen, permitirla
       if (url.startsWith(baseUrl)) {
         return url;
       }
-      // Por defecto, redirigir al dashboard (página principal)
       return `${baseUrl}/`;
-    }
-  }
+    },
+  },
 };
 
 export default authOptions;

@@ -18,7 +18,7 @@ export interface UserPermissions {
 }
 
 export const defaultPermissions: UserPermissions = {
-  canViewDashboard: true,
+  canViewDashboard: false,
   canViewPersonas: false,
   canManagePersonas: false,
   canViewUsuarios: false,
@@ -122,8 +122,17 @@ export const rolePermissions: Record<string, UserPermissions> = {
   },
 };
 
+// Alias de roles equivalentes (p. ej. variantes de género o sinónimos usados en BD/UI).
+const roleAliases: Record<string, string> = {
+  secretaria: 'secretario',
+  'admin parroquial': 'admin parroquia',
+  párroco: 'parroco',
+  diácono: 'diacono',
+};
+
 export function normalizeRole(role?: string | null): string {
-  return (role || 'guest').trim().toLowerCase();
+  const normalized = (role || 'guest').trim().toLowerCase();
+  return roleAliases[normalized] ?? normalized;
 }
 
 export function getPermissionsForRole(role?: string | null): UserPermissions {

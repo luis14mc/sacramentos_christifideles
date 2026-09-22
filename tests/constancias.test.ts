@@ -71,8 +71,12 @@ describe('GET /api/constancias/[sacramento]/[id]', () => {
     setSession(null);
     expect((await getConstancia(getReq(), ctx('bautismo', idBautismo))).status).toBe(401);
   });
-  it('sin permiso (rol sin canViewSacramentos) -> 403', async () => {
+  it('sin permiso (rol sin canGenerateConstancias) -> 403', async () => {
     setSession(cat.parishA, 'guest');
+    expect((await getConstancia(getReq(), ctx('bautismo', idBautismo))).status).toBe(403);
+  });
+  it('catequista (ve sacramentos pero no emite constancias) -> 403', async () => {
+    setSession(cat.parishA, 'catequista');
     expect((await getConstancia(getReq(), ctx('bautismo', idBautismo))).status).toBe(403);
   });
   it('recurso propio -> 200 y application/pdf', async () => {
