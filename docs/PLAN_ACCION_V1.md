@@ -99,13 +99,19 @@ La brecha no es "construir features", es **estabilizar, validar y desplegar**.
 10. **Ampliar auditoría** a toda operación sacramental de escritura y revisar retención.
 11. **Decisión de Defunciones**: confirmar si entra en v1 o se difiere a v1.1 (Scrum Master).
 
+### Nuevo alcance funcional (ver §4bis)
+
+- **v1**: Expediente sacramental por persona (A) + Moldes de constancia subibles con mapeo (B).
+- **v1.1**: Notificaciones inter-parroquiales (C).
+
 ### P2 — v1.1 / mejoras
 
-12. **CSP estricta** con nonces.
-13. **Piloto RSC** en un listado para reducir waterfalls cliente.
-14. **Accesibilidad**: `aria-label` en botones-icono, labels en formularios largos (WCAG 2.2 AA).
-15. **Limpieza de seeds alternativos** (`seed-simple/clean/catalogs`) si no se usan.
-16. **Alinear `eslint-config-next` con Next 16**.
+12. **Notificaciones inter-parroquiales** (modelo `Notificacion` + bandeja + RBAC + auditoría).
+13. **CSP estricta** con nonces.
+14. **Piloto RSC** en un listado para reducir waterfalls cliente.
+15. **Accesibilidad**: `aria-label` en botones-icono, labels en formularios largos (WCAG 2.2 AA).
+16. **Limpieza de seeds alternativos** (`seed-simple/clean/catalogs`) si no se usan.
+17. **Alinear `eslint-config-next` con Next 16**.
 
 ---
 
@@ -116,6 +122,43 @@ La brecha no es "construir features", es **estabilizar, validar y desplegar**.
 | 6 (hardening) | 28 sep–4 oct | P0.2–P0.4, P1.8–P1.10 |
 | 7 (staging/QA) | 5–11 oct | P0.1, P1.5–P1.7, P1.11 |
 | 8 (release) | 12–19 oct | Backups, monitoreo, runbook, smoke productivo, piloto |
+
+---
+
+## 4bis. Alcance funcional aclarado (visión del cliente, 2026-09-22)
+
+La Persona es el centro de la BD y del sistema. Usuarios reales = secretarías parroquiales
+(software de administración).
+
+### A. Expediente sacramental por persona — **v1**
+- Vista centrada en la Persona `(id_parroquia, numero_identidad)` que agrega todos sus
+  sacramentos (bautismo, primera comunión, confirmación, matrimonio) en un solo expediente.
+- Desde el expediente se consulta cada sacramento y se emite su constancia.
+- RBAC: nuevo permiso de "ver expediente" (lectura) alineado con la matriz existente.
+- Multi-tenant: el expediente solo agrega sacramentos de la parroquia de sesión.
+
+### B. Moldes de constancia subibles + mapeo de datos — **v1**
+- La secretaría **sube un molde/archivo** (PDF/DOCX) por parroquia.
+- Se define **qué campos de la BD se inyectan** en el molde según:
+  1. el **sacramento** (bautismo, comunión, confirmación, matrimonio), y
+  2. el **tipo de constancia** dentro de ese sacramento.
+- El servidor lee SIEMPRE los datos de la BD (el cliente nunca aporta datos sacramentales),
+  reutilizando `cargarDatosConstancia`.
+- Enfoque técnico sugerido:
+  - **PDF con AcroForm**: mapear `nombre_de_campo → token` (compatible con `pdf-lib` actual).
+  - **DOCX** (opcional): requiere motor de plantillas (p. ej. docxtemplater) — evaluar dependencia.
+- Modelo de datos: extender `PlantillaConstancia` (o nueva tabla `MoldeConstancia`) con
+  archivo almacenado, `tipo_constancia` y un mapa de campos.
+- RBAC: gestionar moldes requiere `canManageConfiguracion`; emitir requiere `canGenerateConstancias`.
+
+### C. Notificaciones inter-parroquiales — **v1.1** (no v1)
+- **No** es consulta de datos cross-tenant. Es una **notificación** entre secretarías:
+  la parroquia X **no ve** datos de la parroquia Z.
+- Caso: al registrar/verificar una persona, se puede **enviar una notificación** a otra
+  parroquia (p. ej. solicitar verificación o aviso de posible registro sacramental existente).
+- La parroquia destino responde desde su propio alcance; el aislamiento se mantiene.
+- Requiere: modelo `Notificacion` (origen, destino, asunto, estado), bandeja por parroquia,
+  RBAC y auditoría. Diferido a v1.1 por el deadline del 19/oct.
 
 ---
 
