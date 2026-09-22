@@ -41,6 +41,20 @@
 - `npm run build` ✅
 - Tests nuevos ejecutados localmente: 8/8 y 6/6 ✅ (resto de la suite corre en CI con Postgres)
 
+## Cómo seguir mañana (checklist)
+
+1. Clonar o actualizar y **cambiar a la rama de trabajo**:
+   ```bash
+   git fetch origin
+   git checkout fix/security-hardening
+   git pull origin fix/security-hardening
+   ```
+2. **Abrir o crear el PR** (si aún no existe):  
+   https://github.com/luis14mc/sacramentos_christifideles/compare/master...fix/security-hardening?expand=1  
+   Título sugerido: `security(hardening): auditoría, endurecimiento y plan v1`
+3. Esperar **CI verde** → merge a `master`.
+4. Siguiente desarrollo (v1): **expediente por persona** → **moldes PDF** (ver `docs/PLAN_ACCION_V1.md` §4bis).
+
 ## Próximo paso
 
 1. Abrir/mergear el PR `fix/security-hardening` tras CI verde.
