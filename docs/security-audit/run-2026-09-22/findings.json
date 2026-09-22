@@ -1,0 +1,413 @@
+[
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cf.api.config-grupos-roles-post-missing-authz",
+    "title": "Cualquier usuario autenticado puede crear catálogos globales de grupos y roles parroquiales",
+    "description": "Los endpoints POST de configuracion/grupos y configuracion/roles solo exigen sesión válida. No invocan hasPermission ni canManageConfiguracion. Un rol de bajo privilegio (p. ej. catequista) puede crear filas en tablas globales compartidas por todas las parroquias del despliegue.",
+    "root_cause": "Mutaciones de catálogo sin comprobación de permisos en los handlers POST.",
+    "intended_behavior": "Solo roles con canManageConfiguracion (o equivalente) deben poder crear o alterar catálogos administrativos.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/configuracion/grupos/route.ts",
+        "line": 22,
+        "scope": "POST /api/configuracion/grupos",
+        "description": "Petición autenticada con cookie de sesión NextAuth."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/configuracion/grupos/route.ts",
+        "line": 24,
+        "scope": "getServerSession",
+        "description": "Solo se rechaza ausencia de sesión; no se evalúa rol."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/configuracion/grupos/route.ts",
+        "line": 28,
+        "scope": "prisma.grupoParroquial.create",
+        "description": "Inserción global en grupo_parroquial sin autorización por rol."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/configuracion/grupos/route.ts",
+        "line": 22,
+        "description": "POST comprueba session pero no hasPermission antes de create."
+      },
+      {
+        "file": "src/app/api/configuracion/roles/route.ts",
+        "line": 22,
+        "description": "Mismo patrón en rolParroquial.create."
+      },
+      {
+        "file": "prisma/schema.prisma",
+        "line": 293,
+        "description": "GrupoParroquial no tiene id_parroquia; el impacto es global al tenant lógico de la BD."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "Atacante con credenciales válidas de cualquier rol."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Usuario autenticado con rol restringido (catequista o solo lectura).",
+      "payloads": [
+        "POST /api/configuracion/grupos {\"nombre\":\"Inyectado\",\"descripcion\":\"x\"}"
+      ],
+      "instructions": [
+        "Iniciar sesión con un usuario de rol bajo privilegio.",
+        "Enviar POST JSON al endpoint de grupos o roles con nombre arbitrario.",
+        "Observar respuesta 201 y fila visible en GET subsiguiente."
+      ],
+      "observed_result": "Por traza estática, el handler no devuelve 403 por rol; la creación procede tras 401 únicamente si no hay sesión."
+    },
+    "remediation": {
+      "strategy": "Alinear POST con otros catálogos: exigir hasPermission(session.user.rol, 'canManageConfiguracion') y rechazar 403.",
+      "code_changes": [
+        {
+          "file_name": "src/app/api/configuracion/grupos/route.ts",
+          "fixed_code": "if (!hasPermission(session.user.rol, 'canManageConfiguracion')) return NextResponse.json({ error: '...' }, { status: 403 });"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "high",
+        "reason": "Cualquier cuenta comprometida o usuario interno malintencionado puede invocar la API con la sesión del navegador."
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "Integridad de catálogos compartidos y posible confusión operativa entre parroquias en la misma base."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Control ausente verificable directamente en el código fuente."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cf.auth.jwt-stale-role-and-active-state",
+    "title": "JWT conserva rol y parroquia del login sin revalidar en base de datos",
+    "description": "Los callbacks jwt/session copian rol, parishId y datos de parroquia solo en el momento del login. Cambios posteriores de rol, desactivación (estado distinto de 1) o reasignación de parroquia no invalidan el token hasta que expire.",
+    "root_cause": "Estrategia JWT sin refresh de claims desde Prisma en cada request.",
+    "intended_behavior": "Permisos y estado activo deben reflejar la fila actual de usuario en cada operación sensible o tras revocación inmediata.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/lib/auth.ts",
+        "line": 16,
+        "scope": "authorize",
+        "description": "estado y rol se validan solo al autenticar."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/lib/auth.ts",
+        "line": 91,
+        "scope": "jwt callback",
+        "description": "token.rol y token.parishId se fijan cuando user está presente."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/personas/route.ts",
+        "line": 26,
+        "scope": "hasPermission(session.user.rol)",
+        "description": "APIs autorizan con rol embebido en JWT, no con rol actual en BD."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/lib/auth.ts",
+        "line": 37,
+        "description": "estado !== 1 rechaza login pero no revoca tokens emitidos."
+      },
+      {
+        "file": "src/lib/auth.ts",
+        "line": 99,
+        "description": "session callback propaga token.rol sin consulta a BD."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "data_state",
+        "description": "Administrador desactiva usuario o cambia su rol mientras la sesión JWT sigue vigente."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Usuario al que se le revocó privilegios pero conserva cookie de sesión.",
+      "payloads": ["Requests autenticados a /api/personas u otros mientras el JWT no expire."],
+      "instructions": [
+        "Autenticarse con usuario con permisos elevados.",
+        "Admin desactiva usuario o baja rol en BD.",
+        "Sin cerrar sesión, repetir llamadas API con la cookie existente."
+      ],
+      "observed_result": "Por diseño del callback JWT, hasPermission seguirá usando el rol almacenado en token hasta expiración o logout."
+    },
+    "remediation": {
+      "strategy": "Revalidar usuario en jwt/session callback (rol, estado, id_parroquia) o acortar maxAge y forzar re-login tras cambios administrativos; alternativa: sesiones en BD.",
+      "code_changes": [
+        {
+          "file_name": "src/lib/auth.ts",
+          "fixed_code": "En jwt() periódico: cargar usuario por token.sub y refrescar rol/estado/parishId; invalidar token si estado !== 1."
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Requiere ventana entre revocación administrativa y expiración de sesión."
+      },
+      "impact": {
+        "score": "high",
+        "reason": "Bypass de revocación de acceso a datos sacramentales multi-parroquia."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Flujo JWT documentado en auth.ts sin re-fetch de usuario."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cf.middleware.ui-routes-unprotected",
+    "title": "Middleware no protege varias rutas de UI sensibles",
+    "description": "withAuth solo aplica al matcher listado. Rutas reales /auditoria, /buscar, /libros y /primeras-comuniones quedan fuera (además de typo /primera-comunion vs primeras-comuniones). Un visitante anónimo puede cargar shell de página; las APIs suelen responder 401 pero la superficie UI y metadatos de la app quedan expuestos.",
+    "root_cause": "Matcher desactualizado y lógica de restricción comentada en middleware.",
+    "intended_behavior": "Toda ruta operativa tras login debe exigir token válido en edge.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/middleware.ts",
+        "line": 20,
+        "scope": "config.matcher",
+        "description": "Lista de prefijos protegidos."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/auditoria/page.tsx",
+        "line": 40,
+        "scope": "fetch /api/auditoria",
+        "description": "Página client-side invoca API; middleware no bloquea /auditoria."
+      },
+      {
+        "kind": "sink",
+        "file": "src/middleware.ts",
+        "line": 11,
+        "scope": "return allow",
+        "description": "Incluso en rutas matched, la lógica extra de restricción está deshabilitada."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/middleware.ts",
+        "line": 26,
+        "description": "Matcher usa /primera-comunion no /primeras-comuniones."
+      },
+      {
+        "file": "src/middleware.ts",
+        "line": 5,
+        "description": "Comentario indica restricciones desactivadas temporalmente."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "Acceso anónimo GET a rutas no incluidas en matcher."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Visitante sin sesión.",
+      "payloads": ["GET /auditoria", "GET /libros", "GET /primeras-comuniones"],
+      "instructions": [
+        "Abrir las URLs sin cookie de sesión.",
+        "Confirmar que Next.js sirve la página (layout) aunque fetch devuelva 401."
+      ],
+      "observed_result": "Middleware no intercepta esos paths; APIs deniegan datos pero la capa UI no fuerza redirect a login en edge."
+    },
+    "remediation": {
+      "strategy": "Ampliar matcher a todas las rutas autenticadas, corregir primeras-comuniones, reactivar controles por rol si aplica.",
+      "code_changes": [
+        {
+          "file_name": "src/middleware.ts",
+          "fixed_code": "Añadir /auditoria, /buscar, /libros, /primeras-comuniones al matcher; eliminar typo."
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "high",
+        "reason": "Acceso anónimo directo por URL."
+      },
+      "impact": {
+        "score": "low",
+        "reason": "Datos sacramentales no salen sin sesión en API, pero se debilita defensa en profundidad."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Matcher vs filesystem verificable en repo."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cf.api.constancias-pdf-wrong-permission",
+    "title": "Generación de PDF de constancia usa canViewSacramentos en lugar de canGenerateConstancias",
+    "description": "GET /api/constancias/[sacramento]/[id] autoriza con canViewSacramentos. Roles como catequista tienen canViewSacramentos pero no canGenerateConstancias según permissions.ts, incumpliendo la matriz de negocio y permitiendo descargar PDF oficial.",
+    "root_cause": "Comprobación de permiso incorrecta en el handler de constancias.",
+    "intended_behavior": "Emitir PDF requiere canGenerateConstancias (p. ej. secretario sí, catequista no).",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/constancias/[sacramento]/[id]/route.ts",
+        "line": 14,
+        "scope": "GET PDF",
+        "description": "Solicitud autenticada con parishId de sesión."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/lib/permissions.ts",
+        "line": 111,
+        "scope": "role catequista",
+        "description": "canViewSacramentos true, canGenerateConstancias false."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/constancias/[sacramento]/[id]/route.ts",
+        "line": 49,
+        "scope": "generarConstanciaPdf",
+        "description": "PDF generado tras permiso insuficiente según matriz."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/constancias/[sacramento]/[id]/route.ts",
+        "line": 23,
+        "description": "hasPermission(..., 'canViewSacramentos')."
+      },
+      {
+        "file": "src/lib/permissions.ts",
+        "line": 111,
+        "description": "catequista sin canGenerateConstancias."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authorization_role",
+        "description": "Sesión de catequista o rol con vista de sacramentos sin emisión."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Catequista autenticado.",
+      "payloads": ["GET /api/constancias/bautismo/{id}"],
+      "instructions": [
+        "Iniciar sesión como catequista.",
+        "Solicitar PDF con id válido de la parroquia."
+      ],
+      "observed_result": "El handler no comprueba canGenerateConstancias; la traza estática indica 403 solo si falta canViewSacramentos."
+    },
+    "remediation": {
+      "strategy": "Cambiar a hasPermission(..., 'canGenerateConstancias') y alinear UI.",
+      "code_changes": [
+        {
+          "file_name": "src/app/api/constancias/[sacramento]/[id]/route.ts",
+          "fixed_code": "if (!hasPermission(session.user.rol, 'canGenerateConstancias')) return 403;"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Requiere rol interno con vista de sacramentos."
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "Emisión no autorizada de documento oficial con datos personales."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Discrepancia directa entre permissions.ts y route handler."
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "cf.deploy.missing-security-headers",
+    "title": "Cabeceras HTTP de endurecimiento no configuradas en el repositorio",
+    "description": "next.config.ts no define headers (CSP, HSTS, X-Frame-Options, etc.). El comportamiento en Vercel/producción depende de defaults de la plataforma.",
+    "claimed_root_cause": "Ausencia de security headers en configuración Next.js versionada.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "next.config.ts",
+        "line": 3,
+        "scope": "nextConfig export",
+        "description": "Configuración Next sin bloque headers."
+      },
+      {
+        "kind": "sink",
+        "file": "next.config.ts",
+        "line": 5,
+        "scope": "HTTP response defaults",
+        "description": "Respuestas dependen de defaults de Next/Vercel no visibles aquí."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "next.config.ts",
+        "line": 3,
+        "description": "Objeto nextConfig vacío salvo comentario."
+      }
+    ],
+    "blockers": [
+      "Política efectiva del edge/CDN en producción no está versionada en el repositorio."
+    ],
+    "validation_plan": {
+      "local": "Confirmar en next.config.ts y docs de despliegue que no hay headers() definidos.",
+      "deployment": "Inspeccionar respuestas en staging/producción (/login, /api/health) con herramienta de cabeceras y comparar con baseline OWASP."
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "cf.auth.login-rate-limit",
+    "title": "Sin limitación de velocidad visible en autenticación por credenciales",
+    "description": "CredentialsProvider en auth.ts no implementa throttling, lockout ni CAPTCHA en código. Protección dependería de infraestructura externa.",
+    "claimed_root_cause": "Falta de rate limiting en flujo authorize.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/lib/auth.ts",
+        "line": 16,
+        "scope": "authorize(credentials)",
+        "description": "Intentos de login sin contador ni backoff en código."
+      },
+      {
+        "kind": "sink",
+        "file": "src/lib/auth.ts",
+        "line": 43,
+        "scope": "compare password",
+        "description": "Comparación bcrypt repetible sin límite local."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/lib/auth.ts",
+        "line": 16,
+        "description": "authorize no consulta límites ni lockout antes de compare."
+      }
+    ],
+    "blockers": [
+      "Controles WAF, Vercel firewall o rate limits de plataforma no están en este repositorio."
+    ],
+    "validation_plan": {
+      "local": "Revisar auth.ts y middleware: confirmar ausencia de rate limit explícito.",
+      "deployment": "Prueba controlada en staging con serie de intentos fallidos y medir si la plataforma bloquea."
+    }
+  }
+]
