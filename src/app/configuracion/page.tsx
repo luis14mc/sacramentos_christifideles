@@ -2,12 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-import { 
-  CogIcon, 
-  UsersIcon, 
+import {
+  CogIcon,
+  UsersIcon,
   UserCircleIcon,
   HomeModernIcon,
-  ShieldCheckIcon 
+  ShieldCheckIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 const configurationModules = [
@@ -50,6 +51,22 @@ const configurationModules = [
     icon: HomeModernIcon,
     color: 'bg-info hover:bg-info/80',
     stats: '0 sectores'
+  },
+  {
+    name: 'Plantillas de constancia',
+    description: 'Plantillas de texto con placeholders por sacramento',
+    href: '/configuracion/constancias',
+    icon: DocumentTextIcon,
+    color: 'bg-warning hover:bg-warning/80',
+    stats: 'Plantilla de texto'
+  },
+  {
+    name: 'Moldes de constancia',
+    description: 'Sube un PDF con AcroForm por sacramento y tipo de constancia',
+    href: '/configuracion/moldes',
+    icon: DocumentTextIcon,
+    color: 'bg-success hover:bg-success/80',
+    stats: 'PDF con AcroForm'
   }
 ];
 

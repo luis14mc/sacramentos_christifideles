@@ -84,6 +84,12 @@ export const navigationConfig: NavigationItem[] = [
     requiredPermission: 'canViewConfiguracion'
   },
   {
+    name: 'Moldes de constancia',
+    href: '/configuracion/moldes',
+    icon: DocumentTextIcon,
+    requiredPermission: 'canViewConfiguracion'
+  },
+  {
     name: 'Buscar',
     href: '/buscar',
     icon: DocumentTextIcon,
