@@ -7,9 +7,18 @@ import { contextoAuditoria } from '@/lib/bitacora';
 import {
   esSacramentoConstancia,
   cargarDatosConstancia,
+  construirTokens,
   obtenerPlantilla,
   generarConstanciaPdf,
 } from '@/lib/constancias';
+import {
+  TIPOS_CONSTANCIA,
+  esTipoConstanciaMolde,
+  obtenerMoldeActivo,
+  renderMoldePdf,
+} from '@/lib/constancias/moldes';
+
+const TIPO_DEFAULT = 'predeterminado';
 
 export async function GET(
   req: NextRequest,
@@ -39,14 +48,31 @@ export async function GET(
       return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 });
     }
 
-    // Se leen todos los datos del servidor; el cliente solo indica sacramento e id.
+    const tipoSolicitado = (req.nextUrl.searchParams.get('tipo') ?? TIPO_DEFAULT).trim();
+    if (!esTipoConstanciaMolde(tipoSolicitado)) {
+      return NextResponse.json(
+        { error: `tipo inválido; valores permitidos: ${TIPOS_CONSTANCIA.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Se leen todos los datos del servidor; el cliente solo indica sacramento, id y tipo.
     const datos = await cargarDatosConstancia(parishId, sacramento, idRegistro);
     if (!datos) {
       return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 });
     }
 
-    const contenido = await obtenerPlantilla(parishId, sacramento);
-    const pdf = await generarConstanciaPdf(datos, contenido);
+    let pdf: Uint8Array;
+    let fuente: 'molde' | 'plantilla';
+    const molde = await obtenerMoldeActivo(parishId, sacramento, tipoSolicitado);
+    if (molde) {
+      pdf = await renderMoldePdf(molde.archivo, molde.mapa_campos, construirTokens(datos));
+      fuente = 'molde';
+    } else {
+      const contenido = await obtenerPlantilla(parishId, sacramento);
+      pdf = await generarConstanciaPdf(datos, contenido);
+      fuente = 'plantilla';
+    }
 
     // Auditoría de emisión (acción 'R'). Best-effort: no bloquea la entrega.
     try {
@@ -58,7 +84,7 @@ export async function GET(
           accion: 'R',
           nombre_tabla: 'constancia',
           id_tabla_afectado: idRegistro,
-          new_values: { sacramento, id: datos.id },
+          new_values: { sacramento, id: datos.id, tipo: tipoSolicitado, fuente },
           actor_ip: actorIp,
           user_agent: userAgent,
         },

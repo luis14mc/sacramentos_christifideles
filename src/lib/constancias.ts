@@ -168,6 +168,31 @@ function fmtFecha(fecha: Date | null, tz: string): string {
 
 const nombreCompleto = (p: PersonaLite | null) => (p ? `${p.nombres} ${p.apellidos}` : '—');
 
+/** Lista cerrada de tokens disponibles. Usada para validar mapeos en moldes. */
+export const TOKENS_CONSTANCIA = [
+  'parroquia.nombre',
+  'parroquia.direccion',
+  'parroquia.telefono',
+  'parroquia.alias',
+  'persona.nombres',
+  'persona.apellidos',
+  'persona.dni',
+  'persona.nombre_completo',
+  'conyuge.nombre_completo',
+  'conyuge.dni',
+  'fecha_sacramento',
+  'libro',
+  'pagina',
+  'registro',
+  'acta',
+  'sacerdote.nombre',
+  'ministro.nombre',
+  'nota_marginal',
+  'fecha_emision',
+] as const;
+
+export type TokenConstancia = (typeof TOKENS_CONSTANCIA)[number];
+
 /** Diccionario de placeholders permitidos. Sin eval, sin ejecución de código. */
 export function construirTokens(d: ConstanciaData): Record<string, string> {
   const p = d.personaPrincipal;
