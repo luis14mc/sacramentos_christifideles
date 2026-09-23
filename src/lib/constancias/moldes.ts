@@ -152,14 +152,19 @@ export async function validarPdfMolde(pdfBytes: Uint8Array): Promise<void> {
 
 /**
  * Valida el mapa de campos contra la lista de tokens permitidos.
- * Si `requeridoMinimo`, exige al menos una entrada (usado al activar).
- * Si `camposExistentes` se proporciona, exige que cada clave del mapa
- * exista realmente en el PDF.
+ * - `requeridoMinimo`: exige al menos una entrada (usado al activar).
+ * - `camposExistentes`: si se pasa, cada clave del mapa debe estar en el PDF.
+ * - `coberturaCompleta`: exige que CADA campo del PDF tenga una entrada
+ *   en el mapa (regla del flujo de activación).
  */
 export function validarMapaCampos(
   mapa: unknown,
   tokensPermitidos: Set<string>,
-  opciones: { requeridoMinimo?: boolean; camposExistentes?: Set<string> } = {}
+  opciones: {
+    requeridoMinimo?: boolean;
+    camposExistentes?: Set<string>;
+    coberturaCompleta?: boolean;
+  } = {}
 ): void {
   if (typeof mapa !== 'object' || mapa === null || Array.isArray(mapa)) {
     throw new Error('mapa_campos debe ser un objeto { campo_pdf: token }');
@@ -182,6 +187,19 @@ export function validarMapaCampos(
         throw new Error(`El campo "${campo}" no existe en el PDF`);
       }
     }
+    if (opciones.coberturaCompleta) {
+      const cubiertos = new Set(entradas.map(([c]) => c));
+      const faltantes: string[] = [];
+      for (const campo of opciones.camposExistentes) {
+        if (!cubiertos.has(campo)) faltantes.push(campo);
+      }
+      if (faltantes.length > 0) {
+        throw new Error(
+          `Faltan campos AcroForm por mapear: ${faltantes.join(', ')}. ` +
+            'Para activar el molde todos los campos del PDF deben tener un token.'
+        );
+      }
+    }
   }
 }
 
@@ -193,6 +211,29 @@ function esDropdown(field: unknown): field is PDFDropdown {
 }
 function esTextField(field: unknown): field is PDFTextField {
   return field instanceof PDFTextField;
+}
+
+/**
+ * Tipos AcroForm soportados por la implementación actual de renderMoldePdf.
+ * Cualquier otro tipo produce error claro al intentar activarlo.
+ */
+export const TIPOS_ACROFORM_SOPORTADOS = new Set(['PDFTextField', 'PDFCheckBox', 'PDFDropdown']);
+
+/**
+ * Devuelve los tipos AcroForm del PDF que NO están soportados.
+ * Si la lista está vacía, todos los campos son soportados.
+ */
+export async function listarTiposAcroFormNoSoportados(pdfBytes: Uint8Array): Promise<string[]> {
+  const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const form = pdf.getForm();
+  const nombres = new Set<string>();
+  for (const field of form.getFields()) {
+    const tipo = field.constructor?.name ?? 'desconocido';
+    if (!TIPOS_ACROFORM_SOPORTADOS.has(tipo)) {
+      nombres.add(`${field.getName()} (${tipo})`);
+    }
+  }
+  return Array.from(nombres);
 }
 
 /**

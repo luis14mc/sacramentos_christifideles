@@ -134,6 +134,39 @@ describe('moldes · validarMapaCampos', () => {
       )
     ).not.toThrow();
   });
+
+  it('coberturaCompleta: rechaza mapa parcial listando campos faltantes', () => {
+    const existentes = new Set(['nombre', 'dni']);
+    expect(() =>
+      validarMapaCampos(
+        { nombre: 'persona.nombre_completo' },
+        tokens,
+        { requeridoMinimo: true, camposExistentes: existentes, coberturaCompleta: true }
+      )
+    ).toThrow(/Faltan campos AcroForm por mapear: dni/);
+  });
+
+  it('coberturaCompleta: acepta mapa completo', () => {
+    const existentes = new Set(['nombre', 'dni']);
+    expect(() =>
+      validarMapaCampos(
+        { nombre: 'persona.nombre_completo', dni: 'persona.dni' },
+        tokens,
+        { requeridoMinimo: true, camposExistentes: existentes, coberturaCompleta: true }
+      )
+    ).not.toThrow();
+  });
+
+  it('coberturaCompleta: rechaza campos extra que no existen en el PDF', () => {
+    const existentes = new Set(['real']);
+    expect(() =>
+      validarMapaCampos(
+        { real: 'persona.dni', fantasma: 'persona.nombre_completo' },
+        tokens,
+        { camposExistentes: existentes, coberturaCompleta: true }
+      )
+    ).toThrow(/no existe en el PDF/);
+  });
 });
 
 describe('moldes · listarCamposAcroForm', () => {

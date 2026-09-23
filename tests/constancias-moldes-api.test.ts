@@ -225,6 +225,69 @@ describe('PUT /api/configuracion/moldes/[id]', () => {
     expect((await res.json()).error).toMatch(/vacío/);
   });
 
+  it('activar con mapa parcial -> 400 (cobertura completa requerida)', async () => {
+    const pdf = await pdfConCampos(['nombre', 'dni']);
+    setSession(cat.parishA);
+    const creado = await POST(makeReq(formDataWith(pdf)));
+    const { id } = await creado.json();
+
+    const res = await putById(
+      makePutReq({ activo: true, mapa_campos: { nombre: 'persona.nombre_completo' } }),
+      ctx(id)
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/Faltan campos AcroForm por mapear/);
+    expect(body.error).toContain('dni');
+  });
+
+  it('activar con mapa completo -> 200 y activo=true', async () => {
+    const pdf = await pdfConCampos(['nombre', 'dni']);
+    setSession(cat.parishA);
+    const creado = await POST(makeReq(formDataWith(pdf)));
+    const { id } = await creado.json();
+
+    const res = await putById(
+      makePutReq({
+        activo: true,
+        mapa_campos: {
+          nombre: 'persona.nombre_completo',
+          dni: 'persona.dni',
+        },
+      }),
+      ctx(id)
+    );
+    expect(res.status).toBe(200);
+    const updated = await res.json();
+    expect(updated.activo).toBe(true);
+  });
+
+  it('activar PDF con campo de tipo no soportado -> 400 antes de dejar activo', async () => {
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([300, 300]);
+    const form = pdf.getForm();
+    form.createTextField('texto_ok');
+    const radio = form.createRadioGroup('radio_no_soportado');
+    radio.addOptionToPage('opcion_a', page, { x: 50, y: 50, width: 20, height: 20, borderWidth: 1 });
+    const bytes = await pdf.save();
+
+    setSession(cat.parishA);
+    const creado = await POST(makeReq(formDataWith(bytes)));
+    const { id } = await creado.json();
+
+    const res = await putById(
+      makePutReq({
+        activo: true,
+        mapa_campos: { texto_ok: 'persona.nombre_completo' },
+      }),
+      ctx(id)
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/no soportados/);
+    expect(body.error).toMatch(/radio_no_soportado/);
+  });
+
   it('activar con token desconocido -> 400', async () => {
     const pdf = await pdfConCampos(['campo']);
     setSession(cat.parishA);

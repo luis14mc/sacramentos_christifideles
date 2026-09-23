@@ -9,6 +9,7 @@ import { esSacramentoConstancia } from '@/lib/constancias';
 import { TOKENS_CONSTANCIA } from '@/lib/constancias';
 import {
   listarCamposAcroForm,
+  listarTiposAcroFormNoSoportados,
   obtenerMoldePorId,
   validarMapaCampos,
 } from '@/lib/constancias/moldes';
@@ -114,11 +115,24 @@ export async function PUT(
           { status: 400 }
         );
       }
-      const camposPdf = new Set(await listarCamposAcroForm(new Uint8Array(existente.archivo)));
+      const buf = new Uint8Array(existente.archivo);
+      const tiposNoSoportados = await listarTiposAcroFormNoSoportados(buf);
+      if (tiposNoSoportados.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              `El PDF contiene campos AcroForm no soportados: ${tiposNoSoportados.join(', ')}. ` +
+              'Solo se admiten campos de texto, casillas de verificación y listas desplegables.',
+          },
+          { status: 400 }
+        );
+      }
+      const camposPdf = new Set(await listarCamposAcroForm(buf));
       try {
         validarMapaCampos(mapaNormalizado, new Set<string>(TOKENS_CONSTANCIA), {
           requeridoMinimo: true,
           camposExistentes: camposPdf,
+          coberturaCompleta: true,
         });
       } catch (e) {
         return NextResponse.json({ error: (e as Error).message }, { status: 400 });

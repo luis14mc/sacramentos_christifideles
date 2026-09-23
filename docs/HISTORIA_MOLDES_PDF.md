@@ -7,7 +7,7 @@
 
 ## Valor para usuario (secretaría parroquial)
 
-Hoy la secretaría只能 editar texto en una plantilla por sacramento. Hay parroquias con
+Hoy la secretaría solo puede editar texto en una plantilla por sacramento. Hay parroquias con
 moldes PDF institucionales (papel membretado, escudo, tipografía específica, idioma
 católico formal) que la herramienta actual ignora. La consecuencia práctica es que la
 constancia generada no se parece al documento que la diócesis entrega físicamente,
