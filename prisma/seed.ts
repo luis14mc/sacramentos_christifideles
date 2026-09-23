@@ -14,15 +14,10 @@ const DEFAULT_EMAIL = 'admin@cristoresucitado.org';
 const DEFAULT_PASSWORD = 'Admin1234';
 
 async function main() {
-  const isProduction = process.env.NODE_ENV === 'production';
   const allowsDevelopmentDefaults =
     process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
   const email = process.env.SEED_SUPERADMIN_EMAIL?.trim();
   const password = process.env.SEED_SUPERADMIN_PASSWORD;
-
-  if (isProduction) {
-    throw new Error('Development/testing seed is blocked in production.');
-  }
 
   if ((!email || !password) && !allowsDevelopmentDefaults) {
     throw new Error(
