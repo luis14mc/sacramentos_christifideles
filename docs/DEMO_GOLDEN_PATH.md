@@ -27,22 +27,23 @@ pasos exactos de UI y los datos de demo a usar.
 
 Las contraseñas se configuran como variables de entorno. **No se imprimen en logs.**
 
-Los DNIs demo siguen el formato `0801-9NNNN` (5 dígitos numéricos ficticios,
-claramente diferenciados del seed base `0801-YYYY-NNNNN`).
+Los DNIs demo siguen el formato `0801-YYYY-NNNNN`. Los 4 dígitos centrales
+coinciden con el año de nacimiento de la persona; los 5 últimos son ficticios.
+Mismo formato y misma longitud (15 chars) que el seed base.
 
 **Personas clave (DNI ficticio):**
-- `0801-90103` (Sofía Bonilla) — bautizada en 2012
-- `0801-90113` (Emiliano Castillo) — bautizado 2007, comunión 2018
-- `0801-90101` (Ana Lucía Bonilla) — confirmada 2006, casada 2016
-- `0801-90105` (Pedro Pablo Reyes) — esposo de Ana Lucía, confirmado 2002
-- `0801-90107` (Mateo Reyes) — hijo de Ana y Pedro
-- `0801-90109` (Andrés Bonilla) — abuelo, padrino
+- `0801-2010-90103` (Sofía Bonilla) — bautizada en 2012
+- `0801-2007-90113` (Emiliano Castillo) — bautizado 2007, comunión 2018
+- `0801-1988-90101` (Ana Lucía Bonilla) — confirmada 2006, casada 2016
+- `0801-1985-90105` (Pedro Pablo Reyes) — esposo de Ana Lucía, confirmado 2002
+- `0801-2015-90107` (Mateo Reyes) — hijo de Ana y Pedro
+- `0801-1960-90109` (Andrés Bonilla) — abuelo, padrino
 
 **Ministros:**
-- `0801-90001` (Padre Carlos Mendoza) — párroco (sacerdote)
-- `0801-90002` (Padre José Aguilar) — sacerdote
-- `0801-90003` (Monseñor Arturo Paz) — obispo
-- `0801-90004` (Diácono Luis Reyes) — diácono
+- `0801-1965-90001` (Padre Carlos Mendoza) — párroco (sacerdote)
+- `0801-1975-90002` (Padre José Aguilar) — sacerdote
+- `0801-1958-90003` (Monseñor Arturo Paz) — obispo
+- `0801-1978-90004` (Diácono Luis Reyes) — diácono
 
 ---
 
@@ -54,9 +55,9 @@ claramente diferenciados del seed base `0801-YYYY-NNNNN`).
    - contadores reales (sacramentos del mes, personas activas, constancias del mes);
    - actividad reciente.
 4. Navegar a `/personas`. Mostrar paginación y filtros (estado vital, sexo).
-5. Abrir detalle de `0801-90103` (Sofía). Mostrar todos los datos + auditoría.
+5. Abrir detalle de `0801-2010-90103` (Sofía). Mostrar todos los datos + auditoría.
 6. Ir a `/buscar`, buscar por:
-   - DNI exacto: `0801-90103` → 1 resultado.
+   - DNI exacto: `0801-2010-90103` → 1 resultado.
    - Apellido parcial: `Bonilla` → 4 resultados.
 7. Verificar que no hay registros de otras parroquias (multi-tenant).
 
@@ -66,7 +67,7 @@ claramente diferenciados del seed base `0801-YYYY-NNNNN`).
 
 1. Ir a `/sacerdotes`.
 2. Ver lista de ministros con sus rangos (Diácono/Presbítero/Obispo).
-3. Abrir detalle del párroco (`0801-90001`).
+3. Abrir detalle del párroco (`0801-1965-90001`).
 4. Editar (solo Admin): cambiar teléfono o estado ministerial.
 5. Validar `MinistroSelector` en una nueva captura de sacramento (comunión, bautismo, etc.).
 
@@ -74,7 +75,7 @@ claramente diferenciados del seed base `0801-YYYY-NNNNN`).
 
 ## FLOW 3 — Bautismo con numeración y constancia
 
-1. Desde `/personas/0801-90107`, iniciar nuevo bautismo (`/bautismos/nuevo`).
+1. Desde `/personas/0801-2015-90107`, iniciar nuevo bautismo (`/bautismos/nuevo`).
 2. Llenar formulario con:
    - bautizado: Mateo Reyes;
    - padres: Ana Lucía / Pedro Pablo;
@@ -91,7 +92,7 @@ claramente diferenciados del seed base `0801-YYYY-NNNNN`).
 ## FLOW 4 — Primera Comunión + constancia
 
 1. Ir a `/primeras-comuniones/nuevo`.
-2. Persona `0801-90107` (Mateo).
+2. Persona `0801-2015-90107` (Mateo).
 3. Padres, catequista y sacerdote.
 4. Confirmar numeración.
 5. Generar constancia PDF.
@@ -99,23 +100,23 @@ claramente diferenciados del seed base `0801-YYYY-NNNNN`).
 ## FLOW 5 — Confirmación + obispo ministro
 
 1. Ir a `/confirmaciones/nuevo`.
-2. Persona: `0801-90113` (Emiliano Castillo, ya bautizado).
-3. El campo **obispo** debe mostrar al `0801-90003`.
+2. Persona: `0801-2007-90113` (Emiliano Castillo, ya bautizado).
+3. El campo **obispo** debe mostrar al `0801-1958-90003`.
 4. Confirmar y generar constancia.
 
 ## FLOW 6 — Matrimonio con esposos y padrinos
 
 1. Ir a `/matrimonios/nuevo`.
-2. Esposa: `0801-90101` (Ana Lucía).
-3. Esposo: `0801-90105` (Pedro Pablo).
-4. Padrinos: madrina `0801-90108`, padrino `0801-90109`.
-5. Sacerdote: párroco `0801-90001`.
+2. Esposa: `0801-1988-90101` (Ana Lucía).
+3. Esposo: `0801-1985-90105` (Pedro Pablo).
+4. Padrinos: madrina `0801-1982-90108`, padrino `0801-1960-90109`.
+5. Sacerdote: párroco `0801-1965-90001`.
 6. Validar numeración y emitir constancia PDF.
 
 ## FLOW 7 — Búsqueda → historial sacramental
 
 1. `/buscar` con texto `Mateo`.
-2. Abrir resultado `0801-90107`.
+2. Abrir resultado `0801-2015-90107`.
 3. En el detalle, abrir `Expediente sacramental` (`/personas/[id]/expediente`).
 4. Mostrar línea de tiempo: bautismo, comunión (vacío para Mateo), etc.
 

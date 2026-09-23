@@ -109,10 +109,10 @@ describe('demo readiness · demo seed', () => {
     const clero = await prisma.persona.count({
       where: {
         OR: [
-          { numero_identidad: { startsWith: '0801-90001' } },
-          { numero_identidad: { startsWith: '0801-90002' } },
-          { numero_identidad: { startsWith: '0801-90003' } },
-          { numero_identidad: { startsWith: '0801-90004' } },
+          { numero_identidad: { startsWith: '0801-1965-90001' } },
+          { numero_identidad: { startsWith: '0801-1975-90002' } },
+          { numero_identidad: { startsWith: '0801-1958-90003' } },
+          { numero_identidad: { startsWith: '0801-1978-90004' } },
         ],
       },
     });
@@ -177,8 +177,8 @@ describe('demo readiness · tenant consistency', () => {
     const ps = await prisma.persona.findMany({
       where: {
         OR: [
-          { numero_identidad: { startsWith: '0801-90001' } },
-          { numero_identidad: { startsWith: '0801-90101' } },
+          { numero_identidad: { startsWith: '0801-1965-90001' } },
+          { numero_identidad: { startsWith: '0801-1988-90101' } },
         ],
       },
       select: { id_parroquia: true },
