@@ -246,14 +246,16 @@ CREATE TABLE "tr_persona_grupo_rol" (
 );
 
 -- CreateTable
+-- NOTA: padrino/madrina son NOT NULL en el baseline. La relajación a opcional
+-- se aplica en una migración posterior (bautismo_padrino_madrina_opcional).
 CREATE TABLE "bautismo" (
     "id_bautismo" BIGSERIAL NOT NULL,
     "id_parroquia" SMALLINT NOT NULL,
     "numero_identidad_bautizado" VARCHAR(20) NOT NULL,
     "numero_identidad_madre" VARCHAR(20) NOT NULL,
     "numero_identidad_padre" VARCHAR(20) NOT NULL,
-    "numero_identidad_madrina" VARCHAR(20),
-    "numero_identidad_padrino" VARCHAR(20),
+    "numero_identidad_madrina" VARCHAR(20) NOT NULL,
+    "numero_identidad_padrino" VARCHAR(20) NOT NULL,
     "numero_identidad_catequista" VARCHAR(20) NOT NULL,
     "numero_identidad_sacerdote" VARCHAR(20) NOT NULL,
     "fecha_bautismo" TIMESTAMPTZ(6) NOT NULL,
