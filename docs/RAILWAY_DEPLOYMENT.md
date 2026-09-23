@@ -1,6 +1,40 @@
 # ChristiFideles — Despliegue en Railway
 
-Guía para montar **app Next.js + PostgreSQL** en [Railway](https://railway.app). Sustituye o complementa el stack Vercel + Neon del sprint anterior.
+Guía completa para desplegar **Next.js + PostgreSQL** en [Railway](https://railway.app).
+
+## Arquitectura
+
+Cada parroquia que adopte ChristiFideles tendrá **su propio proyecto Railway
+independiente**, con su propio servicio PostgreSQL y su propio servicio Web:
+
+```
+Railway Project (por parroquia)
+├── PostgreSQL           ← servicio gestionado
+└── sacramentos_christifideles  ← servicio web (este repo)
+```
+
+El environment de Railway puede llamarse `production` por defecto; este
+documento no asume separación obligatoria entre staging y producción final.
+
+## Tabla de contenidos
+
+1. [Crear proyecto y servicio PostgreSQL](#1-crear-proyecto-y-servicio-postgresql)
+2. [Añadir el servicio web desde GitHub](#2-añadir-el-servicio-web-desde-github)
+3. [Variables de entorno obligatorias](#3-variables-de-entorno-obligatorias)
+4. [Build command](#4-build-command)
+5. [Start command y migraciones](#5-start-command-y-migraciones)
+6. [Primer deploy](#6-primer-deploy)
+7. [Crear dominio público](#7-crear-dominio-público)
+8. [Configurar NEXTAUTH_URL exacto](#8-configurar-nextauth_url-exacto)
+9. [Healthcheck](#9-healthcheck)
+10. [Ejecutar seed demo manualmente](#10-ejecutar-seed-demo-manualmente)
+11. [Cómo revisar logs](#11-cómo-revisar-logs)
+12. [Cómo hacer rollback](#12-cómo-hacer-rollback)
+13. [Backup y restore básicos](#13-backup-y-restore-básicos)
+14. [Cómo recrear demo sin destruir DB](#14-cómo-recrear-demo-sin-destruir-db)
+15. [Reset destructivo (sólo emergencia)](#15-reset-destructivo-sólo-emergencia)
+
+---
 
 ## Arquitectura
 
@@ -10,123 +44,260 @@ Guía para montar **app Next.js + PostgreSQL** en [Railway](https://railway.app)
 | Base de datos | Plugin **PostgreSQL** en el mismo proyecto |
 | Migraciones | `prisma migrate deploy` en cada arranque (`scripts/railway-start.mjs`) |
 | Health | `GET /api/health` (DB + `SELECT 1`) |
+| Filesystem | **Efímero**. PDFs y moldes van en `BYTEA` (no requiere volumen) |
 
-## 1. Crear proyecto
+---
 
-1. [railway.app](https://railway.app) → **New Project**.
-2. **Add PostgreSQL** (servicio Postgres 15+).
-3. **New** → **GitHub Repo** → `luis14mc/sacramentos_christifideles`, rama `master`.
-4. Railway detecta `railway.toml` (build/start/healthcheck).
+## 1. Crear proyecto y servicio PostgreSQL
 
-## 2. Variables de entorno (servicio Web)
+1. [railway.app](https://railway.app) → **New Project** → **Empty Project**.
+2. Haz clic en **+ New** → **Database** → **PostgreSQL**.
+3. Espera a que el servicio Postgres termine de aprovisionar (~30 s).
+4. Haz clic en el servicio Postgres y anota la pestaña **Variables** para confirmar
+   `DATABASE_URL` (lo usarás desde el servicio web vía referencia `${{Postgres.DATABASE_URL}}`).
 
-En el servicio de la app, **Variables** (referencia al Postgres con `${{Postgres.*}}` si Railway lo ofrece):
+## 2. Añadir el servicio web desde GitHub
 
-| Variable | Valor |
-|----------|--------|
-| `DATABASE_URL` | URL JDBC/Postgres del plugin (pública o **internal** para menor latencia) |
-| `DIRECT_URL` | Misma URL que `DATABASE_URL` en Railway (una sola conexión; no hay pooler tipo Neon) |
-| `NEXTAUTH_URL` | URL pública del servicio, p. ej. `https://christifideles-production.up.railway.app` |
-| `NEXTAUTH_SECRET` | Secreto largo aleatorio (distinto por entorno) |
-| `ALLOW_INITIAL_SETUP` | `false` en producción; `true` solo en el **primer** bootstrap de BD vacía |
-| `NODE_ENV` | `production` (Railway suele fijarlo) |
+1. En el mismo proyecto Railway → **+ New** → **GitHub Repo**.
+2. Selecciona `luis14mc/sacramentos_christifideles`, rama `master`.
+3. Railway detecta `railway.toml` y configura automáticamente:
+   - Builder: NIXPACKS
+   - Build command: `pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm run build`
+   - Start command: `pnpm run start:railway`
+   - Healthcheck: `/api/health` con timeout 120 s.
 
-Opcional tras el primer deploy estable:
+## 3. Variables de entorno obligatorias
 
-- `ALLOW_INITIAL_SETUP=false` (obligatorio en prod).
-- Catálogos/seed: ejecutar seed **una vez** desde tu máquina apuntando a la BD de Railway, o usar `/setup` con `ALLOW_INITIAL_SETUP=true` solo en ventana controlada.
+Configúralas en el servicio **Web** → **Variables**. Railway las inyecta antes del
+arranque. **No commitear secretos reales.**
 
-**No** commitear `.env`. Ver `.env.example`.
+| Variable | Valor | Origen |
+|----------|-------|--------|
+| `DATABASE_URL` | Referencia a `${{Postgres.DATABASE_URL}}` | desde el servicio Postgres |
+| `DIRECT_URL` | Misma URL (en Railway no hay pooler separado) | manual |
+| `NEXTAUTH_URL` | URL pública de Railway (ver §8) | manual |
+| `NEXTAUTH_SECRET` | Secreto aleatorio de 32+ bytes (ver generación abajo) | manual |
+| `ALLOW_INITIAL_SETUP` | `false` | manual |
+| `NODE_ENV` | `production` (lo fija Railway por defecto, pero confirmar) | automático |
+| `DEMO_ADMIN_PASSWORD` | contraseña del Super Admin demo (mín 8 caracteres) | manual |
+| `DEMO_SECRETARIO_PASSWORD` | contraseña del Secretario demo | manual |
+| `DEMO_CATEQUISTA_PASSWORD` | contraseña del Catequista demo | manual |
 
-### Generar `NEXTAUTH_SECRET`
+Generar `NEXTAUTH_SECRET`:
 
 ```bash
 openssl rand -base64 32
 ```
 
-## 3. Dominio público
+> **Importante**: el secreto debe ser **distinto por entorno** (cada
+> parroquia debe tener su propio `NEXTAUTH_SECRET`; nunca reutilizar entre
+> proyectos Railway diferentes).
 
-En el servicio Web → **Settings** → **Networking** → **Generate Domain** (o dominio custom).
+## 4. Build command
 
-Actualizar `NEXTAUTH_URL` para que coincida **exactamente** con la URL HTTPS (sin barra final).
+Definido en `railway.toml`:
 
-## 4. Build y arranque (automático)
-
-`railway.toml`:
-
-- **Build:** `pnpm install`, `prisma generate`, `next build`
-- **Start:** `pnpm run start:railway` → `migrate deploy` + `next start -H 0.0.0.0 -p $PORT`
-
-Railway inyecta `PORT`; la app escucha en todas las interfaces.
-
-## 5. Primera base de datos vacía
-
-1. Deploy con Postgres vacío.
-2. El start aplica `prisma/migrations/` (incluye extensión `citext`).
-3. Bootstrap (elige una):
-   - **Setup UI:** `/setup` con `ALLOW_INITIAL_SETUP=true` temporalmente.
-   - **Seed admin (dev/QA):** desde local con `DATABASE_URL` de Railway y variables `SEED_*` (ver `.env.example`); no usar credenciales de demo en producción real.
-
-4. Volver a poner `ALLOW_INITIAL_SETUP=false`.
-
-### Base ya existente (migrada con `db push` antes)
-
-Si la BD ya tiene tablas sin historial de migraciones:
-
-```bash
-pnpm exec prisma migrate resolve --applied 20260922004338_init
-pnpm exec prisma migrate deploy
+```toml
+[build]
+builder = "NIXPACKS"
+buildCommand = "corepack enable && corepack prepare pnpm@10 --activate && pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm run build"
 ```
 
-(Ejecutar contra la URL de Railway, una sola vez, con cuidado.)
+- `corepack` activa pnpm exacto declarado en `packageManager` (10.15.0).
+- `--frozen-lockfile` garantiza builds reproducibles (mismas versiones).
+- `prisma generate` antes del build asegura que `node_modules/.prisma` esté disponible
+  para `next build`.
 
-## 6. Verificación post-deploy
+## 5. Start command y migraciones
 
-```bash
-export BASE_URL="https://tu-dominio.up.railway.app"
-curl -fsS "$BASE_URL/api/health"
-BASE_URL="$BASE_URL" pnpm run smoke
+Definido en `railway.toml`:
+
+```toml
+[deploy]
+startCommand = "pnpm run start:railway"
 ```
 
-Esperado: health `status: ok`, `/api/dashboard` → `401` sin sesión.
+`scripts/railway-start.mjs`:
 
-## 7. Docker (opcional)
+1. Verifica `DATABASE_URL` (falla rápido si falta).
+2. Ejecuta `pnpm exec prisma migrate deploy` — aplica migraciones versionadas
+   desde cero sobre BD vacía o nuevas migraciones sobre BD existente.
+3. Arranca `next start -H 0.0.0.0 -p ${PORT}`.
 
-Para probar en local sin Railway:
+### Lo que NO se ejecuta en Railway
+- `prisma db push` (sincroniza sin historial).
+- `pnpm db:reset:dev` (destructivo; bloqueado por guard interno).
+- `prisma migrate dev` (no usar en deploy; solo en desarrollo local).
+- `pnpm db:seed:demo` **sin** `ALLOW_DEMO_SEED=true` (guard explícito).
+- `--force-reset` en cualquier migrate.
+
+## 6. Primer deploy
+
+1. Confirma que las variables están todas configuradas (especialmente
+   `DEMO_*_PASSWORD`, sin las cuales no podrás iniciar sesión).
+2. Haz push a `master` o espera al merge del PR correspondiente.
+3. En Railway, abre el servicio Web → **Deployments**.
+4. El primer build puede tardar 3–5 minutos (instalación de pnpm + build).
+5. Revisa los logs en tiempo real desde la pestaña **Logs** del servicio.
+6. Cuando termine, comprueba el healthcheck:
+   - Service → **Settings** → **Deploy** debe mostrar healthcheck success.
+   - O manualmente: `curl https://<dominio>.up.railway.app/api/health` → 200 OK.
+
+## 7. Crear dominio público
+
+1. Servicio Web → **Settings** → **Networking** → **Generate Domain**.
+2. Railway devuelve un dominio aleatorio tipo
+   `https://christifideles-production.up.railway.app`.
+3. Para dominio custom (recomendado): Settings → **Custom Domain** →
+   introduce tu dominio y configura el CNAME según las instrucciones.
+
+## 8. Configurar NEXTAUTH_URL exacto
+
+Una vez generado el dominio, **actualiza la variable `NEXTAUTH_URL`** con el valor
+exacto (sin slash final, con `https://`):
+
+| NEXTAUTH_URL | Resultado |
+|--------------|-----------|
+| `https://christifideles-production.up.railway.app` | ✅ |
+| `http://christifideles-production.up.railway.app` | ❌ (mixed content, CSRF) |
+| `https://christifideles-production.up.railway.app/` | ❌ (slash final puede romper callbacks) |
+| `https://tu-dominio.com` | ✅ (si configuraste custom domain) |
+
+Tras cambiar `NEXTAUTH_URL`, redeploya (Railway → **Redeploy**).
+
+## 9. Healthcheck
+
+`GET /api/health` está configurado en `railway.toml` con timeout 120 s. Devuelve:
+
+| Estado | HTTP | Cuerpo |
+|--------|------|--------|
+| App + DB OK | 200 | `{"status":"ok","database":"ok"}` |
+| DB caída | 503 | `{"status":"degraded","database":"unavailable"}` |
+
+**Importante**: el healthcheck **no expone** detalles del error, DSN ni stack trace
+(ver `src/app/api/health/route.ts`).
+
+## 10. Ejecutar seed demo manualmente
+
+El seed demo **no se ejecuta automáticamente** en el deploy (es destructivo si se
+ejecuta mal). Se corre una vez, manualmente, apuntando a la BD de Railway.
+
+El seed demo **requiere explícitamente** la variable `ALLOW_DEMO_SEED=true`.
+Esto es independiente de `NODE_ENV`: en Railway el environment es `production`
+y eso **no** debe bloquear una operación autorizada y puntual.
+
+### Desde tu máquina local
+
+1. Asegúrate de tener tu `DATABASE_URL` de Railway como variable de entorno.
+2. Verifica conectividad con un SELECT trivial:
+   ```bash
+   psql "$DATABASE_URL" -c 'SELECT 1;'
+   ```
+3. Ejecuta las migraciones contra Railway:
+   ```bash
+   pnpm exec prisma migrate deploy
+   ```
+4. Ejecuta el seed base (catálogos, parroquia demo):
+   ```bash
+   NODE_ENV=test pnpm db:seed
+   ```
+5. Ejecuta el seed demo (usuarios demo, personas, ministros, sacramentos):
+   ```bash
+   ALLOW_DEMO_SEED=true \
+     DEMO_ADMIN_PASSWORD='TuPasswordAdmin' \
+     DEMO_SECRETARIO_PASSWORD='TuPasswordSecretario' \
+     DEMO_CATEQUISTA_PASSWORD='TuPasswordCatequista' \
+     pnpm db:seed:demo
+   ```
+6. Verifica entrando a la app con `demo-admin@cristoresucitado.org` +
+   la contraseña del paso 5.
+7. **Restaura el guard** cuando termines:
+   ```bash
+   unset ALLOW_DEMO_SEED
+   ```
+
+### Idempotencia
+- `pnpm db:seed` es idempotente (usa `upsert` por PKs/unique indexes).
+- `pnpm db:seed:demo` es idempotente (usa `upsert` por DNI / email / constraints).
+- Ambas se pueden correr múltiples veces sin duplicar.
+
+## 11. Cómo revisar logs
+
+- **Railway UI**: Servicio → **Logs** (live tail).
+- **Filtrar por nivel**: Railway soporta `Filter logs` por texto (ej. buscar
+  `ERROR`, `Healthcheck`, `Seed`).
+- **Importante**: el seed **no imprime contraseñas**. Solo imprime los emails
+  de los usuarios creados.
+
+## 12. Cómo hacer rollback
+
+Railway mantiene historial de deployments. Para revertir a una versión anterior:
+
+1. Servicio → **Deployments** → elige el commit anterior.
+2. **Redeploy** ese commit.
+3. **NO** revertir migraciones (migraciones versionadas son forward-only).
+   Si una migración subió datos, el rollback la deja; tras rollback ejecuta
+   `prisma migrate resolve --applied <migracion_fallida>` si fuera necesario.
+
+> Si la release tiene un bug en código, revertir el código es seguro. Si la
+> release rompió schema, el camino es: forward fix + nueva migración.
+
+## 13. Backup y restore básicos
+
+Ver `docs/DEMO_BACKUP_RESTORE.md` para el runbook completo. Resumen:
 
 ```bash
-docker build -t christifideles .
-docker run --rm -p 3000:3000 --env-file .env christifideles
+# Backup (exporta a archivo local)
+pg_dump "$DATABASE_URL" -Fc -f demo-$(date +%F).dump
+
+# Restore (sobre BD vacía)
+createdb demo_restore
+pg_restore -d demo_restore demo-2026-XX-XX.dump
 ```
 
-En Railway puedes cambiar el builder a Dockerfile en el dashboard; por defecto se usa **Nixpacks** (`railway.toml`).
+**Nunca** commitear archivos `.dump` al repositorio. Almacenar en disco local
+o en un sistema externo cifrado.
 
-## 8. Staging vs producción
+## 14. Cómo recrear demo sin destruir DB
 
-- **Dos proyectos Railway** (recomendado): staging + prod, cada uno con su Postgres y secretos distintos.
-- No reutilizar `NEXTAUTH_SECRET` ni `DATABASE_URL` entre entornos.
+El seed demo es **idempotente** por diseño (usa `upsert` por DNI / email /
+constraints únicos):
 
-## 9. Checklist release
+- **Volver a correr el mismo seed** sobre la BD Railway existente no duplica
+  registros ni rompe datos; actualiza los existentes con los valores del seed.
+- Para "empezar de cero" sin perder otros datos de la misma parroquia, la
+  opción segura es recrear el entorno desde Railway (ver §15). **No
+  documentamos `DELETE FROM ...` manuales** para evitar pérdidas accidentales
+  sobre la BD de la parroquia.
 
-- [ ] `prisma/migrations/` versionadas en git
-- [ ] CI verde (`migrate deploy` + tests)
-- [ ] `NEXTAUTH_URL` = URL real
-- [ ] `ALLOW_INITIAL_SETUP=false` en prod
-- [ ] Smoke test OK
-- [ ] Backup del Postgres (Railway snapshots / export periódico)
+Si necesitas resetear los datos demo desde fuera de Railway, usa un backup
+previo (ver §13) como red de seguridad.
 
-## 10. Troubleshooting
+## 15. Reset destructivo (sólo emergencia)
 
-| Síntoma | Causa probable |
-|---------|----------------|
-| Health 503 `database unavailable` | `DATABASE_URL` incorrecta o Postgres no enlazado al servicio |
-| Error `citext` | Postgres antiguo; usar imagen 15+ en Railway |
-| Login redirect loop | `NEXTAUTH_URL` no coincide con la URL pública |
-| Migrate falla al arrancar | BD con esquema manual sin `migrate resolve` |
-| Build falla en pnpm | Falta `pnpm-lock.yaml` o lock desactualizado |
+Solo si la BD queda en estado irrecuperable:
+
+1. **Confirma con Product Owner / Scrum Master**. Esto borra TODA la BD.
+2. En Railway, abre el servicio Postgres → **Settings** → **Reset Database**.
+3. Railway crea una BD nueva vacía.
+4. Vuelve a configurar `DATABASE_URL` (Railway lo actualiza automáticamente).
+5. Redeploy el servicio web (aplicará migraciones).
+6. Re-corre `pnpm db:seed` y `pnpm db:seed:demo` desde tu máquina.
+
+## Troubleshooting
+
+| Síntoma | Causa probable | Solución |
+|---------|----------------|----------|
+| Healthcheck 503 "database unavailable" | `DATABASE_URL` incorrecta o Postgres no enlazado | Revisar Variables del servicio Web |
+| Login redirect loop | `NEXTAUTH_URL` no coincide con dominio público | Actualizar `NEXTAUTH_URL` y redeploy |
+| `prisma migrate deploy` falla al arrancar | BD con esquema manual sin `migrate resolve` | Ver `docs/MIGRATIONS_PRISMA.md` § "Manejo de una BD existente" |
+| Build falla en pnpm | Falta `pnpm-lock.yaml` o lock desactualizado | Regenerar lock con `pnpm install` local, commitearlo |
+| `pnpm db:seed:demo` falla con "Faltan variables" | `DEMO_*_PASSWORD` no definidas | Definir las 3 variables antes de ejecutar |
+| Sacramentos demo no aparecen | `pnpm db:seed:demo` no se ha corrido | Ejecutar manualmente (ver §10) |
 
 ## Referencias
 
-- `docs/STAGING_DEPLOYMENT.md` (conceptos compartidos con Vercel/Neon)
-- `docs/BACKUP_RESTORE_RUNBOOK.md`
-- `AGENTS.md` — no usar `db push` como mecanismo normal de producción
+- `docs/MIGRATIONS_PRISMA.md` — ciclo de migraciones y manejo de BD existente.
+- `docs/DEMO_GOLDEN_PATH.md` — flujos de demo.
+- `docs/DEMO_BACKUP_RESTORE.md` — backup/restore runbook.
+- `docs/STORAGE_AUDIT.md` — auditoría de almacenamiento (filesystem vs BYTEA).
