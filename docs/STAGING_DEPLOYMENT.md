@@ -1,9 +1,9 @@
 # ChristiFidelis — Staging Deployment
 
 ## Arquitectura objetivo
-- App: Vercel
-- DB: Neon PostgreSQL dedicada exclusivamente a staging
-- Producción: no se toca en Sprint 7
+- App: **Railway** (recomendado, ver `docs/RAILWAY_DEPLOYMENT.md`) o Vercel
+- DB: PostgreSQL dedicada a staging (Railway Postgres o Neon)
+- Producción: entorno separado con secretos distintos
 
 ## Variables Vercel (staging)
 Configurar como secretos del proyecto/entorno Preview o Staging:
@@ -28,10 +28,8 @@ El flujo objetivo es:
 npx prisma migrate deploy
 ```
 
-### Bloqueo detectado en Sprint 7
-A fecha de este sprint el repositorio no contiene `prisma/migrations/`. Por tanto, `migrate deploy` **no está todavía habilitado como mecanismo de bootstrap reproducible**. No sustituirlo silenciosamente por `prisma db push` en staging.
-
-Antes del despliegue real se debe crear y revisar una migración baseline no destructiva a partir del schema/SQL v3, validarla contra una base vacía y definir cómo se baselina una base existente. Hasta entonces, el deploy de staging queda `PENDING` y el Release Candidate es `NO-GO`.
+### Estado migraciones
+El repositorio incluye migración baseline en `prisma/migrations/` (extensión `citext` + esquema v3). En staging/producción usar siempre `prisma migrate deploy`. Si la BD ya existía sin historial Prisma, ver `migrate resolve` en `docs/RAILWAY_DEPLOYMENT.md`.
 
 ## Healthcheck
 Después del despliegue:

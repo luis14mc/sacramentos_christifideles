@@ -40,7 +40,7 @@ yarn-error.log*
 # database
 *.db
 *.sqlite
-/prisma/migrations/
+# Las migraciones versionadas SÍ van al repo (CI, Railway, producción).
 
 # typescript
 *.tsbuildinfo
