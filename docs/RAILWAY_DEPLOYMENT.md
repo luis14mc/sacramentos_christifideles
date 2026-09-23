@@ -1,11 +1,20 @@
-# ChristiFideles — Despliegue en Railway (DEMO / STAGING)
+# ChristiFideles — Despliegue en Railway
 
-Guía completa para desplegar **Next.js + PostgreSQL** en [Railway](https://railway.app)
-para el demo funcional. Railway es **staging**, **no** producción final.
+Guía completa para desplegar **Next.js + PostgreSQL** en [Railway](https://railway.app).
 
-> **Importante**: este entorno es demostrativo. La base de datos de Railway para
-> el demo debe estar **separada** de futuras bases productivas. No usar el mismo
-> proyecto Railway para demo y producción.
+## Arquitectura
+
+Cada parroquia que adopte ChristiFideles tendrá **su propio proyecto Railway
+independiente**, con su propio servicio PostgreSQL y su propio servicio Web:
+
+```
+Railway Project (por parroquia)
+├── PostgreSQL           ← servicio gestionado
+└── sacramentos_christifideles  ← servicio web (este repo)
+```
+
+El environment de Railway puede llamarse `production` por defecto; este
+documento no asume separación obligatoria entre staging y producción final.
 
 ## Tabla de contenidos
 
@@ -80,7 +89,9 @@ Generar `NEXTAUTH_SECRET`:
 openssl rand -base64 32
 ```
 
-> **Importante**: el secreto debe ser **distinto por entorno** (staging ≠ producción).
+> **Importante**: el secreto debe ser **distinto por entorno** (cada
+> parroquia debe tener su propio `NEXTAUTH_SECRET`; nunca reutilizar entre
+> proyectos Railway diferentes).
 
 ## 4. Build command
 
@@ -114,10 +125,10 @@ startCommand = "pnpm run start:railway"
 3. Arranca `next start -H 0.0.0.0 -p ${PORT}`.
 
 ### Lo que NO se ejecuta en Railway
-- `prisma db push` (prohibido: sincroniza sin historial).
-- `pnpm db:reset:dev` (prohibido por el guard de seguridad del script).
-- `pnpm db:seed` (prohibido en producción por el propio `seed.ts`).
+- `prisma db push` (sincroniza sin historial).
+- `pnpm db:reset:dev` (destructivo; bloqueado por guard interno).
 - `prisma migrate dev` (no usar en deploy; solo en desarrollo local).
+- `pnpm db:seed:demo` **sin** `ALLOW_DEMO_SEED=true` (guard explícito).
 - `--force-reset` en cualquier migrate.
 
 ## 6. Primer deploy
@@ -171,6 +182,10 @@ Tras cambiar `NEXTAUTH_URL`, redeploya (Railway → **Redeploy**).
 El seed demo **no se ejecuta automáticamente** en el deploy (es destructivo si se
 ejecuta mal). Se corre una vez, manualmente, apuntando a la BD de Railway.
 
+El seed demo **requiere explícitamente** la variable `ALLOW_DEMO_SEED=true`.
+Esto es independiente de `NODE_ENV`: en Railway el environment es `production`
+y eso **no** debe bloquear una operación autorizada y puntual.
+
 ### Desde tu máquina local
 
 1. Asegúrate de tener tu `DATABASE_URL` de Railway como variable de entorno.
@@ -188,7 +203,7 @@ ejecuta mal). Se corre una vez, manualmente, apuntando a la BD de Railway.
    ```
 5. Ejecuta el seed demo (usuarios demo, personas, ministros, sacramentos):
    ```bash
-   NODE_ENV=development \
+   ALLOW_DEMO_SEED=true \
      DEMO_ADMIN_PASSWORD='TuPasswordAdmin' \
      DEMO_SECRETARIO_PASSWORD='TuPasswordSecretario' \
      DEMO_CATEQUISTA_PASSWORD='TuPasswordCatequista' \
@@ -196,6 +211,10 @@ ejecuta mal). Se corre una vez, manualmente, apuntando a la BD de Railway.
    ```
 6. Verifica entrando a la app con `demo-admin@cristoresucitado.org` +
    la contraseña del paso 5.
+7. **Restaura el guard** cuando termines:
+   ```bash
+   unset ALLOW_DEMO_SEED
+   ```
 
 ### Idempotencia
 - `pnpm db:seed` es idempotente (usa `upsert` por PKs/unique indexes).
@@ -241,27 +260,18 @@ o en un sistema externo cifrado.
 
 ## 14. Cómo recrear demo sin destruir DB
 
-Si quieres **resetear los datos demo** sin tocar el esquema:
+El seed demo es **idempotente** por diseño (usa `upsert` por DNI / email /
+constraints únicos):
 
-1. Ejecuta `pnpm db:seed:demo` (es idempotente — usa los mismos DNIs / emails,
-   no duplica y actualiza los datos existentes con los del seed).
+- **Volver a correr el mismo seed** sobre la BD Railway existente no duplica
+  registros ni rompe datos; actualiza los existentes con los valores del seed.
+- Para "empezar de cero" sin perder otros datos de la misma parroquia, la
+  opción segura es recrear el entorno desde Railway (ver §15). **No
+  documentamos `DELETE FROM ...` manuales** para evitar pérdidas accidentales
+  sobre la BD de la parroquia.
 
-Si quieres **empezar desde cero con datos demo**:
-
-1. Borrar SOLO los registros demo (no la BD):
-   ```sql
-   DELETE FROM molde_constancia;
-   DELETE FROM plantilla_constancia;
-   DELETE FROM matrimonio WHERE nota_marginal LIKE '%(demo)%';
-   DELETE FROM confirmacion WHERE nota_marginal LIKE '%(demo)%';
-   DELETE FROM primera_comunion WHERE nota_marginal LIKE '%(demo)%';
-   DELETE FROM bautismo WHERE nota_marginal LIKE '%(demo)%';
-   DELETE FROM numeradores WHERE id_parroquia IN (SELECT id_parroquia FROM parroquia WHERE nombre='Cristo Resucitado de Loarque');
-   DELETE FROM orden_sacerdotal WHERE id_parroquia IN (SELECT id_parroquia FROM parroquia WHERE nombre='Cristo Resucitado de Loarque');
-   DELETE FROM usuario WHERE email LIKE 'demo-%@cristoresucitado.org';
-   DELETE FROM persona WHERE numero_identidad LIKE '0801-1985-D%' OR numero_identidad LIKE '0801-1990-D%' OR numero_identidad LIKE '0801-1980-D%' OR numero_identidad LIKE '0801-1988-D%' OR numero_identidad LIKE '0801-19__-P%' OR numero_identidad LIKE '0801-2007-P%' OR numero_identidad LIKE '0801-2008-P%' OR numero_identidad LIKE '0801-2010-P%' OR numero_identidad LIKE '0801-2015-P%';
-   ```
-2. Vuelve a correr `pnpm db:seed:demo`.
+Si necesitas resetear los datos demo desde fuera de Railway, usa un backup
+previo (ver §13) como red de seguridad.
 
 ## 15. Reset destructivo (sólo emergencia)
 

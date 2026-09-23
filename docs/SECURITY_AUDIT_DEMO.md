@@ -111,7 +111,8 @@ no debe mostrar cambios.
 
 ## Conclusión
 
-El estado de seguridad del demo es **aceptable** para staging. Los hallazgos
+El estado de seguridad del demo es **aceptable** para producción demostrativa.
+Los hallazgos
 pendientes (CSP, rate limit) están identificados y priorizados para v1.1; no
 representan riesgo crítico mientras el demo no esté expuesto a Internet
 abierto sin autenticación.

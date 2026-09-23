@@ -5,7 +5,8 @@
  *   - parroquia existente (no duplica)
  *   - 3 usuarios (admin, secretario, catequista) con contraseñas desde env
  *   - ~18 personas con perfiles heterogéneos (incluye relaciones de familia)
- *   - 3 ministros (Diácono, Presbítero, Obispo) con `orden_sacerdotal`
+ *   - 4 ministros (1 párroco, 1 sacerdote adjunto, 1 obispo, 1 diácono)
+ *     con `orden_sacerdotal`
  *   - sacramentos coherentes (bautismos, comuniones, confirmaciones, matrimonio)
  *   - numeradores inicializados
  *
@@ -217,10 +218,15 @@ async function ensureClero(
 }
 
 async function main() {
-  const nodeEnv = process.env.NODE_ENV ?? 'development';
-  if (nodeEnv === 'production') {
+  // Guard explícito. El seed demo NUNCA corre por accidente: requiere
+  // ALLOW_DEMO_SEED=true en el entorno. Esto es independiente de NODE_ENV
+  // (Railway usa environment 'production' por defecto y eso no debe
+  // bloquear una operación autorizada y explícita).
+  if (process.env.ALLOW_DEMO_SEED !== 'true') {
     throw new Error(
-      'Demo seed bloqueado en NODE_ENV=production. Úsalo solo en staging/demo.',
+      'Demo seed bloqueado. Para ejecutarlo, define ALLOW_DEMO_SEED=true ' +
+        'en el entorno antes de correr `pnpm db:seed:demo`. Tras terminar, ' +
+        'restablece ALLOW_DEMO_SEED=false o elimínalo.'
     );
   }
 
@@ -296,24 +302,24 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
 
   // Personas demo (~18)
   const personasData: Array<Parameters<typeof ensurePersona>[3]> = [
-    { dni: '0801-1985-D001', nombres: 'Padre Carlos', apellidos: 'Mendoza Ruiz', fechaNacimiento: '1965-03-12', sexo: 'M' },
-    { dni: '0801-1990-D002', nombres: 'Padre José', apellidos: 'Aguilar Vega', fechaNacimiento: '1975-06-22', sexo: 'M' },
-    { dni: '0801-1980-D003', nombres: 'Monseñor Arturo', apellidos: 'Paz Cárcamo', fechaNacimiento: '1958-11-30', sexo: 'M' },
-    { dni: '0801-1988-D004', nombres: 'Diácono Luis', apellidos: 'Reyes Galo', fechaNacimiento: '1978-04-18', sexo: 'M' },
-    { dni: '0801-1990-P001', nombres: 'Ana Lucía', apellidos: 'Bonilla Paz', fechaNacimiento: '1988-08-14', sexo: 'F' },
-    { dni: '0801-1992-P002', nombres: 'José Andrés', apellidos: 'Bonilla Paz', fechaNacimiento: '1992-02-03', sexo: 'M' },
-    { dni: '0801-2010-P003', nombres: 'Sofía', apellidos: 'Bonilla Flores', fechaNacimiento: '2010-05-19', sexo: 'F' },
-    { dni: '0801-1980-P004', nombres: 'María Teresa', apellidos: 'Flores', fechaNacimiento: '1980-09-21', sexo: 'F' },
-    { dni: '0801-1985-P005', nombres: 'Pedro Pablo', apellidos: 'Reyes', fechaNacimiento: '1985-07-04', sexo: 'M' },
-    { dni: '0801-1991-P006', nombres: 'Camila Andrea', apellidos: 'Reyes', fechaNacimiento: '1991-12-12', sexo: 'F' },
-    { dni: '0801-2015-P007', nombres: 'Mateo', apellidos: 'Reyes', fechaNacimiento: '2015-04-07', sexo: 'M' },
-    { dni: '0801-1982-P008', nombres: 'Rosa Elena', apellidos: 'Herrera', fechaNacimiento: '1982-10-30', sexo: 'F' },
-    { dni: '0801-1960-P009', nombres: 'Andrés', apellidos: 'Bonilla', fechaNacimiento: '1960-01-25', sexo: 'M' },
-    { dni: '0801-1965-P010', nombres: 'Lucía', apellidos: 'Paz', fechaNacimiento: '1965-08-08', sexo: 'F' },
-    { dni: '0801-1987-P011', nombres: 'Jorge Luis', apellidos: 'Castillo', fechaNacimiento: '1987-03-15', sexo: 'M' },
-    { dni: '0801-1989-P012', nombres: 'Daniela', apellidos: 'Mendoza', fechaNacimiento: '1989-11-02', sexo: 'F' },
-    { dni: '0801-2007-P013', nombres: 'Emiliano', apellidos: 'Castillo Mendoza', fechaNacimiento: '2007-06-20', sexo: 'M' },
-    { dni: '0801-2008-P014', nombres: 'Isabella', apellidos: 'Castillo Mendoza', fechaNacimiento: '2008-09-12', sexo: 'F' },
+    { dni: '0801-90001', nombres: 'Padre Carlos', apellidos: 'Mendoza Ruiz', fechaNacimiento: '1965-03-12', sexo: 'M' },
+    { dni: '0801-90002', nombres: 'Padre José', apellidos: 'Aguilar Vega', fechaNacimiento: '1975-06-22', sexo: 'M' },
+    { dni: '0801-90003', nombres: 'Monseñor Arturo', apellidos: 'Paz Cárcamo', fechaNacimiento: '1958-11-30', sexo: 'M' },
+    { dni: '0801-90004', nombres: 'Diácono Luis', apellidos: 'Reyes Galo', fechaNacimiento: '1978-04-18', sexo: 'M' },
+    { dni: '0801-90101', nombres: 'Ana Lucía', apellidos: 'Bonilla Paz', fechaNacimiento: '1988-08-14', sexo: 'F' },
+    { dni: '0801-90102', nombres: 'José Andrés', apellidos: 'Bonilla Paz', fechaNacimiento: '1992-02-03', sexo: 'M' },
+    { dni: '0801-90103', nombres: 'Sofía', apellidos: 'Bonilla Flores', fechaNacimiento: '2010-05-19', sexo: 'F' },
+    { dni: '0801-90104', nombres: 'María Teresa', apellidos: 'Flores', fechaNacimiento: '1980-09-21', sexo: 'F' },
+    { dni: '0801-90105', nombres: 'Pedro Pablo', apellidos: 'Reyes', fechaNacimiento: '1985-07-04', sexo: 'M' },
+    { dni: '0801-90106', nombres: 'Camila Andrea', apellidos: 'Reyes', fechaNacimiento: '1991-12-12', sexo: 'F' },
+    { dni: '0801-90107', nombres: 'Mateo', apellidos: 'Reyes', fechaNacimiento: '2015-04-07', sexo: 'M' },
+    { dni: '0801-90108', nombres: 'Rosa Elena', apellidos: 'Herrera', fechaNacimiento: '1982-10-30', sexo: 'F' },
+    { dni: '0801-90109', nombres: 'Andrés', apellidos: 'Bonilla', fechaNacimiento: '1960-01-25', sexo: 'M' },
+    { dni: '0801-90110', nombres: 'Lucía', apellidos: 'Paz', fechaNacimiento: '1965-08-08', sexo: 'F' },
+    { dni: '0801-90111', nombres: 'Jorge Luis', apellidos: 'Castillo', fechaNacimiento: '1987-03-15', sexo: 'M' },
+    { dni: '0801-90112', nombres: 'Daniela', apellidos: 'Mendoza', fechaNacimiento: '1989-11-02', sexo: 'F' },
+    { dni: '0801-90113', nombres: 'Emiliano', apellidos: 'Castillo Mendoza', fechaNacimiento: '2007-06-20', sexo: 'M' },
+    { dni: '0801-90114', nombres: 'Isabella', apellidos: 'Castillo Mendoza', fechaNacimiento: '2008-09-12', sexo: 'F' },
   ];
 
   for (const p of personasData) {
@@ -322,10 +328,10 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
   console.log(`✓ ${personasData.length} personas demo`);
 
   // Clero: asignar personas a cargos
-  await ensureClero(parish.id_parroquia, rangoSacerdote.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-1985-D001', true); // párroco
-  await ensureClero(parish.id_parroquia, rangoSacerdote.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-1990-D002');
-  await ensureClero(parish.id_parroquia, rangoObispo.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-1980-D003');
-  await ensureClero(parish.id_parroquia, rangoDiacono.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-1988-D004');
+  await ensureClero(parish.id_parroquia, rangoSacerdote.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-90001', true); // párroco
+  await ensureClero(parish.id_parroquia, rangoSacerdote.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-90002');
+  await ensureClero(parish.id_parroquia, rangoObispo.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-90003');
+  await ensureClero(parish.id_parroquia, rangoDiacono.id_rango_sacerdotal, ordenDiocesana.id_orden_religiosa, '0801-90004');
   console.log('✓ 4 ministros (1 párroco, 1 sacerdote adjunto, 1 obispo, 1 diácono)');
 
   // Numeradores
@@ -350,13 +356,13 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_bautizado: '0801-2010-P003',
-      numero_identidad_madre: '0801-1990-P001',
-      numero_identidad_padre: '0801-1985-P005',
-      numero_identidad_madrina: '0801-1980-P004',
-      numero_identidad_padrino: '0801-1982-P008',
-      numero_identidad_catequista: '0801-1992-P002',
-      numero_identidad_sacerdote: '0801-1985-D001',
+      numero_identidad_bautizado: '0801-90103',
+      numero_identidad_madre: '0801-90101',
+      numero_identidad_padre: '0801-90105',
+      numero_identidad_madrina: '0801-90104',
+      numero_identidad_padrino: '0801-90108',
+      numero_identidad_catequista: '0801-90102',
+      numero_identidad_sacerdote: '0801-90001',
       fecha_bautismo: new Date('2012-05-12T10:00:00Z'),
       numero_folio: '12',
       numero_libro: '12',
@@ -377,13 +383,13 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_bautizado: '0801-2007-P013',
-      numero_identidad_madre: '0801-1989-P012',
-      numero_identidad_padre: '0801-1987-P011',
-      numero_identidad_madrina: '0801-1990-P001',
-      numero_identidad_padrino: '0801-1985-D001',
-      numero_identidad_catequista: '0801-1988-D004',
-      numero_identidad_sacerdote: '0801-1990-D002',
+      numero_identidad_bautizado: '0801-90113',
+      numero_identidad_madre: '0801-90112',
+      numero_identidad_padre: '0801-90111',
+      numero_identidad_madrina: '0801-90101',
+      numero_identidad_padrino: '0801-90001',
+      numero_identidad_catequista: '0801-90004',
+      numero_identidad_sacerdote: '0801-90002',
       fecha_bautismo: new Date('2007-09-22T11:00:00Z'),
       numero_folio: '8',
       numero_libro: '8',
@@ -406,11 +412,11 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_persona: '0801-2007-P013',
-      numero_identidad_madre: '0801-1989-P012',
-      numero_identidad_padre: '0801-1987-P011',
-      numero_identidad_catequista: '0801-1988-D004',
-      numero_identidad_sacerdote: '0801-1985-D001',
+      numero_identidad_persona: '0801-90113',
+      numero_identidad_madre: '0801-90112',
+      numero_identidad_padre: '0801-90111',
+      numero_identidad_catequista: '0801-90004',
+      numero_identidad_sacerdote: '0801-90001',
       fecha_primera_comunion: new Date('2018-06-15T18:00:00Z'),
       numero_acta: '15',
       numero_libro: '4',
@@ -431,11 +437,11 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_persona: '0801-2008-P014',
-      numero_identidad_madre: '0801-1989-P012',
-      numero_identidad_padre: '0801-1987-P011',
-      numero_identidad_catequista: '0801-1988-D004',
-      numero_identidad_sacerdote: '0801-1990-D002',
+      numero_identidad_persona: '0801-90114',
+      numero_identidad_madre: '0801-90112',
+      numero_identidad_padre: '0801-90111',
+      numero_identidad_catequista: '0801-90004',
+      numero_identidad_sacerdote: '0801-90002',
       fecha_primera_comunion: new Date('2019-06-08T18:00:00Z'),
       numero_acta: '16',
       numero_libro: '4',
@@ -458,13 +464,13 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_confirmado: '0801-1990-P001',
-      numero_identidad_madre: '0801-1965-P010',
-      numero_identidad_padre: '0801-1960-P009',
-      numero_identidad_madrina: '0801-1982-P008',
-      numero_identidad_padrino: '0801-1985-P005',
-      numero_identidad_catequista: '0801-1988-D004',
-      numero_identidad_obispo: '0801-1980-D003',
+      numero_identidad_confirmado: '0801-90101',
+      numero_identidad_madre: '0801-90110',
+      numero_identidad_padre: '0801-90109',
+      numero_identidad_madrina: '0801-90108',
+      numero_identidad_padrino: '0801-90105',
+      numero_identidad_catequista: '0801-90004',
+      numero_identidad_obispo: '0801-90003',
       fecha_confirmacion: new Date('2006-09-15T11:00:00Z'),
       numero_acta: '12',
       numero_libro: '3',
@@ -485,13 +491,13 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_confirmado: '0801-1985-P005',
-      numero_identidad_madre: '0801-1965-P010',
-      numero_identidad_padre: '0801-1960-P009',
-      numero_identidad_madrina: '0801-1990-P001',
-      numero_identidad_padrino: '0801-1982-P008',
-      numero_identidad_catequista: '0801-1988-D004',
-      numero_identidad_obispo: '0801-1980-D003',
+      numero_identidad_confirmado: '0801-90105',
+      numero_identidad_madre: '0801-90110',
+      numero_identidad_padre: '0801-90109',
+      numero_identidad_madrina: '0801-90101',
+      numero_identidad_padrino: '0801-90108',
+      numero_identidad_catequista: '0801-90004',
+      numero_identidad_obispo: '0801-90003',
       fecha_confirmacion: new Date('2002-08-10T10:30:00Z'),
       numero_acta: '9',
       numero_libro: '2',
@@ -514,13 +520,13 @@ console.log(`Parroquia: ${parish.nombre} (id_parroquia=${parish.id_parroquia})`)
     update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      numero_identidad_esposa: '0801-1990-P001',
-      numero_identidad_esposo: '0801-1985-P005',
-      numero_identidad_madrina: '0801-1982-P008',
-      numero_identidad_padrino: '0801-1960-P009',
-      numero_identidad_sacerdote: '0801-1985-D001',
-      numero_identidad_madre_esposa: '0801-1965-P010',
-      numero_identidad_padre_esposa: '0801-1960-P009',
+      numero_identidad_esposa: '0801-90101',
+      numero_identidad_esposo: '0801-90105',
+      numero_identidad_madrina: '0801-90108',
+      numero_identidad_padrino: '0801-90109',
+      numero_identidad_sacerdote: '0801-90001',
+      numero_identidad_madre_esposa: '0801-90110',
+      numero_identidad_padre_esposa: '0801-90109',
       numero_identidad_madre_esposo: null,
       numero_identidad_padre_esposo: null,
       fecha_matrimonio: new Date('2016-04-16T17:00:00Z'),

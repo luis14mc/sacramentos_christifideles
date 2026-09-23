@@ -39,7 +39,7 @@ async function runDemoSeed() {
   execSync('pnpm db:seed:demo', {
     env: {
       ...process.env,
-      NODE_ENV: 'development',
+      ALLOW_DEMO_SEED: 'true',
       DEMO_ADMIN_PASSWORD: adminPwd,
       DEMO_SECRETARIO_PASSWORD: secretarioPwd,
       DEMO_CATEQUISTA_PASSWORD: catequistaPwd,
@@ -80,6 +80,28 @@ describe('demo readiness · demo seed', () => {
     await runDemoSeed();
   });
 
+  it('guard ALLOW_DEMO_SEED: falla sin la variable aunque haya passwords', () => {
+    let code = 0;
+    try {
+      execSync('pnpm db:seed:demo', {
+        env: {
+          ...process.env,
+          // sin ALLOW_DEMO_SEED
+          DEMO_ADMIN_PASSWORD: adminPwd,
+          DEMO_SECRETARIO_PASSWORD: secretarioPwd,
+          DEMO_CATEQUISTA_PASSWORD: catequistaPwd,
+        },
+        stdio: 'pipe',
+      });
+    } catch (e) {
+      const err = e as { status?: number; stderr?: Buffer };
+      code = err.status ?? 1;
+      const stderrText = err.stderr?.toString() ?? '';
+      expect(stderrText).toMatch(/ALLOW_DEMO_SEED/);
+    }
+    expect(code).not.toBe(0);
+  });
+
   it('carga parroquia demo con datos coherentes', async () => {
     const users = await prisma.usuario.count({ where: { email: { startsWith: 'demo-' } } });
     expect(users).toBe(3);
@@ -87,10 +109,10 @@ describe('demo readiness · demo seed', () => {
     const clero = await prisma.persona.count({
       where: {
         OR: [
-          { numero_identidad: { startsWith: '0801-1985-D' } },
-          { numero_identidad: { startsWith: '0801-1990-D' } },
-          { numero_identidad: { startsWith: '0801-1980-D' } },
-          { numero_identidad: { startsWith: '0801-1988-D' } },
+          { numero_identidad: { startsWith: '0801-90001' } },
+          { numero_identidad: { startsWith: '0801-90002' } },
+          { numero_identidad: { startsWith: '0801-90003' } },
+          { numero_identidad: { startsWith: '0801-90004' } },
         ],
       },
     });
@@ -155,8 +177,8 @@ describe('demo readiness · tenant consistency', () => {
     const ps = await prisma.persona.findMany({
       where: {
         OR: [
-          { numero_identidad: { startsWith: '0801-1985-D' } },
-          { numero_identidad: { startsWith: '0801-1990-P' } },
+          { numero_identidad: { startsWith: '0801-90001' } },
+          { numero_identidad: { startsWith: '0801-90101' } },
         ],
       },
       select: { id_parroquia: true },
