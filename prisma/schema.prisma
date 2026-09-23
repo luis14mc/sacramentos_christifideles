@@ -47,6 +47,7 @@ model Parroquia {
   config              ParroquiaConfig?
   parametros          ParroquiaParametro[]
   personas            Persona[]
+  moldes_constancia   MoldeConstancia[]
   plantillas          PlantillaConstancia[]
   primeras_comuniones PrimeraComunion[]
   sectores            SectorParroquial[]
@@ -83,6 +84,32 @@ model PlantillaConstancia {
 
   @@unique([id_parroquia, sacramento, nombre])
   @@map("plantilla_constancia")
+}
+
+/// Molde de constancia: PDF con AcroForm subido por la parroquia.
+/// El servidor rellena los campos mapeados leyendo SIEMPRE los datos
+/// sacramentales desde la base de datos (no se acepta información del cliente).
+model MoldeConstancia {
+  id              BigInt    @id @default(autoincrement())
+  id_parroquia    Int       @db.SmallInt
+  sacramento      String
+  tipo_constancia String    @db.VarChar(50)
+  nombre          String    @db.VarChar(100)
+  archivo         Bytes
+  archivo_nombre  String    @db.VarChar(255)
+  archivo_mime    String    @default("application/pdf") @db.VarChar(50)
+  archivo_bytes   Int
+  /// Mapa JSON: { "campo_pdf": "token" }. Tokens válidos definidos en
+  /// construirTokens() de src/lib/constancias.ts.
+  mapa_campos     Json      @default("{}")
+  activo          Boolean   @default(true)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  parroquia       Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onDelete: Cascade)
+
+  @@unique([id_parroquia, sacramento, tipo_constancia, nombre])
+  @@index([id_parroquia, sacramento, tipo_constancia, activo])
+  @@map("molde_constancia")
 }
 
 model ParroquiaParametro {
