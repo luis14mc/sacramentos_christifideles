@@ -1,6 +1,8 @@
 export interface UserPermissions {
   canViewDashboard: boolean;
   canViewPersonas: boolean;
+  /** Expediente sacramental agregado por persona (v1) */
+  canViewExpediente: boolean;
   canManagePersonas: boolean;
   canViewUsuarios: boolean;
   canManageUsuarios: boolean;
@@ -20,6 +22,7 @@ export interface UserPermissions {
 export const defaultPermissions: UserPermissions = {
   canViewDashboard: false,
   canViewPersonas: false,
+  canViewExpediente: false,
   canManagePersonas: false,
   canViewUsuarios: false,
   canManageUsuarios: false,
@@ -39,6 +42,7 @@ export const defaultPermissions: UserPermissions = {
 const fullAccess: UserPermissions = {
   canViewDashboard: true,
   canViewPersonas: true,
+  canViewExpediente: true,
   canManagePersonas: true,
   canViewUsuarios: true,
   canManageUsuarios: true,
@@ -93,6 +97,7 @@ export const rolePermissions: Record<string, UserPermissions> = {
   'secretario': {
     canViewDashboard: true,
     canViewPersonas: true,
+    canViewExpediente: true,
     canManagePersonas: false,
     canViewUsuarios: false,
     canManageUsuarios: false,
@@ -111,11 +116,13 @@ export const rolePermissions: Record<string, UserPermissions> = {
   'catequista': {
     ...defaultPermissions,
     canViewPersonas: true,
+    canViewExpediente: true,
     canViewSacramentos: true,
   },
   'solo lectura': {
     ...defaultPermissions,
     canViewPersonas: true,
+    canViewExpediente: true,
     canViewSacerdotes: true,
     canViewSacramentos: true,
     canViewConstancias: true,

@@ -311,9 +311,15 @@ export default function DetallePersona() {
                       <PencilSquareIcon className="h-4 w-4" />
                       Editar Información
                     </button>
-                    <button className="btn btn-sm btn-outline w-full justify-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(`/personas/${numeroIdentidad}/expediente`)
+                      }
+                      className="btn btn-sm btn-outline w-full justify-start gap-2"
+                    >
                       <UserGroupIcon className="h-4 w-4" />
-                      Ver Sacramentos
+                      Expediente sacramental
                     </button>
                   </div>
                 </div>

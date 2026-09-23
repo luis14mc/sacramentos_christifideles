@@ -34,6 +34,7 @@ describe('permissions: matriz de roles', () => {
 
   it('catequista puede ver sacramentos pero no emitir constancias', () => {
     expect(hasPermission('catequista', 'canViewSacramentos')).toBe(true);
+    expect(hasPermission('catequista', 'canViewExpediente')).toBe(true);
     expect(hasPermission('catequista', 'canGenerateConstancias')).toBe(false);
   });
 
