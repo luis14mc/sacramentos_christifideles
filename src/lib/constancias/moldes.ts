@@ -1,4 +1,9 @@
-import { PDFDocument } from 'pdf-lib';
+import {
+  PDFCheckBox,
+  PDFDropdown,
+  PDFTextField,
+  PDFDocument,
+} from 'pdf-lib';
 import { prisma } from '@/lib/prisma';
 import type { SacramentoConstancia } from '@/lib/constancias';
 
@@ -72,6 +77,12 @@ export async function listarMoldes(
   return rows.map(toResumen);
 }
 
+/**
+ * Devuelve el único molde activo para (parroquia, sacramento, tipo).
+ * Determinista: el índice UNIQUE parcial WHERE activo = true garantiza
+ * que solo puede existir uno. Devuelve null si no hay molde activo
+ * (fallback a PlantillaConstancia).
+ */
 export async function obtenerMoldeActivo(
   idParroquia: number,
   sacramento: SacramentoConstancia,
@@ -100,7 +111,7 @@ export async function obtenerMoldePorId(
   return { ...toResumen(row), archivo: new Uint8Array(row.archivo) };
 }
 
-/** Lista los nombres de campos AcroForm del PDF. Sirve para construir el mapeo en UI. */
+/** Lista los nombres de campos AcroForm del PDF. */
 export async function listarCamposAcroForm(pdfBytes: Uint8Array): Promise<string[]> {
   const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const form = pdf.getForm();
@@ -123,7 +134,6 @@ export async function validarPdfMolde(pdfBytes: Uint8Array): Promise<void> {
   if (header !== '%PDF-') {
     throw new Error('El archivo no es un PDF válido (header incorrecto)');
   }
-  // Heurística barata: rechazar /JS o /Launch sin parsear todo el PDF.
   const sniff = new TextDecoder('latin1').decode(pdfBytes);
   if (/\/(JS|Launch)\b/.test(sniff)) {
     throw new Error('El PDF contiene elementos no permitidos (/JS o /Launch)');
@@ -140,15 +150,25 @@ export async function validarPdfMolde(pdfBytes: Uint8Array): Promise<void> {
   }
 }
 
-/** Valida claves del PDF y que cada token esté en la lista permitida. */
+/**
+ * Valida el mapa de campos contra la lista de tokens permitidos.
+ * Si `requeridoMinimo`, exige al menos una entrada (usado al activar).
+ * Si `camposExistentes` se proporciona, exige que cada clave del mapa
+ * exista realmente en el PDF.
+ */
 export function validarMapaCampos(
-  mapa: Record<string, string>,
-  tokensPermitidos: Set<string>
+  mapa: unknown,
+  tokensPermitidos: Set<string>,
+  opciones: { requeridoMinimo?: boolean; camposExistentes?: Set<string> } = {}
 ): void {
   if (typeof mapa !== 'object' || mapa === null || Array.isArray(mapa)) {
     throw new Error('mapa_campos debe ser un objeto { campo_pdf: token }');
   }
-  for (const [campo, token] of Object.entries(mapa)) {
+  const entradas = Object.entries(mapa as Record<string, unknown>);
+  if (opciones.requeridoMinimo && entradas.length === 0) {
+    throw new Error('mapa_campos no puede estar vacío al activar un molde');
+  }
+  for (const [campo, token] of entradas) {
     if (!CAMPO_PDF_REGEX.test(campo)) {
       throw new Error(`Nombre de campo PDF inválido: "${campo}"`);
     }
@@ -156,9 +176,30 @@ export function validarMapaCampos(
       throw new Error(`Token desconocido o inválido: "${token}"`);
     }
   }
+  if (opciones.camposExistentes) {
+    for (const campo of entradas.map(([c]) => c)) {
+      if (!opciones.camposExistentes.has(campo)) {
+        throw new Error(`El campo "${campo}" no existe en el PDF`);
+      }
+    }
+  }
 }
 
-/** Rellena los campos del PDF usando los tokens provistos. */
+function esCheckBox(field: unknown): field is PDFCheckBox {
+  return field instanceof PDFCheckBox;
+}
+function esDropdown(field: unknown): field is PDFDropdown {
+  return field instanceof PDFDropdown;
+}
+function esTextField(field: unknown): field is PDFTextField {
+  return field instanceof PDFTextField;
+}
+
+/**
+ * Rellena los campos del PDF según el mapa y los tokens provistos.
+ * Tipos AcroForm soportados explícitamente: TextField, CheckBox, Dropdown.
+ * Otros tipos (Radio, OptionList, Signature) producen error explícito.
+ */
 export async function renderMoldePdf(
   pdfBytes: Uint8Array,
   mapa: Record<string, string>,
@@ -167,19 +208,26 @@ export async function renderMoldePdf(
   const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const form = pdf.getForm();
   for (const [campoPdf, token] of Object.entries(mapa)) {
-    const field = form.getField(campoPdf);
+    let field: unknown;
+    try {
+      field = form.getField(campoPdf);
+    } catch {
+      throw new Error(`Campo AcroForm no encontrado: "${campoPdf}"`);
+    }
     const valor = Object.prototype.hasOwnProperty.call(tokens, token) ? tokens[token] : '';
-    if (field.constructor.name === 'PDFCheckBox') {
-      const cb = form.getCheckBox(campoPdf);
-      if (typeof valor === 'string' && valor.toLowerCase() === 'true') {
-        cb.check();
-      } else {
-        cb.uncheck();
-      }
-    } else if (field.constructor.name === 'PDFDropdown') {
-      form.getDropdown(campoPdf).select(String(valor));
+    if (esTextField(field)) {
+      field.setText(String(valor));
+    } else if (esCheckBox(field)) {
+      if (typeof valor === 'string' && valor.toLowerCase() === 'true') field.check();
+      else field.uncheck();
+    } else if (esDropdown(field)) {
+      field.select(String(valor));
     } else {
-      form.getTextField(campoPdf).setText(String(valor));
+      const tipo = (field as { constructor?: { name?: string } })?.constructor?.name ?? 'desconocido';
+      throw new Error(
+        `Tipo AcroForm no soportado para "${campoPdf}": ${tipo}. ` +
+          'Solo se admiten campos de texto, casillas de verificación y listas desplegables.'
+      );
     }
   }
   form.flatten();

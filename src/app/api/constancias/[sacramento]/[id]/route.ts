@@ -48,7 +48,7 @@ export async function GET(
       return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 });
     }
 
-    const tipoSolicitado = (req.nextUrl.searchParams.get('tipo') ?? TIPO_DEFAULT).trim();
+    const tipoSolicitado = (new URL(req.url).searchParams.get('tipo') ?? TIPO_DEFAULT).trim();
     if (!esTipoConstanciaMolde(tipoSolicitado)) {
       return NextResponse.json(
         { error: `tipo inválido; valores permitidos: ${TIPOS_CONSTANCIA.join(', ')}` },

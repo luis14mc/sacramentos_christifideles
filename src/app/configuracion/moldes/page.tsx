@@ -234,27 +234,31 @@ function SubirMoldeForm({ onSubido }: SubirMoldeFormProps) {
   const [tipo, setTipo] = useState('predeterminado');
   const [nombre, setNombre] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [borradorId, setBorradorId] = useState<string | null>(null);
   const [camposPdf, setCamposPdf] = useState<string[]>([]);
   const [mapa, setMapa] = useState<Record<string, string>>({});
   const [subiendo, setSubiendo] = useState(false);
+  const [activando, setActivando] = useState(false);
 
-  const mapaValido = useMemo(() => {
+  const mapaCompleto = useMemo(() => {
+    if (camposPdf.length === 0) return false;
     return camposPdf.every((c) => typeof mapa[c] === 'string' && mapa[c].length > 0);
   }, [camposPdf, mapa]);
 
-  const alElegirArchivo = async (f: File | null) => {
-    setArchivo(f);
-    setMapa({});
-    if (!f) {
-      setCamposPdf([]);
-      return;
-    }
-    // El servicio real se ejecuta en backend; aquí hacemos un pre-check subiendo
-    // el archivo al endpoint /campos en modo "preview" sería costoso, así que
-    // pedimos al backend solo el listado al guardar (en este formulario, si el
-    // usuario sube sin mapear, guardamos mapa vacío y el backend lo acepta).
-    // Para mantener la UX asistida, simulamos sin listar hasta el submit.
+  const reset = () => {
+    setNombre('');
+    setArchivo(null);
+    setBorradorId(null);
     setCamposPdf([]);
+    setMapa({});
+  };
+
+  const cargarCampos = async (id: string) => {
+    const r = await fetch(`/api/configuracion/moldes/${id}/campos`);
+    if (r.ok) {
+      const j = (await r.json()) as { campos: string[] };
+      setCamposPdf(j.campos ?? []);
+    }
   };
 
   const enviar = async (e: React.FormEvent) => {
@@ -274,35 +278,97 @@ function SubirMoldeForm({ onSubido }: SubirMoldeFormProps) {
       fd.append('tipo_constancia', tipo);
       fd.append('nombre', nombre.trim());
       fd.append('archivo', archivo);
-      fd.append('mapa_campos', JSON.stringify(mapa));
       const res = await fetch('/api/configuracion/moldes', { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         await Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo subir' });
         return;
       }
-      // Si el backend devolvió campos del PDF, los mostramos para mapeo posterior.
-      const idCreado = data.id as string | undefined;
-      if (idCreado) {
-        const r2 = await fetch(`/api/configuracion/moldes/${idCreado}/campos`);
-        if (r2.ok) {
-          const j = (await r2.json()) as { campos: string[] };
-          setCamposPdf(j.campos ?? []);
-        }
-      }
-      await Swal.fire({ icon: 'success', title: 'Molde subido', timer: 1200, showConfirmButton: false });
-      setNombre('');
-      setArchivo(null);
-      setMapa({});
+      const idCreado = data.id as string;
+      setBorradorId(idCreado);
+      await cargarCampos(idCreado);
       onSubido();
     } finally {
       setSubiendo(false);
     }
   };
 
+  const activar = async () => {
+    if (!borradorId || !mapaCompleto) return;
+    setActivando(true);
+    try {
+      const res = await fetch(`/api/configuracion/moldes/${borradorId}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ activo: true, mapa_campos: mapa }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        await Swal.fire({ icon: 'error', title: 'Error al activar', text: data.error || 'Error' });
+        return;
+      }
+      await Swal.fire({ icon: 'success', title: 'Molde activado', timer: 1200, showConfirmButton: false });
+      reset();
+      onSubido();
+    } finally {
+      setActivando(false);
+    }
+  };
+
+  if (borradorId) {
+    return (
+      <div className="space-y-3">
+        <h3 className="font-semibold">Mapear campos AcroForm — {nombre}</h3>
+        <p className="text-xs text-base-content/60">
+          PDF recibido como borrador. Asocia cada campo del PDF con un token de la lista y activa el molde.
+        </p>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          {camposPdf.map((campo) => (
+            <label key={campo} className="flex flex-col gap-1 text-sm">
+              <code className="text-xs">{campo}</code>
+              <select
+                className="select select-bordered select-sm"
+                value={mapa[campo] ?? ''}
+                onChange={(e) => setMapa({ ...mapa, [campo]: e.target.value })}
+              >
+                <option value="">— Seleccionar token —</option>
+                {TOKENS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={!mapaCompleto || activando}
+            onClick={activar}
+          >
+            {activando ? 'Activando…' : 'Activar molde'}
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={reset}>
+            Cancelar
+          </button>
+          {!mapaCompleto && (
+            <span className="text-xs text-warning self-center">
+              Asigna un token a cada campo antes de activar.
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={enviar} className="space-y-3">
-      <h3 className="font-semibold">Subir molde</h3>
+      <h3 className="font-semibold">Subir molde (borrador)</h3>
+      <p className="text-xs text-base-content/60">
+        El PDF se sube como borrador inactivo. Tras subirlo, mapea los campos AcroForm y actívalo.
+      </p>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select className="select select-bordered" value={sacramento} onChange={(e) => setSacramento(e.target.value)}>
           {SACRAMENTOS.map(([v, l]) => (
@@ -330,45 +396,11 @@ function SubirMoldeForm({ onSubido }: SubirMoldeFormProps) {
         type="file"
         accept="application/pdf"
         className="file-input file-input-bordered w-full"
-        onChange={(e) => alElegirArchivo(e.target.files?.[0] ?? null)}
+        onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
       />
-      {camposPdf.length > 0 && (
-        <div className="rounded-md border border-base-300 p-3 space-y-2">
-          <p className="text-sm font-medium">Mapeo de campos AcroForm</p>
-          <p className="text-xs text-base-content/60">
-            Asocia cada campo del PDF con un token. La constancia solo se emite si todos están mapeados.
-          </p>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            {camposPdf.map((campo) => (
-              <label key={campo} className="flex flex-col gap-1 text-sm">
-                <code className="text-xs">{campo}</code>
-                <select
-                  className="select select-bordered select-sm"
-                  value={mapa[campo] ?? ''}
-                  onChange={(e) => setMapa({ ...mapa, [campo]: e.target.value })}
-                >
-                  <option value="">— Seleccionar token —</option>
-                  {TOKENS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="flex gap-2">
-        <button type="submit" className="btn btn-primary btn-sm" disabled={subiendo || (camposPdf.length > 0 && !mapaValido)}>
-          {subiendo ? 'Subiendo…' : 'Subir molde'}
-        </button>
-        {camposPdf.length > 0 && !mapaValido && (
-          <span className="text-xs text-warning self-center">
-            Faltan tokens por mapear antes de poder guardar.
-          </span>
-        )}
-      </div>
+      <button type="submit" className="btn btn-primary btn-sm" disabled={subiendo || !archivo || !nombre.trim()}>
+        {subiendo ? 'Subiendo…' : 'Subir borrador'}
+      </button>
     </form>
   );
 }

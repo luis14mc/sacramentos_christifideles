@@ -89,6 +89,11 @@ model PlantillaConstancia {
 /// Molde de constancia: PDF con AcroForm subido por la parroquia.
 /// El servidor rellena los campos mapeados leyendo SIEMPRE los datos
 /// sacramentales desde la base de datos (no se acepta información del cliente).
+///
+/// Regla de unicidad adicional (declarada en SQL porque Prisma no soporta
+/// UNIQUE parcial nativo): máximo UN molde activo por
+/// (id_parroquia, sacramento, tipo_constancia). Ver migración
+/// `20260923130000_molde_constancia_unique_activo`.
 model MoldeConstancia {
   id              BigInt    @id @default(autoincrement())
   id_parroquia    Int       @db.SmallInt
@@ -100,9 +105,10 @@ model MoldeConstancia {
   archivo_mime    String    @default("application/pdf") @db.VarChar(50)
   archivo_bytes   Int
   /// Mapa JSON: { "campo_pdf": "token" }. Tokens válidos definidos en
-  /// construirTokens() de src/lib/constancias.ts.
+  /// construirTokens() de src/lib/constancias.ts. Debe tener al menos una
+  /// entrada cuando `activo = true`.
   mapa_campos     Json      @default("{}")
-  activo          Boolean   @default(true)
+  activo          Boolean   @default(false)
   created_at      DateTime  @default(now()) @db.Timestamptz(6)
   updated_at      DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   parroquia       Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onDelete: Cascade)

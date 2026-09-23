@@ -7,15 +7,14 @@ import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { jsonSafe } from '@/lib/serialize';
 import { isPrismaUniqueError } from '@/lib/sacramentos';
 import { esSacramentoConstancia } from '@/lib/constancias';
+import { TOKENS_CONSTANCIA } from '@/lib/constancias';
 import {
   MOLDE_MIME,
   TIPOS_CONSTANCIA,
   esTipoConstanciaMolde,
   listarMoldes,
-  validarMapaCampos,
   validarPdfMolde,
 } from '@/lib/constancias/moldes';
-import { TOKENS_CONSTANCIA } from '@/lib/constancias';
 
 async function getContext() {
   const session = await getServerSession(authOptions);
@@ -42,6 +41,11 @@ export async function GET() {
   }
 }
 
+/**
+ * POST crea un BORRADOR (activo=false, sin mapa obligatorio).
+ * El PDF se persiste para poder extraer los campos AcroForm en un GET posterior.
+ * Para activar el molde y guardar el mapa se usa PUT /api/configuracion/moldes/[id].
+ */
 export async function POST(req: NextRequest) {
   try {
     const context = await getContext();
@@ -56,7 +60,6 @@ export async function POST(req: NextRequest) {
     const tipo = String(form.get('tipo_constancia') ?? '').trim();
     const nombre = String(form.get('nombre') ?? '').trim();
     const archivo = form.get('archivo');
-    const mapaRaw = form.get('mapa_campos');
 
     if (!esSacramentoConstancia(sacramento)) {
       return NextResponse.json({ error: 'Sacramento inválido' }, { status: 400 });
@@ -85,31 +88,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
 
-    let mapa: Record<string, string> = {};
-    if (typeof mapaRaw === 'string' && mapaRaw.trim()) {
-      try {
-        mapa = JSON.parse(mapaRaw);
-      } catch {
-        return NextResponse.json({ error: 'mapa_campos debe ser JSON válido' }, { status: 400 });
-      }
-    }
-    try {
-      validarMapaCampos(mapa, new Set<string>(TOKENS_CONSTANCIA));
-    } catch (e) {
-      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
-    }
-    // Sanity: el campo PDF destino debe existir en el archivo.
-    const { listarCamposAcroForm } = await import('@/lib/constancias/moldes');
-    const camposPdf = new Set(await listarCamposAcroForm(buf));
-    for (const campo of Object.keys(mapa)) {
-      if (!camposPdf.has(campo)) {
-        return NextResponse.json(
-          { error: `El campo "${campo}" no existe en el PDF` },
-          { status: 400 }
-        );
-      }
-    }
-
     const userId = BigInt(context.session.user.id);
     const { actorIp, userAgent } = contextoAuditoria(req);
 
@@ -124,8 +102,8 @@ export async function POST(req: NextRequest) {
           archivo_nombre: archivo.name || `${nombre}.pdf`,
           archivo_mime: archivo.type || MOLDE_MIME,
           archivo_bytes: buf.byteLength,
-          mapa_campos: mapa,
-          activo: true,
+          mapa_campos: {},
+          activo: false,
         },
       });
       await registrarBitacora(tx, {
@@ -134,7 +112,13 @@ export async function POST(req: NextRequest) {
         accion: 'C',
         nombreTabla: 'molde_constancia',
         idAfectado: m.id,
-        newValues: { sacramento, tipo_constancia: tipo, nombre, archivo_nombre: archivo.name },
+        newValues: {
+          sacramento,
+          tipo_constancia: tipo,
+          nombre,
+          archivo_nombre: archivo.name,
+          estado: 'borrador',
+        },
         actorIp,
         userAgent,
       });

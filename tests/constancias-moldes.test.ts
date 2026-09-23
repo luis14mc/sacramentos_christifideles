@@ -80,8 +80,12 @@ describe('moldes · validarPdfMolde', () => {
 describe('moldes · validarMapaCampos', () => {
   const tokens = new Set<string>(TOKENS_CONSTANCIA);
 
-  it('acepta mapa vacío', () => {
+  it('acepta mapa vacío (borrador)', () => {
     expect(() => validarMapaCampos({}, tokens)).not.toThrow();
+  });
+
+  it('rechaza mapa vacío cuando requeridoMinimo=true', () => {
+    expect(() => validarMapaCampos({}, tokens, { requeridoMinimo: true })).toThrow(/vacío/);
   });
 
   it('acepta mapa con tokens permitidos', () => {
@@ -107,6 +111,28 @@ describe('moldes · validarMapaCampos', () => {
     expect(() =>
       validarMapaCampos(null as unknown as Record<string, string>, tokens)
     ).toThrow();
+  });
+
+  it('rechaza campo que no existe en el PDF', () => {
+    const existentes = new Set(['real_a', 'real_b']);
+    expect(() =>
+      validarMapaCampos(
+        { fantasma: 'persona.dni' },
+        tokens,
+        { camposExistentes: existentes }
+      )
+    ).toThrow(/no existe en el PDF/);
+  });
+
+  it('combina requeridoMinimo + camposExistentes', () => {
+    const existentes = new Set(['campo_ok']);
+    expect(() =>
+      validarMapaCampos(
+        { campo_ok: 'persona.dni' },
+        tokens,
+        { requeridoMinimo: true, camposExistentes: existentes }
+      )
+    ).not.toThrow();
   });
 });
 

@@ -101,7 +101,7 @@ datos, auditoría, multi-tenant).
 - [ ] Integration: GET /api/constancias/bautismo/:id sin molde → fallback.
 - [ ] Multi-tenant: usuario A no puede usar moldes de B (404).
 - [ ] RBAC: catequista sin `canManageConfiguracion` recibe 403 al POST.
-- [ ] `npm run lint` y `npm run build` en verde.
+- [ ] `pnpm run lint` y `pnpm run build` en verde.
 
 ## Definition of Done
 
@@ -109,6 +109,6 @@ datos, auditoría, multi-tenant).
 - Autorización y multi-tenant verificados.
 - Migración Prisma incluida y validada.
 - Tests pasan.
-- `npm run lint` verde.
-- `npm run build` verde.
+- `pnpm run lint` verde.
+- `pnpm run build` verde.
 - Documentación mínima (este archivo) actualizada.
