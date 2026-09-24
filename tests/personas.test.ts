@@ -166,9 +166,17 @@ describe('CREATE /api/personas', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rechaza Persona sin orden religiosa explícita -> 400', async () => {
+  it('permite Persona sin orden religiosa -> 201', async () => {
     setSession(parishA);
     const res = await createPersona(makeReq(validBody('A1005', sectorA, { id_orden_religiosa: '' })));
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.id_orden_religiosa).toBeNull();
+  });
+
+  it('rechaza orden religiosa inexistente -> 400', async () => {
+    setSession(parishA);
+    const res = await createPersona(makeReq(validBody('A1006', sectorA, { id_orden_religiosa: '99999' })));
     expect(res.status).toBe(400);
   });
 

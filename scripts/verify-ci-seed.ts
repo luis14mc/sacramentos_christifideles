@@ -93,7 +93,7 @@ async function main() {
       persona.sexo !== sexo || persona.estado_vital !== estadoVital ||
       persona.fecha_nacimiento.getUTCFullYear() !== year || !persona.telefono ||
       !persona.direccion || persona.estado_activo_parroquia !== 1 ||
-      persona.sector.nombre !== 'General' || persona.orden_religiosa.nombre !== 'Diocesano' ||
+      persona.sector.nombre !== 'General' || persona.orden_religiosa?.nombre !== 'Diocesano' ||
       persona.municipio_nacimiento.nombre_municipio !== 'Distrito Central'
     ) {
       throw new Error(`Seeded QA Persona does not match the required profile: ${dni}.`);
