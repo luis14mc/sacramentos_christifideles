@@ -1,0 +1,4 @@
+# Dependencias del sistema requeridas por Prisma en Railway/Nixpacks.
+# "..." conserva los paquetes detectados por el provider de Node.
+[phases.setup]
+aptPkgs = ["...", "openssl"]
