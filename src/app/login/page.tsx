@@ -18,19 +18,11 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
+      await signIn('credentials', {
         email,
         password,
-        redirect: false
+        callbackUrl: '/dashboard',
       });
-
-      if (result?.error) {
-        setError('Credenciales inválidas. Verifique su email y contraseña.');
-      } else {
-        // Navegación completa para asegurar que la cookie/JWT de NextAuth
-        // esté disponible antes de montar las rutas protegidas.
-        window.location.assign('/dashboard');
-      }
     } catch (err) {
       console.error('Login error:', err);
       setError('Error de conexión. Intente nuevamente.');
