@@ -46,7 +46,7 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ✅ `tests/instancia.test.ts`
 - ✅ Docs: `docs/RAILWAY_DEPLOYMENT.md` §3.1 y `.env.example`
 - ✅ `tests/instancia.test.ts` pasa contra la BD de test
-- ⬜ Crear los dos servicios en Railway con sus variables (lo hace el PO)
+- ⬜ Crear los tres servicios en Railway (dos parroquias y el hub) siguiendo `docs/RAILWAY_DEPLOYMENT.md` §16 (lo hace el PO)
 
 ### Fase 2 — Sacramentos en el módulo Personas · rama `feature/fase2-sacramentos-en-personas` (apilada sobre fase 1)
 - ✅ Resumen por persona sin vista SQL: `_count` de Prisma (`personaSacramentosCount`, `resumenSacramentos`, `whereSacramento` en `src/lib/persona.ts`). No requiere migración. Si con volumen real se vuelve lento, pasar a vista `v_persona_sacramentos`.
@@ -103,7 +103,7 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
   - ⚠️ Verificar en el primer deploy que Nixpacks respeta `hub/railway.toml` con Root Directory vacío
 - ✅ 4e. UI `/consultas`: nueva consulta (con `?dni=` precargado desde el expediente), pestañas "Mis consultas" y "Recibidas", aprobar (el diálogo explica qué se comparte) o rechazar (con motivo), ver la respuesta. Entrada en el menú con contador de pendientes y botón "Consultar en otra parroquia" en el expediente. Los datos remotos se escapan antes de meterlos en HTML
 - ✅ **Prueba E2E real** (2026-09-24): hub y dos instancias `next start`, cada una con su Postgres. Flujo A→hub→B→aprobar→hub→A OK. Verificado: el hub no guarda el DNI en claro, B no guarda la respuesta, A no recibe el teléfono, queda bitácora en B y las llamadas con firma falsa dan 401
-- ⬜ 4f. Docs de despliegue: tres servicios en Railway y rotación de secretos
+- ✅ 4f. Runbook en `docs/RAILWAY_DEPLOYMENT.md` §16 (tres servicios, registro, variables, rotación y suspensión) y `.env.example`
 
 ## Instrucciones para agentes
 
@@ -132,3 +132,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-09-24 | Claude (Opus 5.5) | El PO confirma que la interoperabilidad entra en v1. Diseño en el plan. 4a (firma HMAC), 4b (tabla y migración) y 4c (endpoints de la instancia y permisos) hechos. Suite completa: 355/355 contra el Postgres desechable en Docker. | Siguiente: 4d (app `hub/`), luego 4e (UI) y 4f (despliegue). |
 | 2026-09-24 | Claude (Opus 5.5) | 4d: hub listo con 10/10 tests. `hub/` queda excluido del tsc de la raíz; el lint de la raíz sí lo revisa (sin warnings nuevos). | Siguiente: 4e (UI de consultas y bandeja). |
 | 2026-09-24 | Claude (Opus 5.5) | 4e: UI de consultas. `pnpm build` OK. E2E real con tres servidores y tres BDs OK (detalle en Estado). | UI no revisada visualmente en navegador. Siguiente: 4f (runbook de despliegue). |
+| 2026-09-24 | Claude (Opus 5.5) | 4f: runbook de despliegue. **Fase 4 completa.** App 355+ tests y hub 10 tests en verde. | Pendiente del PO: crear los servicios en Railway, revisar la UI en navegador y confirmar los permisos (hoy el secretario puede consultar pero no aprobar). |
