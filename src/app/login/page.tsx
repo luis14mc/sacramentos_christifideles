@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
@@ -18,11 +18,39 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await signIn('credentials', {
+      const result = await signIn('credentials', {
         email,
         password,
-        callbackUrl: '/dashboard',
+        redirect: false,
       });
+
+      if (!result || result.error || !result.ok) {
+        setError('Credenciales inválidas o la autenticación fue rechazada.');
+        return;
+      }
+
+      // Espera brevemente a que NextAuth exponga la sesión recién creada.
+      // Esto evita navegar a una ruta protegida antes de que la cookie/JWT esté lista.
+      let session = await getSession();
+      for (let attempt = 0; !session?.user?.id && attempt < 5; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        session = await getSession();
+      }
+
+      if (!session?.user?.id) {
+        const diagnosticResponse = await fetch('/api/auth/diagnostic', { cache: 'no-store' });
+        const diagnostic = diagnosticResponse.ok ? await diagnosticResponse.json() : null;
+        const hint =
+          diagnostic?.urlMatchesRequest === false
+            ? ' NEXTAUTH_URL no coincide con el dominio actual.'
+            : diagnostic?.secretConfigured === false
+              ? ' NEXTAUTH_SECRET no está configurado.'
+              : ' La sesión no pudo persistirse.';
+        setError(`El usuario fue validado, pero no se pudo crear la sesión.${hint}`);
+        return;
+      }
+
+      window.location.replace('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setError('Error de conexión. Intente nuevamente.');
