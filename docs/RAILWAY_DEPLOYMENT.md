@@ -83,6 +83,23 @@ arranque. **No commitear secretos reales.**
 | `DEMO_SECRETARIO_PASSWORD` | contraseña del Secretario demo | manual |
 | `DEMO_CATEQUISTA_PASSWORD` | contraseña del Catequista demo | manual |
 
+### 3.1 Una instancia por parroquia
+
+Cada parroquia es un **proyecto Railway propio** (servicio web + PostgreSQL
+propio). Nunca se comparte base de datos. Además de las variables anteriores:
+
+| Variable | Ejemplo | Uso |
+|----------|---------|-----|
+| `PARROQUIA_CODIGO` | `salvador-del-mundo` | Slug estable de la instancia (interoperabilidad). Minúsculas y guiones. |
+| `PARROQUIA_NOMBRE` | `Salvador del Mundo de Cerro Grande` | Nombre usado por el seed. Si falta, el seed usa Cristo Resucitado. |
+| `PARROQUIA_UBICACION` | `0801` | Código de municipio (4 dígitos). Default `0801`. |
+| `PARROQUIA_DIRECCION` | `Cerro Grande, Distrito Central` | Dirección. |
+| `PARROQUIA_TELEFONO` | `+504 0000-0000` | Teléfono. |
+| `PARROQUIA_EMAIL` | `secretaria@...` | Opcional. |
+
+Verificación: `GET /api/instancia` devuelve `{ codigo, nombre, version }`.
+Plan completo en `docs/PLAN_MULTIPARROQUIA.md`.
+
 Generar `NEXTAUTH_SECRET`:
 
 ```bash
