@@ -148,23 +148,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El sector no pertenece a tu parroquia' }, { status: 403 });
     }
 
+    // Orden religiosa opcional en Persona: solo se exige para clérigos
+    // (orden_sacerdotal). Si llega informada, validamos rango y existencia.
+    const idOrdenReligiosaRaw = data.id_orden_religiosa;
+    let idOrdenReligiosa: number | null = null;
     if (
-      data.id_orden_religiosa === undefined ||
-      data.id_orden_religiosa === null ||
-      data.id_orden_religiosa === ''
+      idOrdenReligiosaRaw !== undefined &&
+      idOrdenReligiosaRaw !== null &&
+      idOrdenReligiosaRaw !== ''
     ) {
-      return NextResponse.json({ error: 'La orden religiosa es obligatoria' }, { status: 400 });
-    }
-    const idOrdenReligiosa = Number(data.id_orden_religiosa);
-    if (!Number.isInteger(idOrdenReligiosa)) {
-      return NextResponse.json({ error: 'Orden religiosa inválida' }, { status: 400 });
-    }
-    const orden = await prisma.ordenReligiosa.findUnique({
-      where: { id_orden_religiosa: idOrdenReligiosa },
-      select: { id_orden_religiosa: true },
-    });
-    if (!orden) {
-      return NextResponse.json({ error: 'La orden religiosa indicada no existe' }, { status: 400 });
+      const parsed = Number(idOrdenReligiosaRaw);
+      if (
+        !Number.isInteger(parsed) ||
+        parsed <= 0 ||
+        parsed > 32_767
+      ) {
+        return NextResponse.json({ error: 'Orden religiosa inválida' }, { status: 400 });
+      }
+      const orden = await prisma.ordenReligiosa.findUnique({
+        where: { id_orden_religiosa: parsed },
+        select: { id_orden_religiosa: true },
+      });
+      if (!orden) {
+        return NextResponse.json({ error: 'La orden religiosa indicada no existe' }, { status: 400 });
+      }
+      idOrdenReligiosa = orden.id_orden_religiosa;
     }
 
     const lugarRaw = data.lugar_nacimiento ?? data.municipio_id;
@@ -205,7 +213,7 @@ export async function POST(req: NextRequest) {
           numero_identidad: numeroIdentidad,
           id_parroquia: parishId,
           id_sector_parroquial: sectorId,
-          id_orden_religiosa: orden.id_orden_religiosa,
+          id_orden_religiosa: idOrdenReligiosa,
           nombres,
           apellidos,
           fecha_nacimiento: fechaNacimiento,

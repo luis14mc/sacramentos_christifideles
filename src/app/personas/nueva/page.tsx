@@ -401,7 +401,10 @@ export default function NuevaPersona() {
 
                   <div className="form-control">
                     <label className="label" htmlFor="id_orden_religiosa">
-                      <span className="label-text">Orden Religiosa *</span>
+                      <span className="label-text">Orden Religiosa</span>
+                      <span className="label-text-alt text-xs text-base-content/60">
+                        Solo clerigos
+                      </span>
                     </label>
                     <select
                       id="id_orden_religiosa"
@@ -409,9 +412,8 @@ export default function NuevaPersona() {
                       className="select select-bordered"
                       value={formData.id_orden_religiosa}
                       onChange={handleInputChange}
-                      required
                     >
-                      <option value="">Seleccionar orden</option>
+                      <option value="">Sin orden religiosa</option>
                       {ordenesReligiosas.map((orden) => (
                         <option key={orden.id_orden_religiosa} value={orden.id_orden_religiosa}>
                           {orden.nombre}

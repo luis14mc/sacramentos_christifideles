@@ -219,7 +219,9 @@ CREATE TABLE persona (
   numero_identidad VARCHAR(20) NOT NULL,
   id_parroquia SMALLINT NOT NULL REFERENCES parroquia(id_parroquia) ON DELETE RESTRICT ON UPDATE RESTRICT,
   id_sector_parroquial BIGINT NOT NULL REFERENCES sector_parroquial(id_sector_parroquial) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  id_orden_religiosa SMALLINT NOT NULL REFERENCES orden_religiosa(id_orden_religiosa) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  -- id_orden_religiosa es OPCIONAL: solo los clérigos (orden_sacerdotal) deben
+  -- pertenecer a una orden religiosa. Un fiel laico no requiere este dato.
+  id_orden_religiosa SMALLINT REFERENCES orden_religiosa(id_orden_religiosa) ON DELETE RESTRICT ON UPDATE RESTRICT,
   nombres VARCHAR(55) NOT NULL,
   apellidos VARCHAR(55) NOT NULL,
   fecha_nacimiento DATE NOT NULL,

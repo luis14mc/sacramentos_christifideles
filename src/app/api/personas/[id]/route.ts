@@ -215,7 +215,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data.id_orden_religiosa !== ''
     ) {
       idOrdenReligiosa = parseInt(String(data.id_orden_religiosa), 10);
-      if (Number.isNaN(idOrdenReligiosa)) {
+      if (
+        Number.isNaN(idOrdenReligiosa) ||
+        idOrdenReligiosa <= 0 ||
+        idOrdenReligiosa > 32_767
+      ) {
         return NextResponse.json({ error: 'Orden religiosa inválida' }, { status: 400 });
       }
       const orden = await prisma.ordenReligiosa.findUnique({
