@@ -9,6 +9,7 @@ Llevar ChristiFideles a una primera versión productiva utilizable por una secre
 - Rama de preparación de v1: `release/v1-planning`
 - Contexto funcional: `docs/PROJECT_CONTEXT.md`
 - Roadmap vigente: `docs/ROADMAP_V1.md`
+- Iniciativa multiparroquia (instancias, expedientes, interoperabilidad): `docs/PLAN_MULTIPARROQUIA.md`. **Leer y actualizar su Estado y Bitácora en cada sesión.**
 
 ## Roles del equipo IA
 - Scrum Master / Coordinación: prioriza backlog, protege alcance, define criterios de aceptación y evita trabajo duplicado.

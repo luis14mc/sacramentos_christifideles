@@ -3,7 +3,15 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { serializePersona, normalizeSexo } from '@/lib/persona';
+import {
+  serializePersona,
+  normalizeSexo,
+  personaSacramentosCount,
+  resumenSacramentos,
+  whereSacramento,
+  SACRAMENTOS_RESUMEN,
+  type SacramentoResumen,
+} from '@/lib/persona';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 
 const personaInclude = {
@@ -46,8 +54,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Filtro estado_vital inválido (debe ser 0, 1 o 2)' }, { status: 400 });
     }
 
+    // Filtro por sacramento: ?sacramento=bautismo (lo tiene) o ?sin_sacramento=bautismo (le falta).
+    const conSacramento = searchParams.get('sacramento');
+    const sinSacramento = searchParams.get('sin_sacramento');
+    for (const valor of [conSacramento, sinSacramento]) {
+      if (valor !== null && !SACRAMENTOS_RESUMEN.includes(valor as SacramentoResumen)) {
+        return NextResponse.json({ error: 'Filtro de sacramento inválido' }, { status: 400 });
+      }
+    }
+    const filtrosSacramento = [
+      ...(conSacramento ? [whereSacramento(conSacramento as SacramentoResumen, true)] : []),
+      ...(sinSacramento ? [whereSacramento(sinSacramento as SacramentoResumen, false)] : []),
+    ];
+
     const where = {
       id_parroquia: parishId,
+      ...(filtrosSacramento.length ? { AND: filtrosSacramento } : {}),
       ...(sexo ? { sexo } : {}),
       ...(estadoVitalRaw !== null ? { estado_vital: Number(estadoVitalRaw) } : {}),
       ...(q
@@ -73,12 +95,17 @@ export async function GET(req: NextRequest) {
 
     const personas = await prisma.persona.findMany({
       where,
-      include: personaInclude,
+      include: { ...personaInclude, ...personaSacramentosCount },
       orderBy: [{ apellidos: 'asc' }, { nombres: 'asc' }],
       ...(limit ? { take: limit } : {}),
     });
 
-    return NextResponse.json(personas.map(serializePersona));
+    return NextResponse.json(
+      personas.map(({ _count, ...persona }) => ({
+        ...serializePersona(persona),
+        sacramentos: resumenSacramentos(_count),
+      }))
+    );
   } catch (error) {
     console.error('Error al obtener personas:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });

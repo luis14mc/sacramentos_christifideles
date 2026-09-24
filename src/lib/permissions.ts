@@ -17,6 +17,10 @@ export interface UserPermissions {
   canViewReportes: boolean;
   canViewConfiguracion: boolean;
   canManageConfiguracion: boolean;
+  /** Interoperabilidad: consultar a otra parroquia vía hub */
+  canSolicitarInterop: boolean;
+  /** Interoperabilidad: aprobar/rechazar consultas entrantes (comparte datos) */
+  canResolverInterop: boolean;
 }
 
 export const defaultPermissions: UserPermissions = {
@@ -37,6 +41,8 @@ export const defaultPermissions: UserPermissions = {
   canViewReportes: false,
   canViewConfiguracion: false,
   canManageConfiguracion: false,
+  canSolicitarInterop: false,
+  canResolverInterop: false,
 };
 
 const fullAccess: UserPermissions = {
@@ -57,17 +63,16 @@ const fullAccess: UserPermissions = {
   canViewReportes: true,
   canViewConfiguracion: true,
   canManageConfiguracion: true,
+  canSolicitarInterop: true,
+  canResolverInterop: true,
 };
 
 export const rolePermissions: Record<string, UserPermissions> = {
   'super admin': fullAccess,
   'admin parroquia': fullAccess,
   'administrador': fullAccess,
-  'parroco': {
-    ...fullAccess,
-    canManageUsuarios: false,
-    canManageConfiguracion: false,
-  },
+  // Párroco: ve todo y autoriza todo (decisión del PO, 2026-09-24).
+  'parroco': fullAccess,
   'vicario': {
     ...fullAccess,
     canViewUsuarios: false,
@@ -105,13 +110,16 @@ export const rolePermissions: Record<string, UserPermissions> = {
     canManageSacerdotes: true,
     canViewSacramentos: true,
     canCreateSacramentos: true,
-    canEditSacramentos: false,
+    // Secretaría registra y edita (con justificación obligatoria), pero no borra ni da de baja.
+    canEditSacramentos: true,
     canDeleteSacramentos: false,
     canViewConstancias: true,
     canGenerateConstancias: true,
     canViewReportes: false,
     canViewConfiguracion: false,
     canManageConfiguracion: false,
+    canSolicitarInterop: true,
+    canResolverInterop: false,
   },
   'catequista': {
     ...defaultPermissions,

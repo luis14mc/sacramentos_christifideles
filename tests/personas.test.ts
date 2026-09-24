@@ -13,6 +13,7 @@ import {
   PUT as updatePersona,
   DELETE as deletePersona,
 } from '@/app/api/personas/[id]/route';
+import { resumenSacramentos } from '@/lib/persona';
 
 // --- Fixtures compartidos ---
 let parishA: number;
@@ -210,6 +211,52 @@ describe('GET /api/personas', () => {
     const json = await res.json();
     expect(json).toHaveLength(1);
     expect(json[0].numero_identidad).toBe('SEARCH-A');
+  });
+
+  it('incluye el resumen de sacramentos y filtra por sacramento', async () => {
+    await seedPersona(parishA, 'SACR-A', sectorA);
+    setSession(parishA);
+
+    const res = await listPersonas(listReq('?q=SACR-A'));
+    expect(res.status).toBe(200);
+    const [persona] = await res.json();
+    expect(persona.sacramentos).toEqual({
+      bautismo: false,
+      primera_comunion: false,
+      confirmacion: false,
+      matrimonio: false,
+    });
+    expect(persona).not.toHaveProperty('_count');
+
+    const sin = await listPersonas(listReq('?q=SACR-A&sin_sacramento=bautismo'));
+    expect(await sin.json()).toHaveLength(1);
+    const con = await listPersonas(listReq('?q=SACR-A&sacramento=matrimonio'));
+    expect(await con.json()).toHaveLength(0);
+  });
+
+  it('rechaza un filtro de sacramento inválido -> 400', async () => {
+    setSession(parishA);
+    const res = await listPersonas(listReq('?sacramento=defuncion'));
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('resumenSacramentos', () => {
+  it('matrimonio cuenta como esposo o esposa', () => {
+    const base = {
+      bautismos_bautizado: 1,
+      comuniones_persona: 0,
+      confirmaciones_confirmado: 0,
+      matrimonios_esposo: 0,
+      matrimonios_esposa: 0,
+    };
+    expect(resumenSacramentos(base)).toEqual({
+      bautismo: true,
+      primera_comunion: false,
+      confirmacion: false,
+      matrimonio: false,
+    });
+    expect(resumenSacramentos({ ...base, matrimonios_esposa: 1 }).matrimonio).toBe(true);
   });
 });
 

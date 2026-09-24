@@ -1,0 +1,35 @@
+{
+  "name": "christifideles-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hub de interoperabilidad entre parroquias (solo reenvío de consultas). Ver docs/PLAN_MULTIPARROQUIA.md",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "prisma migrate deploy && tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "instancia": "tsx scripts/instancia.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.14.0",
+    "prisma": "^6.14.0",
+    "tsx": "^4.20.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^2.1.9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

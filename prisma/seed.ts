@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { loadEnvFile } from 'node:process';
+import { leerParroquiaDesdeEnv } from '../src/lib/instancia-env';
 
 try {
   loadEnvFile();
@@ -96,13 +97,7 @@ async function main() {
         data: { nombre: 'General', descripcion: 'Sector parroquial general' },
       });
 
-  const parishData = {
-    nombre: 'Cristo Resucitado de Loarque',
-    ubicacion: '0801',
-    direccion: 'Loarque, Distrito Central, Francisco Morazán',
-    telefono: '+504 0000-0000',
-    email: 'admin@cristoresucitado.org',
-  };
+  const parishData = leerParroquiaDesdeEnv();
   const parishExisting = await prisma.parroquia.findFirst({
     where: { nombre: parishData.nombre },
     orderBy: { id_parroquia: 'asc' },

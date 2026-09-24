@@ -33,6 +33,7 @@ documento no asume separación obligatoria entre staging y producción final.
 13. [Backup y restore básicos](#13-backup-y-restore-básicos)
 14. [Cómo recrear demo sin destruir DB](#14-cómo-recrear-demo-sin-destruir-db)
 15. [Reset destructivo (sólo emergencia)](#15-reset-destructivo-sólo-emergencia)
+16. [Interoperabilidad: hub y parroquias](#16-interoperabilidad-hub-y-parroquias)
 
 ---
 
@@ -82,6 +83,23 @@ arranque. **No commitear secretos reales.**
 | `DEMO_ADMIN_PASSWORD` | contraseña del Super Admin demo (mín 8 caracteres) | manual |
 | `DEMO_SECRETARIO_PASSWORD` | contraseña del Secretario demo | manual |
 | `DEMO_CATEQUISTA_PASSWORD` | contraseña del Catequista demo | manual |
+
+### 3.1 Una instancia por parroquia
+
+Cada parroquia es un **proyecto Railway propio** (servicio web + PostgreSQL
+propio). Nunca se comparte base de datos. Además de las variables anteriores:
+
+| Variable | Ejemplo | Uso |
+|----------|---------|-----|
+| `PARROQUIA_CODIGO` | `salvador-del-mundo` | Slug estable de la instancia (interoperabilidad). Minúsculas y guiones. |
+| `PARROQUIA_NOMBRE` | `Salvador del Mundo de Cerro Grande` | Nombre usado por el seed. Si falta, el seed usa Cristo Resucitado. |
+| `PARROQUIA_UBICACION` | `0801` | Código de municipio (4 dígitos). Default `0801`. |
+| `PARROQUIA_DIRECCION` | `Cerro Grande, Distrito Central` | Dirección. |
+| `PARROQUIA_TELEFONO` | `+504 0000-0000` | Teléfono. |
+| `PARROQUIA_EMAIL` | `secretaria@...` | Opcional. |
+
+Verificación: `GET /api/instancia` devuelve `{ codigo, nombre, version }`.
+Plan completo en `docs/PLAN_MULTIPARROQUIA.md`.
 
 Generar `NEXTAUTH_SECRET`:
 
@@ -283,6 +301,54 @@ Solo si la BD queda en estado irrecuperable:
 4. Vuelve a configurar `DATABASE_URL` (Railway lo actualiza automáticamente).
 5. Redeploy el servicio web (aplicará migraciones).
 6. Re-corre `pnpm db:seed` y `pnpm db:seed:demo` desde tu máquina.
+
+## 16. Interoperabilidad: hub y parroquias
+
+Arquitectura: **tres servicios, tres PostgreSQL**. Ninguna base se comparte.
+
+| Servicio | Código | Config | BD |
+|----------|--------|--------|----|
+| `cristo-resucitado` | raíz del repo | `railway.toml` | Postgres propio |
+| `salvador-del-mundo` | raíz del repo | `railway.toml` | Postgres propio |
+| `hub` | `hub/` | `hub/railway.toml` (Root Directory **vacío**) | Postgres propio |
+
+### 16.1 Hub
+1. Nuevo servicio desde el mismo repo → Settings → *Railway config file* = `hub/railway.toml`.
+2. Agregar un plugin PostgreSQL propio al hub.
+3. Variables:
+
+| Variable | Valor |
+|----------|-------|
+| `DATABASE_URL` | `${{Postgres-hub.DATABASE_URL}}` |
+| `HUB_CLAVE_MAESTRA` | `openssl rand -base64 32` (si se pierde, hay que rotar los secretos de todas las instancias) |
+
+4. Dominio público y comprobación: `GET https://<hub>/api/health` → `{"status":"ok"}`.
+
+### 16.2 Registrar cada parroquia en el hub
+Desde la shell del servicio hub (`railway ssh` o `railway run`):
+
+```bash
+cd hub && pnpm instancia registrar cristo-resucitado "Cristo Resucitado de Loarque" https://<url-cristo>
+cd hub && pnpm instancia registrar salvador-del-mundo "Salvador del Mundo de Cerro Grande" https://<url-salvador>
+```
+
+Cada comando imprime **una sola vez** un `INTEROP_SECRET`: cópialo a las variables de esa parroquia.
+
+### 16.3 Variables en cada parroquia (además de §3 y §3.1)
+
+| Variable | Valor |
+|----------|-------|
+| `PARROQUIA_CODIGO` | el mismo código registrado en el hub |
+| `INTEROP_HUB_URL` | `https://<hub>` |
+| `INTEROP_SECRET` | el secreto impreso por `registrar` |
+
+Sin estas tres variables la parroquia funciona normalmente, pero `/consultas` muestra "no configurada".
+
+### 16.4 Operación
+- **Rotar un secreto:** `pnpm instancia rotar <codigo>` y actualizar `INTEROP_SECRET` en esa parroquia. Hasta que se actualice, sus consultas fallan con 401.
+- **Suspender una parroquia:** `pnpm instancia desactivar <codigo>` (`activar` para revertir).
+- **Ver registradas:** `pnpm instancia listar`.
+- **Relojes:** las firmas rechazan desfases de más de 5 minutos. Railway usa NTP, así que no requiere acción.
 
 ## Troubleshooting
 

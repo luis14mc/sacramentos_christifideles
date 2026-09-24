@@ -449,6 +449,35 @@ CREATE TABLE bitacora_persona_parroquia (
 );
 
 -- ============================================================================
+-- INTEROPERABILIDAD: consultas entre parroquias vía hub (solo lectura)
+-- Cada instancia parroquial tiene su propia BD; esta tabla registra las
+-- consultas salientes ('S') y entrantes ('E'). Ver docs/PLAN_MULTIPARROQUIA.md.
+-- ============================================================================
+DROP TABLE IF EXISTS solicitud_interop CASCADE;
+
+CREATE TABLE solicitud_interop (
+  id_solicitud BIGSERIAL PRIMARY KEY,
+  id_parroquia SMALLINT NOT NULL REFERENCES parroquia(id_parroquia),
+  uuid UUID UNIQUE,                                   -- id global asignado por el hub
+  direccion CHAR(1) NOT NULL CHECK (direccion IN ('S','E')),
+  codigo_parroquia_contraparte VARCHAR(50) NOT NULL,
+  nombre_parroquia_contraparte VARCHAR(100),
+  numero_identidad_consultado VARCHAR(20) NOT NULL,
+  motivo VARCHAR(500) NOT NULL,
+  estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'
+    CHECK (estado IN ('pendiente','aprobada','rechazada','error_envio')),
+  id_usuario_solicitante BIGINT,
+  id_usuario_resolutor BIGINT,
+  motivo_rechazo VARCHAR(500),
+  respuesta JSONB,                                    -- solo salientes aprobadas
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resuelta_at TIMESTAMPTZ
+);
+
+CREATE INDEX solicitud_interop_bandeja_idx
+  ON solicitud_interop(id_parroquia, direccion, estado, created_at);
+
+-- ============================================================================
 -- TRIGGERS de actualización de updated_at
 -- ============================================================================
 DROP FUNCTION IF EXISTS set_updated_at() CASCADE;

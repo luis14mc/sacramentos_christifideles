@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
 import { jsonSafeSacramento as jsonSafe } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
+import { ERROR_JUSTIFICACION, leerJustificacion } from '@/lib/justificacion';
 import {
   normalizeBautismoInput,
   validarReferenciasTenant,
@@ -89,6 +90,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const data = await req.json();
 
+    // Toda modificación de un registro sacramental exige justificación (auditoría).
+    const justificacion = leerJustificacion(data.justificacion);
+    if (!justificacion) {
+      return NextResponse.json({ error: ERROR_JUSTIFICACION }, { status: 400 });
+    }
+
     // La parroquia nunca se cambia desde el cliente.
     if (data.id_parroquia !== undefined && parseInt(String(data.id_parroquia), 10) !== parishId) {
       return NextResponse.json({ error: 'No se permite cambiar la parroquia del bautismo' }, { status: 400 });
@@ -129,6 +136,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const oldValues = jsonSafe(existente) as Prisma.InputJsonValue;
     const newValues: Prisma.InputJsonValue = {
       ...input,
+      justificacion,
       fecha_bautismo: input.fecha_bautismo.toISOString(),
     };
 

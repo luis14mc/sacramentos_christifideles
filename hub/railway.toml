@@ -1,0 +1,16 @@
+# Hub de interoperabilidad — servicio Railway propio con su PostgreSQL propio.
+# En Railway: Settings → Config-as-code → "Railway config file" = hub/railway.toml
+# y dejar Root Directory VACÍO (el hub importa src/lib/interop/{firma,contrato}.ts).
+# Docs: docs/PLAN_MULTIPARROQUIA.md (Fase 4) y docs/RAILWAY_DEPLOYMENT.md §16.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "corepack enable && corepack prepare pnpm@10 --activate && cd hub && pnpm install --frozen-lockfile && pnpm exec prisma generate"
+watchPatterns = ["hub/**", "src/lib/interop/firma.ts", "src/lib/interop/contrato.ts"]
+
+[deploy]
+startCommand = "cd hub && pnpm start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

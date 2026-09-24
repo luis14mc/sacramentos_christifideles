@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { pedirJustificacion } from '@/components/sacramentos/pedirJustificacion';
 import PersonaSelector from './PersonaSelector';
 import MinistroSelector from '@/components/sacramentos/MinistroSelector';
 import NumeracionAutomaticaControl from '@/components/sacramentos/NumeracionAutomaticaControl';
@@ -100,6 +101,12 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
       return;
     }
 
+    let justificacion: string | null = null;
+    if (isEdit) {
+      justificacion = await pedirJustificacion();
+      if (!justificacion) return;
+    }
+
     setLoading(true);
     try {
       const url = isEdit ? `/api/bautismos/${bautismoId}` : '/api/bautismos';
@@ -107,7 +114,9 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
       const res = await fetch(url, {
         method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(isEdit ? form : { ...form, numeracion_automatica: numeracionAutomatica }),
+        body: JSON.stringify(
+          isEdit ? { ...form, justificacion } : { ...form, numeracion_automatica: numeracionAutomatica }
+        ),
       });
       const data = await res.json();
       if (!res.ok) {

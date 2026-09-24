@@ -39,6 +39,11 @@ function makeReq(body: unknown, url = 'http://test.local/api/bautismos'): NextRe
   }) as unknown as NextRequest;
 }
 
+/** PUT con la justificación obligatoria de modificación. */
+function putReq(body: object): NextRequest {
+  return makeReq({ ...body, justificacion: 'Corrección verificada contra el libro físico' });
+}
+
 function getReq(url: string): NextRequest {
   return new Request(url) as unknown as NextRequest;
 }
@@ -286,35 +291,35 @@ describe('UPDATE /api/bautismos/[id]', () => {
     const b = await crearBautismoDirecto('200');
     setSession(parishA);
     const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '200', nota_marginal: 'ok' });
-    const res = await updateBautismo(makeReq(body), ctx(b.id_bautismo.toString()));
+    const res = await updateBautismo(putReq(body), ctx(b.id_bautismo.toString()));
     expect(res.status).toBe(200);
   });
 
   it('cross-tenant -> 404', async () => {
     const b = await crearBautismoDirecto('201');
     setSession(parishB);
-    expect((await updateBautismo(makeReq(validBody()), ctx(b.id_bautismo.toString()))).status).toBe(404);
+    expect((await updateBautismo(putReq(validBody()), ctx(b.id_bautismo.toString()))).status).toBe(404);
   });
 
   it('cambio a Persona inexistente -> 400', async () => {
     const b = await crearBautismoDirecto('202');
     setSession(parishA);
     const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '202', numero_identidad_madre: 'NOEXISTE' });
-    expect((await updateBautismo(makeReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
+    expect((await updateBautismo(putReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
   });
 
   it('cambio a Persona de otra parroquia -> 400', async () => {
     const b = await crearBautismoDirecto('203');
     setSession(parishA);
     const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '203', numero_identidad_padre: PERSONA_B });
-    expect((await updateBautismo(makeReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
+    expect((await updateBautismo(putReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
   });
 
   it('sacerdote de otra parroquia -> 400', async () => {
     const b = await crearBautismoDirecto('204');
     setSession(parishA);
     const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '204', numero_identidad_sacerdote: SAC_B });
-    expect((await updateBautismo(makeReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
+    expect((await updateBautismo(putReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
   });
 
   it('colisión registral -> 409', async () => {
@@ -331,7 +336,7 @@ describe('UPDATE /api/bautismos/[id]', () => {
     setSession(parishA);
     // b2 intenta tomar el registro de b1 -> 409
     const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '205' });
-    expect((await updateBautismo(makeReq(body), ctx(b2.id_bautismo.toString()))).status).toBe(409);
+    expect((await updateBautismo(putReq(body), ctx(b2.id_bautismo.toString()))).status).toBe(409);
   });
 });
 
@@ -347,7 +352,7 @@ describe('RBAC', () => {
   it('solo lectura no puede editar -> 403', async () => {
     const b = await crearBautismoDirecto('300');
     setSession(parishA, 'solo lectura');
-    expect((await updateBautismo(makeReq(validBody()), ctx(b.id_bautismo.toString()))).status).toBe(403);
+    expect((await updateBautismo(putReq(validBody()), ctx(b.id_bautismo.toString()))).status).toBe(403);
   });
   it('administrador puede crear -> 201', async () => {
     setSession(parishA, 'administrador');
@@ -366,8 +371,27 @@ describe('AUDITORÍA', () => {
     const b = await crearBautismoDirecto('400');
     setSession(parishA);
     const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '400' });
-    await updateBautismo(makeReq(body), ctx(b.id_bautismo.toString()));
+    await updateBautismo(putReq(body), ctx(b.id_bautismo.toString()));
     const n = await prisma.bitacoraCrud.count({ where: { nombre_tabla: 'bautismo', accion: 'U', id_parroquia: parishA } });
     expect(n).toBe(1);
+    const reg = await prisma.bitacoraCrud.findFirst({ where: { nombre_tabla: 'bautismo', accion: 'U' } });
+    expect(reg?.new_values).toMatchObject({ justificacion: 'Corrección verificada contra el libro físico' });
+  });
+
+  it('update sin justificación -> 400 y no modifica', async () => {
+    const b = await crearBautismoDirecto('401');
+    setSession(parishA);
+    const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '401' });
+    expect((await updateBautismo(makeReq(body), ctx(b.id_bautismo.toString()))).status).toBe(400);
+    expect((await updateBautismo(makeReq({ ...body, justificacion: 'corto' }), ctx(b.id_bautismo.toString()))).status).toBe(400);
+    const n = await prisma.bitacoraCrud.count({ where: { nombre_tabla: 'bautismo', accion: 'U' } });
+    expect(n).toBe(0);
+  });
+
+  it('secretaria puede editar con justificación -> 200', async () => {
+    const b = await crearBautismoDirecto('402');
+    setSession(parishA, 'secretaria');
+    const body = validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '402' });
+    expect((await updateBautismo(putReq(body), ctx(b.id_bautismo.toString()))).status).toBe(200);
   });
 });

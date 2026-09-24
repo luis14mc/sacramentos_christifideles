@@ -80,6 +80,7 @@ export async function seedSacerdote(
 export async function limpiarCatalogo() {
   await prisma.bitacoraLogin.deleteMany({});
   await prisma.bitacoraCrud.deleteMany({});
+  await prisma.solicitudInterop.deleteMany({});
   await prisma.bautismo.deleteMany({});
   await prisma.primeraComunion.deleteMany({});
   await prisma.confirmacion.deleteMany({});

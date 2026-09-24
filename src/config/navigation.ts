@@ -9,6 +9,7 @@ import {
   ShieldCheckIcon,
   UserIcon,
   UserCircleIcon,
+  ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline';
 
 import { UserPermissions } from '@/hooks/usePermissions';
@@ -94,6 +95,12 @@ export const navigationConfig: NavigationItem[] = [
     href: '/buscar',
     icon: DocumentTextIcon,
     requiredPermission: 'canViewPersonas'
+  },
+  {
+    name: 'Consultas entre parroquias',
+    href: '/consultas',
+    icon: ArrowsRightLeftIcon,
+    requiredPermission: 'canSolicitarInterop'
   },
   {
     name: 'Auditoría',

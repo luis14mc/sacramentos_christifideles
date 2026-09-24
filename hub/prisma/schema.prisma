@@ -1,0 +1,46 @@
+// Hub de interoperabilidad. BD propia, independiente de las parroquias.
+// NUNCA guarda datos sacramentales ni el DNI en claro. Ver docs/PLAN_MULTIPARROQUIA.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Parroquia registrada (una instancia desplegada).
+model Instancia {
+  codigo          String      @id @db.VarChar(50)
+  nombre          String      @db.VarChar(100)
+  /// URL base pública de la instancia, sin barra final.
+  url             String      @db.VarChar(300)
+  /// Secreto HMAC compartido, cifrado con AES-256-GCM (HUB_CLAVE_MAESTRA).
+  secreto_cifrado String
+  activa          Boolean     @default(true)
+  created_at      DateTime    @default(now()) @db.Timestamptz(6)
+  salientes       Solicitud[] @relation("Origen")
+  entrantes       Solicitud[] @relation("Destino")
+
+  @@map("instancia")
+}
+
+/// Traza de una consulta. Sin motivo, sin DNI en claro y sin respuesta.
+model Solicitud {
+  uuid              String    @id @default(uuid()) @db.Uuid
+  origen            String    @db.VarChar(50)
+  destino           String    @db.VarChar(50)
+  /// SHA-256 del DNI consultado (auditoría sin exponer el dato).
+  dni_hash          String    @db.Char(64)
+  /// pendiente | aprobada | rechazada | error_entrega
+  estado            String    @default("pendiente") @db.VarChar(20)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  resuelta_at       DateTime? @db.Timestamptz(6)
+  instancia_origen  Instancia @relation("Origen", fields: [origen], references: [codigo], onUpdate: Restrict)
+  instancia_destino Instancia @relation("Destino", fields: [destino], references: [codigo], onUpdate: Restrict)
+
+  @@index([destino, estado])
+  @@index([origen, created_at])
+  @@map("solicitud")
+}
