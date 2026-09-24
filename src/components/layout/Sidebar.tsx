@@ -69,6 +69,16 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   // Obtener navegación filtrada según permisos del usuario
   const navigation = getFilteredNavigation(permissions);
 
+  // Consultas de otras parroquias pendientes de aprobar (contador en el menú)
+  const [consultasPendientes, setConsultasPendientes] = useState(0);
+  useEffect(() => {
+    if (!permissions.canResolverInterop) return;
+    fetch('/api/interop/solicitudes?direccion=E&estado=pendiente')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: unknown[]) => setConsultasPendientes(data.length))
+      .catch(() => setConsultasPendientes(0));
+  }, [permissions.canResolverInterop, pathname]);
+
   // Cerrar sidebar con tecla Escape
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -162,6 +172,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
                     : 'text-base-content/50 group-hover:text-base-content/70'
                 }`} />
                 <span className="truncate">{item.name}</span>
+                {item.href === '/consultas' && consultasPendientes > 0 && (
+                  <span className="badge badge-warning badge-sm ml-auto" title="Consultas pendientes de aprobar">
+                    {consultasPendientes}
+                  </span>
+                )}
               </Link>
             );
           })}

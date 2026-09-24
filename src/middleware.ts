@@ -22,5 +22,6 @@ export const config = {
     '/auditoria/:path*',
     '/buscar/:path*',
     '/libros/:path*',
+    '/consultas/:path*',
   ],
 };

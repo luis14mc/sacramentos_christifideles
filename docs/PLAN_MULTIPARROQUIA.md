@@ -101,7 +101,8 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 - ✅ 4d. `hub/`: servidor Node mínimo (`node:http` con handlers Request/Response, sin framework) + Prisma propio (`instancia`, `solicitud`), secretos HMAC cifrados con AES-256-GCM (`HUB_CLAVE_MAESTRA`), CLI `pnpm instancia registrar|rotar|activar|desactivar|listar`, `hub/railway.toml` y `hub/tests/hub.test.ts` (10). El hub no guarda motivo, DNI en claro ni respuestas
   - Tests del hub: `cd hub && HUB_TEST_DATABASE_URL=postgresql://postgres:test@localhost:55432/christifideles_hub_test pnpm test` (crear antes la BD y correr `prisma migrate deploy`)
   - ⚠️ Verificar en el primer deploy que Nixpacks respeta `hub/railway.toml` con Root Directory vacío
-- ⬜ 4e. UI: nueva consulta, bandeja con contador en el menú, aprobar o rechazar, ver respuesta
+- ✅ 4e. UI `/consultas`: nueva consulta (con `?dni=` precargado desde el expediente), pestañas "Mis consultas" y "Recibidas", aprobar (el diálogo explica qué se comparte) o rechazar (con motivo), ver la respuesta. Entrada en el menú con contador de pendientes y botón "Consultar en otra parroquia" en el expediente. Los datos remotos se escapan antes de meterlos en HTML
+- ✅ **Prueba E2E real** (2026-09-24): hub y dos instancias `next start`, cada una con su Postgres. Flujo A→hub→B→aprobar→hub→A OK. Verificado: el hub no guarda el DNI en claro, B no guarda la respuesta, A no recibe el teléfono, queda bitácora en B y las llamadas con firma falsa dan 401
 - ⬜ 4f. Docs de despliegue: tres servicios en Railway y rotación de secretos
 
 ## Instrucciones para agentes
@@ -130,3 +131,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-09-24 | Claude (Opus 5.5) | El PO difiere la Fase 3 (gestor de expedientes) a v2. La v1 es el registro de sacramentos. | Por confirmar: si la Fase 4 (interoperabilidad) entra en v1. |
 | 2026-09-24 | Claude (Opus 5.5) | El PO confirma que la interoperabilidad entra en v1. Diseño en el plan. 4a (firma HMAC), 4b (tabla y migración) y 4c (endpoints de la instancia y permisos) hechos. Suite completa: 355/355 contra el Postgres desechable en Docker. | Siguiente: 4d (app `hub/`), luego 4e (UI) y 4f (despliegue). |
 | 2026-09-24 | Claude (Opus 5.5) | 4d: hub listo con 10/10 tests. `hub/` queda excluido del tsc de la raíz; el lint de la raíz sí lo revisa (sin warnings nuevos). | Siguiente: 4e (UI de consultas y bandeja). |
+| 2026-09-24 | Claude (Opus 5.5) | 4e: UI de consultas. `pnpm build` OK. E2E real con tres servidores y tres BDs OK (detalle en Estado). | UI no revisada visualmente en navegador. Siguiente: 4f (runbook de despliegue). |

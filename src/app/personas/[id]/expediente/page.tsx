@@ -84,12 +84,23 @@ export default function ExpedientePersonaPage() {
               <p className="text-base-content/70">{numeroIdentidad}</p>
             )}
           </div>
-          <Link
-            href={`/personas/${encodeURIComponent(numeroIdentidad)}`}
-            className="btn btn-outline btn-sm"
-          >
-            Ficha de persona
-          </Link>
+          <div className="flex gap-2">
+            {permissions.canSolicitarInterop && (
+              <Link
+                href={`/consultas?dni=${encodeURIComponent(numeroIdentidad)}`}
+                className="btn btn-outline btn-sm"
+                title="Pedir a otra parroquia los sacramentos de esta persona"
+              >
+                Consultar en otra parroquia
+              </Link>
+            )}
+            <Link
+              href={`/personas/${encodeURIComponent(numeroIdentidad)}`}
+              className="btn btn-outline btn-sm"
+            >
+              Ficha de persona
+            </Link>
+          </div>
         </div>
 
         {loading && (
