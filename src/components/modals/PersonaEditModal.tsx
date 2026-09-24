@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import { pedirJustificacion } from '@/components/sacramentos/pedirJustificacion';
 import { 
   XMarkIcon,
   CheckIcon
@@ -152,6 +153,9 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
       return;
     }
 
+    const justificacion = await pedirJustificacion();
+    if (!justificacion) return;
+
     try {
       setSaving(true);
       
@@ -160,10 +164,8 @@ export default function PersonaEditModal({ isOpen, onClose, personaId, onPersona
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          id_parroquia: 3 // Parroquia Cristo Resucitado
-        }),
+        // La parroquia la determina el servidor desde la sesión.
+        body: JSON.stringify({ ...formData, justificacion }),
       });
 
       if (response.ok) {

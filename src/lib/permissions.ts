@@ -4,6 +4,8 @@ export interface UserPermissions {
   /** Expediente sacramental agregado por persona (v1) */
   canViewExpediente: boolean;
   canManagePersonas: boolean;
+  /** Borrar personas (solo sin historia sacramental); separado de crear/editar */
+  canDeletePersonas: boolean;
   canViewUsuarios: boolean;
   canManageUsuarios: boolean;
   canViewSacerdotes: boolean;
@@ -28,6 +30,7 @@ export const defaultPermissions: UserPermissions = {
   canViewPersonas: false,
   canViewExpediente: false,
   canManagePersonas: false,
+  canDeletePersonas: false,
   canViewUsuarios: false,
   canManageUsuarios: false,
   canViewSacerdotes: false,
@@ -50,6 +53,7 @@ const fullAccess: UserPermissions = {
   canViewPersonas: true,
   canViewExpediente: true,
   canManagePersonas: true,
+  canDeletePersonas: true,
   canViewUsuarios: true,
   canManageUsuarios: true,
   canViewSacerdotes: true,
@@ -103,7 +107,9 @@ export const rolePermissions: Record<string, UserPermissions> = {
     canViewDashboard: true,
     canViewPersonas: true,
     canViewExpediente: true,
-    canManagePersonas: false,
+    // Secretaría crea y edita personas (con justificación), pero no las borra.
+    canManagePersonas: true,
+    canDeletePersonas: false,
     canViewUsuarios: false,
     canManageUsuarios: false,
     canViewSacerdotes: true,

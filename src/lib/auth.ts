@@ -1,5 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { limitadorLogin } from '@/lib/login-limiter';
 import { compare } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
@@ -43,6 +44,12 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Tras 5 fallos en 15 min el email queda bloqueado 15 min (ni siquiera se consulta la BD).
+        if (limitadorLogin.estaBloqueado(credentials.email)) {
+          console.warn('Login bloqueado temporalmente por intentos fallidos');
+          return null;
+        }
+
         try {
           const user = await prisma.usuario.findUnique({
             where: {
@@ -54,11 +61,8 @@ export const authOptions: NextAuthOptions = {
             },
           });
 
-          if (!user) {
-            return null;
-          }
-
-          if (user.estado !== 1) {
+          if (!user || user.estado !== 1) {
+            limitadorLogin.registrarFallo(credentials.email);
             return null;
           }
 
@@ -68,8 +72,10 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!passwordsMatch) {
+            limitadorLogin.registrarFallo(credentials.email);
             return null;
           }
+          limitadorLogin.registrarExito(credentials.email);
 
           await prisma.bitacoraLogin.create({
             data: {

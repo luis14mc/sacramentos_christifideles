@@ -38,7 +38,7 @@ interoperabilidad** → **Seguridad**.
 
 | Rol | Sacramentos | Consultas entre parroquias |
 |-----|-------------|----------------------------|
-| **Secretaria** | Registra y **edita**; no borra ni da de baja | Puede consultar, **no** aprobar |
+| **Secretaria** | Registra y **edita**; no borra ni da de baja. En **Personas**: crea y edita (con justificación), no borra | Puede consultar, **no** aprobar |
 | **Párroco** | Ve todo y autoriza todo (`fullAccess`, incluidos usuarios y configuración) | Consulta y aprueba |
 
 - **Toda modificación de un sacramento exige justificación** (10 a 500 caracteres), para todos los roles. Se valida en el backend (`src/lib/justificacion.ts`) y queda en `bitacora_crud.new_values.justificacion`. El formulario la pide al guardar (`pedirJustificacion`).
@@ -145,3 +145,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-09-24 | Claude (Opus 5.5) | Roles: la secretaria puede editar sacramentos (sin borrar), el párroco pasa a acceso total y la justificación es obligatoria al editar (backend, UI y auditoría). 358/358 tests. | Por confirmar con el PO: la secretaria sigue sin poder crear ni editar Personas (`canManagePersonas`). |
 | 2026-09-24 | Claude (Opus 5.5) | Seed completo por instancia: 18 departamentos y 298 municipios (`prisma/catalogos/honduras.ts`, códigos oficiales DDMM), 9 roles alineados con los permisos (`prisma/catalogos/roles.ts`, con test). Las personas de QA con DNI ficticio quedan solo para dev/test. Se eliminó el asistente `/setup` y `ALLOW_INITIAL_SETUP`: cada instancia se inicializa en su deploy. | Los nombres de municipio van sin tildes (como en la fuente); corregir a mano si el PO lo pide. |
 | 2026-09-24 | Claude (Opus 5.5) | Bug en Railway: las instancias con usuarios no recibían el catálogo, porque el seed completo solo corre con la BD vacía (log: "Seed inicial omitido"). Ahora `railway-start` corre `pnpm db:seed:catalogos` (idempotente) en cada arranque, y el seed completo (parroquia y admin) sigue solo para BD vacía. `openssl` agregado al Dockerfile. | Verificar en el próximo deploy que el log muestra "✓ Catálogos aplicados". |
+| 2026-09-24 | Claude (Opus 5.5) | La secretaria crea y edita Personas con justificación (permiso nuevo `canDeletePersonas` separado). Fix: la edición de personas mandaba `id_parroquia: 3` fijo y fallaba en toda instancia. Limpieza de seeds, scripts y debug sin uso. Límite de login: 5 fallos en 15 min bloquean ese email 15 min (en memoria; probado en servidor real). 366/366 tests. | El bloqueo se reinicia si la instancia se reinicia (aceptable con una instancia por parroquia). |
