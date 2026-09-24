@@ -10,7 +10,6 @@ Configurar como secretos del proyecto/entorno Preview o Staging:
 - `DATABASE_URL`: conexión Neon de staging
 - `NEXTAUTH_URL`: URL pública exacta de staging
 - `NEXTAUTH_SECRET`: secreto único de staging
-- `ALLOW_INITIAL_SETUP=false`
 
 No reutilizar secretos ni DATABASE_URL de producción.
 

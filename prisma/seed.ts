@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { loadEnvFile } from 'node:process';
 import { leerParroquiaDesdeEnv } from '../src/lib/instancia-env';
+import { DEPARTAMENTOS, MUNICIPIOS } from './catalogos/honduras';
+import { ROLES } from './catalogos/roles';
 
 try {
   loadEnvFile();
@@ -31,21 +33,22 @@ async function main() {
 
   console.log('Seeding required development/testing data...');
 
-  await prisma.departamento.upsert({
-    where: { codigo_departamento: '08' },
-    update: { nombre_departamento: 'Francisco Morazán' },
-    create: { codigo_departamento: '08', nombre_departamento: 'Francisco Morazán' },
-  });
-  await prisma.municipio.upsert({
-    where: { codigo_municipio: '0801' },
-    update: { codigo_departamento: '08', nombre_municipio: 'Distrito Central' },
-    create: {
-      codigo_municipio: '0801',
-      codigo_departamento: '08',
-      nombre_municipio: 'Distrito Central',
-    },
-  });
-  console.log('✓ Ubicación base asegurada');
+  // Catálogo territorial completo (nombres de municipios se respetan si ya existen).
+  for (const [codigo, nombre] of DEPARTAMENTOS) {
+    await prisma.departamento.upsert({
+      where: { codigo_departamento: codigo },
+      update: { nombre_departamento: nombre },
+      create: { codigo_departamento: codigo, nombre_departamento: nombre },
+    });
+  }
+  for (const [codigo, nombre] of MUNICIPIOS) {
+    await prisma.municipio.upsert({
+      where: { codigo_municipio: codigo },
+      update: {},
+      create: { codigo_municipio: codigo, codigo_departamento: codigo.slice(0, 2), nombre_municipio: nombre },
+    });
+  }
+  console.log(`✓ Ubicación asegurada: ${DEPARTAMENTOS.length} departamentos, ${MUNICIPIOS.length} municipios`);
 
   for (const item of [
     { nombre: 'Diocesano', abreviatura: 'DIOC', rama: 'M' },
@@ -145,60 +148,64 @@ async function main() {
     : await prisma.sectorParroquial.create({ data: sectorData });
   console.log('✓ Configuración y sector asegurados');
 
-  const ordenDiocesana = await prisma.ordenReligiosa.findFirstOrThrow({
-    where: { nombre: 'Diocesano' },
-    orderBy: { id_orden_religiosa: 'asc' },
-  });
-  const personas = [
-    { numero_identidad: '0801-1990-00001', nombres: 'Juan Carlos', apellidos: 'Martínez', fecha_nacimiento: new Date('1990-05-18'), sexo: 'M', telefono: '+504 9981-2401', direccion: 'Colonia Loarque, bloque A, Distrito Central', estado_vital: 1 },
-    { numero_identidad: '0801-1985-00002', nombres: 'José Antonio', apellidos: 'López', fecha_nacimiento: new Date('1985-09-12'), sexo: 'M', telefono: '+504 9874-3152', direccion: 'Residencial Loarque Sur, Distrito Central', estado_vital: 1 },
-    { numero_identidad: '0801-1970-00003', nombres: 'Miguel Ángel', apellidos: 'Rodríguez', fecha_nacimiento: new Date('1970-03-24'), sexo: 'M', telefono: '+504 9762-4803', direccion: 'Colonia San José de Loarque, Distrito Central', estado_vital: 1 },
-    { numero_identidad: '0801-1992-00004', nombres: 'María Fernanda', apellidos: 'García', fecha_nacimiento: new Date('1992-11-08'), sexo: 'F', telefono: '+504 9653-5724', direccion: 'Residencial Las Uvas, Distrito Central', estado_vital: 1 },
-    { numero_identidad: '0801-1960-00005', nombres: 'Pedro', apellidos: 'Hernández', fecha_nacimiento: new Date('1960-07-16'), sexo: 'M', telefono: '+504 9541-6805', direccion: 'Aldea Loarque, Distrito Central', estado_vital: 0 },
-    { numero_identidad: '0801-1995-00006', nombres: 'Carlos', apellidos: 'Mejía', fecha_nacimiento: new Date('1995-01-29'), sexo: 'M', telefono: '+504 9432-7956', direccion: 'Colonia Satélite, Distrito Central', estado_vital: 1 },
-  ] as const;
-  for (const persona of personas) {
-    const data = {
-      ...persona,
-      id_sector_parroquial: sector.id_sector_parroquial,
-      id_orden_religiosa: ordenDiocesana.id_orden_religiosa,
-      lugar_nacimiento: '0801',
-      estado_activo_parroquia: 1,
-      email: null,
-      otra_orden_religiosa: null,
-      imagen: null,
-    };
-    await prisma.persona.upsert({
-      where: {
-        id_parroquia_numero_identidad: {
-          id_parroquia: parish.id_parroquia,
-          numero_identidad: persona.numero_identidad,
-        },
-      },
-      update: data,
-      create: { ...data, id_parroquia: parish.id_parroquia },
+  // Personas de QA con DNIs ficticios: nunca en producción (AGENTS.md regla 12).
+  if (allowsDevelopmentDefaults) {
+    const ordenDiocesana = await prisma.ordenReligiosa.findFirstOrThrow({
+      where: { nombre: 'Diocesano' },
+      orderBy: { id_orden_religiosa: 'asc' },
     });
+    const personas = [
+      { numero_identidad: '0801-1990-00001', nombres: 'Juan Carlos', apellidos: 'Martínez', fecha_nacimiento: new Date('1990-05-18'), sexo: 'M', telefono: '+504 9981-2401', direccion: 'Colonia Loarque, bloque A, Distrito Central', estado_vital: 1 },
+      { numero_identidad: '0801-1985-00002', nombres: 'José Antonio', apellidos: 'López', fecha_nacimiento: new Date('1985-09-12'), sexo: 'M', telefono: '+504 9874-3152', direccion: 'Residencial Loarque Sur, Distrito Central', estado_vital: 1 },
+      { numero_identidad: '0801-1970-00003', nombres: 'Miguel Ángel', apellidos: 'Rodríguez', fecha_nacimiento: new Date('1970-03-24'), sexo: 'M', telefono: '+504 9762-4803', direccion: 'Colonia San José de Loarque, Distrito Central', estado_vital: 1 },
+      { numero_identidad: '0801-1992-00004', nombres: 'María Fernanda', apellidos: 'García', fecha_nacimiento: new Date('1992-11-08'), sexo: 'F', telefono: '+504 9653-5724', direccion: 'Residencial Las Uvas, Distrito Central', estado_vital: 1 },
+      { numero_identidad: '0801-1960-00005', nombres: 'Pedro', apellidos: 'Hernández', fecha_nacimiento: new Date('1960-07-16'), sexo: 'M', telefono: '+504 9541-6805', direccion: 'Aldea Loarque, Distrito Central', estado_vital: 0 },
+      { numero_identidad: '0801-1995-00006', nombres: 'Carlos', apellidos: 'Mejía', fecha_nacimiento: new Date('1995-01-29'), sexo: 'M', telefono: '+504 9432-7956', direccion: 'Colonia Satélite, Distrito Central', estado_vital: 1 },
+    ] as const;
+    for (const persona of personas) {
+      const data = {
+        ...persona,
+        id_sector_parroquial: sector.id_sector_parroquial,
+        id_orden_religiosa: ordenDiocesana.id_orden_religiosa,
+        lugar_nacimiento: '0801',
+        estado_activo_parroquia: 1,
+        email: null,
+        otra_orden_religiosa: null,
+        imagen: null,
+      };
+      await prisma.persona.upsert({
+        where: {
+          id_parroquia_numero_identidad: {
+            id_parroquia: parish.id_parroquia,
+            numero_identidad: persona.numero_identidad,
+          },
+        },
+        update: data,
+        create: { ...data, id_parroquia: parish.id_parroquia },
+      });
+    }
+    console.log('✓ Personas de QA aseguradas');
   }
-  console.log('✓ Personas de QA aseguradas');
 
-  const roleExisting = await prisma.rolUsuario.findFirst({
-    where: { nombre: 'Super Admin' },
-    orderBy: { id_rol: 'asc' },
-  });
-  const roleData = {
-    nombre: 'Super Admin',
-    descripcion: 'Administrador del sistema completo',
-    estado: 1,
-    id_usuario_creacion: BigInt(0),
-  };
-  const role = roleExisting
-    ? await prisma.rolUsuario.update({ where: { id_rol: roleExisting.id_rol }, data: roleData })
-    : await prisma.rolUsuario.create({ data: roleData });
+  // Roles del sistema: los nombres deben coincidir con src/lib/permissions.ts.
+  let superAdminRolId: number | null = null;
+  for (const [nombre, descripcion] of ROLES) {
+    const existente = await prisma.rolUsuario.findFirst({
+      where: { nombre },
+      orderBy: { id_rol: 'asc' },
+    });
+    const data = { nombre, descripcion, estado: 1, id_usuario_creacion: BigInt(0) };
+    const rol = existente
+      ? await prisma.rolUsuario.update({ where: { id_rol: existente.id_rol }, data })
+      : await prisma.rolUsuario.create({ data });
+    if (nombre === 'Super Admin') superAdminRolId = rol.id_rol;
+  }
+  console.log(`✓ Roles asegurados: ${ROLES.map(([n]) => n).join(', ')}`);
 
   const passwordHash = Buffer.from(await hash(adminPassword, 12));
   const userData = {
     id_parroquia: parish.id_parroquia,
-    id_rol: role.id_rol,
+    id_rol: superAdminRolId!,
     nombre: 'Super Admin',
     contrasena: passwordHash,
     estado: 1,

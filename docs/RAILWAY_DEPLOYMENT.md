@@ -78,11 +78,15 @@ arranque. **No commitear secretos reales.**
 | `DIRECT_URL` | Misma URL (en Railway no hay pooler separado) | manual |
 | `NEXTAUTH_URL` | URL pública de Railway (ver §8) | manual |
 | `NEXTAUTH_SECRET` | Secreto aleatorio de 32+ bytes (ver generación abajo) | manual |
-| `ALLOW_INITIAL_SETUP` | `false` | manual |
+| `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` | credenciales del primer admin de **esta** parroquia (el seed corre solo si la BD no tiene usuarios) | manual |
 | `NODE_ENV` | `production` (lo fija Railway por defecto, pero confirmar) | automático |
 | `DEMO_ADMIN_PASSWORD` | contraseña del Super Admin demo (mín 8 caracteres) | manual |
 | `DEMO_SECRETARIO_PASSWORD` | contraseña del Secretario demo | manual |
 | `DEMO_CATEQUISTA_PASSWORD` | contraseña del Catequista demo | manual |
+
+> Ya no existe el asistente web `/setup`: cada instancia se inicializa sola en
+> su primer deploy (`scripts/railway-start.mjs` → migraciones + seed con
+> departamentos, municipios, roles, la parroquia de `PARROQUIA_*` y el admin).
 
 ### 3.1 Una instancia por parroquia
 
