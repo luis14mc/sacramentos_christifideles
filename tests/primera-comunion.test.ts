@@ -78,6 +78,9 @@ afterAll(async () => {
 
 describe('CREATE /api/primeras-comuniones', () => {
   it('válido -> 201', async () => { setSession(cat.parishA); expect((await create(makeReq(validBody()))).status).toBe(201); });
+  it('permite solo madre -> 201', async () => { setSession(cat.parishA); expect((await create(makeReq(validBody({ numero_identidad_padre: '' })))).status).toBe(201); });
+  it('permite solo padre -> 201', async () => { setSession(cat.parishA); expect((await create(makeReq(validBody({ numero_identidad_madre: '' })))).status).toBe(201); });
+  it('permite filiación no informada -> 201', async () => { setSession(cat.parishA); expect((await create(makeReq(validBody({ numero_identidad_madre: '', numero_identidad_padre: '' })))).status).toBe(201); });
   it('sin sesión -> 401', async () => { setSession(null); expect((await create(makeReq(validBody()))).status).toBe(401); });
   it('sin permiso -> 403', async () => { setSession(cat.parishA, 'solo lectura'); expect((await create(makeReq(validBody()))).status).toBe(403); });
   it.each(Object.entries(P))('%s inexistente -> 400', async (role) => {
