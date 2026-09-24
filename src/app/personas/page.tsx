@@ -14,8 +14,17 @@ import {
   PencilSquareIcon,
   TrashIcon,
   EyeIcon,
-  FunnelIcon
+  FunnelIcon,
+  FolderOpenIcon
 } from '@heroicons/react/24/outline';
+import type { ResumenSacramentos, SacramentoResumen } from '@/lib/persona';
+
+const SACRAMENTO_INSIGNIA: Record<SacramentoResumen, { corto: string; nombre: string }> = {
+  bautismo: { corto: 'B', nombre: 'Bautismo' },
+  primera_comunion: { corto: 'PC', nombre: 'Primera Comunión' },
+  confirmacion: { corto: 'C', nombre: 'Confirmación' },
+  matrimonio: { corto: 'M', nombre: 'Matrimonio' },
+};
 
 interface Persona {
   numero_identidad: string;
@@ -28,6 +37,7 @@ interface Persona {
   email?: string;
   estado_vital: number;
   estado_activo_parroquia: number;
+  sacramentos: ResumenSacramentos;
   sector: {
     nombre: string;
   };
@@ -49,6 +59,8 @@ export default function PersonasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSexo, setFilterSexo] = useState('todos');
   const [filterEstado, setFilterEstado] = useState('todos');
+  // 'todos' | 'con:<sacramento>' | 'sin:<sacramento>'
+  const [filterSacramento, setFilterSacramento] = useState('todos');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -187,7 +199,11 @@ export default function PersonasPage() {
       (filterEstado === 'activos' && persona.estado_vital === 1 && persona.estado_activo_parroquia === 1) ||
       (filterEstado === 'inactivos' && (persona.estado_vital === 0 || persona.estado_activo_parroquia === 0));
 
-    return matchesSearch && matchesSexo && matchesEstado;
+    const [modo, sacramento] = filterSacramento.split(':') as ['con' | 'sin', SacramentoResumen];
+    const matchesSacramento =
+      filterSacramento === 'todos' || persona.sacramentos[sacramento] === (modo === 'con');
+
+    return matchesSearch && matchesSexo && matchesEstado && matchesSacramento;
   });
 
   // Paginación
@@ -308,6 +324,27 @@ export default function PersonasPage() {
                       <option value="activos">✅ Activos</option>
                       <option value="inactivos">❌ Inactivos</option>
                     </select>
+                    <select
+                      className="select select-bordered select-sm focus:select-primary transition-colors"
+                      value={filterSacramento}
+                      onChange={(e) => {
+                        setFilterSacramento(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      aria-label="Filtrar por sacramento"
+                    >
+                      <option value="todos">Todos los sacramentos</option>
+                      <optgroup label="Tiene">
+                        {Object.entries(SACRAMENTO_INSIGNIA).map(([clave, { nombre }]) => (
+                          <option key={`con-${clave}`} value={`con:${clave}`}>Con {nombre}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Le falta">
+                        {Object.entries(SACRAMENTO_INSIGNIA).map(([clave, { nombre }]) => (
+                          <option key={`sin-${clave}`} value={`sin:${clave}`}>Sin {nombre}</option>
+                        ))}
+                      </optgroup>
+                    </select>
                   </div>
                 </div>
 
@@ -338,7 +375,7 @@ export default function PersonasPage() {
                   <UsersIcon className="h-10 w-10 text-base-content/30" />
                 </div>
                 <h3 className="text-lg font-medium text-base-content/60 mb-2">
-                  {searchTerm || filterSexo !== 'todos' || filterEstado !== 'todos'
+                  {searchTerm || filterSexo !== 'todos' || filterEstado !== 'todos' || filterSacramento !== 'todos'
                     ? 'No se encontraron personas'
                     : 'No hay personas registradas'
                   }
@@ -368,6 +405,7 @@ export default function PersonasPage() {
                       <th className="font-semibold">Contacto</th>
                       <th className="font-semibold">Información</th>
                       <th className="font-semibold">Sector</th>
+                      <th className="font-semibold">Sacramentos</th>
                       <th className="font-semibold">Estado</th>
                       <th className="font-semibold">Acciones</th>
                     </tr>
@@ -434,6 +472,23 @@ export default function PersonasPage() {
                           </div>
                         </td>
                         <td>
+                          <div className="flex flex-wrap gap-1">
+                            {(Object.keys(SACRAMENTO_INSIGNIA) as SacramentoResumen[]).map((clave) => {
+                              const tiene = persona.sacramentos?.[clave] ?? false;
+                              const { corto, nombre } = SACRAMENTO_INSIGNIA[clave];
+                              return (
+                                <span
+                                  key={clave}
+                                  className={`badge badge-sm ${tiene ? 'badge-success' : 'badge-ghost opacity-50'}`}
+                                  title={`${nombre}: ${tiene ? 'registrado' : 'sin registro'}`}
+                                >
+                                  {corto}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </td>
+                        <td>
                           <span className={`badge badge-sm ${getEstadoColor(persona)} shadow-sm`}>
                             {getEstadoTexto(persona)}
                           </span>
@@ -446,6 +501,13 @@ export default function PersonasPage() {
                               title="Ver detalles"
                             >
                               <EyeIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => router.push(`/personas/${encodeURIComponent(persona.numero_identidad)}/expediente`)}
+                              className="btn btn-ghost btn-xs hover:bg-primary/20 hover:text-primary transition-colors"
+                              title="Expediente sacramental"
+                            >
+                              <FolderOpenIcon className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => abrirModalEdicion(persona.numero_identidad)}

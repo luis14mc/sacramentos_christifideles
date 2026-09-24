@@ -45,3 +45,67 @@ export function isEstadoVitalValido(v: number): boolean {
 export function isEstadoActivoValido(v: number): boolean {
   return v === 0 || v === 1;
 }
+
+/** Sacramentos en los que la persona es sujeto principal (resumen para listados). */
+export interface ResumenSacramentos {
+  bautismo: boolean;
+  primera_comunion: boolean;
+  confirmacion: boolean;
+  matrimonio: boolean;
+}
+
+export type SacramentoResumen = keyof ResumenSacramentos;
+
+export const SACRAMENTOS_RESUMEN: readonly SacramentoResumen[] = [
+  'bautismo',
+  'primera_comunion',
+  'confirmacion',
+  'matrimonio',
+];
+
+/** `_count` de Prisma para calcular el resumen sin traer los registros. */
+export const personaSacramentosCount = {
+  _count: {
+    select: {
+      bautismos_bautizado: true,
+      comuniones_persona: true,
+      confirmaciones_confirmado: true,
+      matrimonios_esposo: true,
+      matrimonios_esposa: true,
+    },
+  },
+} as const;
+
+export interface PersonaSacramentosCount {
+  bautismos_bautizado: number;
+  comuniones_persona: number;
+  confirmaciones_confirmado: number;
+  matrimonios_esposo: number;
+  matrimonios_esposa: number;
+}
+
+export function resumenSacramentos(count: PersonaSacramentosCount): ResumenSacramentos {
+  return {
+    bautismo: count.bautismos_bautizado > 0,
+    primera_comunion: count.comuniones_persona > 0,
+    confirmacion: count.confirmaciones_confirmado > 0,
+    matrimonio: count.matrimonios_esposo + count.matrimonios_esposa > 0,
+  };
+}
+
+/** Filtro Prisma "tiene / no tiene" un sacramento como sujeto principal. */
+export function whereSacramento(sacramento: SacramentoResumen, tiene: boolean) {
+  const rel = tiene ? 'some' : 'none';
+  switch (sacramento) {
+    case 'bautismo':
+      return { bautismos_bautizado: { [rel]: {} } };
+    case 'primera_comunion':
+      return { comuniones_persona: { [rel]: {} } };
+    case 'confirmacion':
+      return { confirmaciones_confirmado: { [rel]: {} } };
+    case 'matrimonio':
+      return tiene
+        ? { OR: [{ matrimonios_esposo: { some: {} } }, { matrimonios_esposa: { some: {} } }] }
+        : { matrimonios_esposo: { none: {} }, matrimonios_esposa: { none: {} } };
+  }
+}

@@ -48,11 +48,14 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ⬜ Correr `tests/instancia.test.ts` contra una BD de test (en local falta `TEST_DATABASE_URL`)
 - ⬜ Crear los dos servicios en Railway con sus variables (lo hace el PO)
 
-### Fase 2 — Sacramentos en el módulo Personas
-- ⬜ Vista SQL `v_persona_sacramentos` (migración) con flags y fecha por sacramento
-- ⬜ Búsqueda de personas: insignias B / PC / C / M
-- ⬜ Detalle de persona: línea de tiempo (reusar `src/lib/expediente.ts`)
-- ⬜ Tests
+### Fase 2 — Sacramentos en el módulo Personas · rama `feature/fase2-sacramentos-en-personas` (apilada sobre fase 1)
+- ✅ Resumen por persona sin vista SQL: `_count` de Prisma (`personaSacramentosCount`, `resumenSacramentos`, `whereSacramento` en `src/lib/persona.ts`). No requiere migración. Si con volumen real se vuelve lento, pasar a vista `v_persona_sacramentos`.
+- ✅ `GET /api/personas` devuelve `sacramentos: { bautismo, primera_comunion, confirmacion, matrimonio }` y acepta `?sacramento=` / `?sin_sacramento=`
+- ✅ Listado de personas: columna con insignias B / PC / C / M, filtro "Con / Sin <sacramento>" y botón al expediente
+- ✅ Detalle con línea de tiempo: ya existía en `/personas/[id]/expediente` (`src/lib/expediente.ts`)
+- ✅ Tests en `tests/personas.test.ts` (lógica pura validada; los de API siguen pendientes de `TEST_DATABASE_URL`)
+- ⬜ La búsqueda global (`/buscar`, `src/lib/busqueda.ts`) todavía no muestra insignias
+- ⬜ Solo cuenta a la persona como sujeto principal (bautizado, comulgante, confirmado, cónyuge), no como padrino ni como padre o madre
 
 ### Fase 3 — Gestor de expedientes (escaneos)
 - ⬜ Confirmar D6 (almacenamiento)
@@ -84,3 +87,4 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 | Fecha | Agente | Qué se hizo | Pendiente / notas |
 |-------|--------|-------------|-------------------|
 | 2026-09-24 | Claude (Opus 5.5) | Plan y decisiones. Fase 1 implementada: seed por env, `/api/instancia`, tests y docs. | Tests de ruta sin ejecutar en local (falta `TEST_DATABASE_URL`); la lógica pura se validó aparte. Intentos de delegar a Gemini (cuota gratuita sin Pro) y MiniMax M3 (salió del repo: docker/sudo) fallaron sin dejar cambios. Otra sesión opencode en la misma carpeta metió estos archivos en su commit y luego hizo reset; se recuperaron desde `13ecf37` al worktree `../sacramentos_christifideles-fase1`. |
+| 2026-09-24 | Claude (Opus 5.5) | Fase 1 rebaseada sobre `master` (PR #31 mergeado). Fase 2: resumen de sacramentos en `GET /api/personas`, filtros e insignias en el listado, acceso al expediente. | Falta correr los tests de API con BD de test y hacer `pnpm build` completo. Pendiente: insignias en `/buscar`. |
