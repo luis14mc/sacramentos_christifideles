@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
 import { jsonSafeSacramento as jsonSafe, isPrismaUniqueError } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
+import { ERROR_JUSTIFICACION, leerJustificacion } from '@/lib/justificacion';
 import {
   normalizeMatrimonioInput,
   validarReferenciasMatrimonio,
@@ -74,6 +75,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!existente) return NextResponse.json({ error: 'Matrimonio no encontrado' }, { status: 404 });
 
     const data = await req.json();
+
+    // Toda modificación de un registro sacramental exige justificación (auditoría).
+    const justificacion = leerJustificacion(data.justificacion);
+    if (!justificacion) {
+      return NextResponse.json({ error: ERROR_JUSTIFICACION }, { status: 400 });
+    }
     if (data.id_parroquia !== undefined && parseInt(String(data.id_parroquia), 10) !== parishId) {
       return NextResponse.json({ error: 'No se permite cambiar la parroquia' }, { status: 400 });
     }
@@ -100,7 +107,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const userId = BigInt(context.session.user.id);
     const { actorIp, userAgent } = contextoAuditoria(req);
     const oldValues = jsonSafe(existente) as Prisma.InputJsonValue;
-    const newValues: Prisma.InputJsonValue = { ...input, fecha_matrimonio: input.fecha_matrimonio.toISOString() };
+    const newValues: Prisma.InputJsonValue = { ...input, justificacion, fecha_matrimonio: input.fecha_matrimonio.toISOString() };
 
     const actualizado = await prisma.$transaction(async (tx) => {
       const registro = await tx.matrimonio.update({

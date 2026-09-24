@@ -25,11 +25,20 @@ describe('permissions: normalizeRole y alias', () => {
 });
 
 describe('permissions: matriz de roles', () => {
-  it('secretaria hereda permisos de secretario (crea pero no edita sacramentos)', () => {
+  it('secretaria hereda permisos de secretario (crea y edita, pero no borra sacramentos)', () => {
     expect(hasPermission('secretaria', 'canCreateSacramentos')).toBe(true);
-    expect(hasPermission('secretaria', 'canEditSacramentos')).toBe(false);
+    expect(hasPermission('secretaria', 'canEditSacramentos')).toBe(true);
+    expect(hasPermission('secretaria', 'canDeleteSacramentos')).toBe(false);
+    expect(hasPermission('secretaria', 'canResolverInterop')).toBe(false);
     expect(hasPermission('secretaria', 'canGenerateConstancias')).toBe(true);
     expect(hasPermission('secretaria', 'canManageConfiguracion')).toBe(false);
+  });
+
+  it('párroco ve todo y autoriza todo', () => {
+    expect(hasPermission('parroco', 'canManageUsuarios')).toBe(true);
+    expect(hasPermission('parroco', 'canManageConfiguracion')).toBe(true);
+    expect(hasPermission('parroco', 'canDeleteSacramentos')).toBe(true);
+    expect(hasPermission('parroco', 'canResolverInterop')).toBe(true);
   });
 
   it('catequista puede ver sacramentos pero no emitir constancias', () => {

@@ -24,6 +24,11 @@ function setSession(parishId: number | null, rol = 'administrador') {
 function makeReq(body: unknown): NextRequest {
   return new Request('http://t/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) as unknown as NextRequest;
 }
+
+/** PUT con la justificación obligatoria de modificación. */
+function putReq(body: object): NextRequest {
+  return makeReq({ ...body, justificacion: 'Corrección verificada contra el libro físico' });
+}
 function getReq(url = 'http://t/api'): NextRequest {
   return new Request(url) as unknown as NextRequest;
 }
@@ -118,44 +123,44 @@ describe('GET', () => {
 describe('UPDATE', () => {
   it('propio -> 200', async () => {
     const r = await crearDirecto('200'); setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '200' })), ctx(r.id_matrimonio.toString()))).status).toBe(200);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '200' })), ctx(r.id_matrimonio.toString()))).status).toBe(200);
   });
   it('cross-tenant -> 404', async () => {
     const r = await crearDirecto('201'); setSession(cat.parishB);
-    expect((await update(makeReq(validBody()), ctx(r.id_matrimonio.toString()))).status).toBe(404);
+    expect((await update(putReq(validBody()), ctx(r.id_matrimonio.toString()))).status).toBe(404);
   });
   it('participante inexistente -> 400', async () => {
     const r = await crearDirecto('202'); setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '202', numero_identidad_madrina: 'NOEXISTE' })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '202', numero_identidad_madrina: 'NOEXISTE' })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
   });
   it('participante de otra parroquia -> 400', async () => {
     const r = await crearDirecto('203'); setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '203', numero_identidad_esposa: PERSONA_B })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '203', numero_identidad_esposa: PERSONA_B })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
   });
   it('padre opcional inválido -> 400', async () => {
     const r = await crearDirecto('204'); setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '204', numero_identidad_padre_esposa: 'NOEXISTE' })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '204', numero_identidad_padre_esposa: 'NOEXISTE' })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
   });
   it('sacerdote de otra parroquia -> 400', async () => {
     const r = await crearDirecto('205'); setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '205', numero_identidad_sacerdote: SAC_B })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '205', numero_identidad_sacerdote: SAC_B })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
   });
   it('misma Persona como ambos cónyuges -> 400', async () => {
     const r = await crearDirecto('206'); setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '206', numero_identidad_esposo: ESPOSA })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '206', numero_identidad_esposo: ESPOSA })), ctx(r.id_matrimonio.toString()))).status).toBe(400);
   });
   it('colisión registral -> 409', async () => {
     await crearDirecto('207');
     const r2 = await prisma.matrimonio.create({ data: { id_parroquia: cat.parishA, numero_identidad_esposa: ESPOSA, numero_identidad_esposo: ESPOSO, numero_identidad_madrina: MADRINA, numero_identidad_padrino: PADRINO, numero_identidad_sacerdote: SAC_A, fecha_matrimonio: new Date('2026-04-02'), numero_acta: '9', numero_libro: '9', numero_pagina: '9', numero_registro: '208' } });
     setSession(cat.parishA);
-    expect((await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '207' })), ctx(r2.id_matrimonio.toString()))).status).toBe(409);
+    expect((await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '207' })), ctx(r2.id_matrimonio.toString()))).status).toBe(409);
   });
 });
 
 describe('RBAC', () => {
   it('solo lectura GET 200', async () => { setSession(cat.parishA, 'solo lectura'); expect((await list(getReq())).status).toBe(200); });
   it('solo lectura POST 403', async () => { setSession(cat.parishA, 'solo lectura'); expect((await create(makeReq(validBody()))).status).toBe(403); });
-  it('solo lectura PUT 403', async () => { const r = await crearDirecto('300'); setSession(cat.parishA, 'solo lectura'); expect((await update(makeReq(validBody()), ctx(r.id_matrimonio.toString()))).status).toBe(403); });
+  it('solo lectura PUT 403', async () => { const r = await crearDirecto('300'); setSession(cat.parishA, 'solo lectura'); expect((await update(putReq(validBody()), ctx(r.id_matrimonio.toString()))).status).toBe(403); });
 });
 
 describe('AUDITORÍA', () => {
@@ -165,7 +170,7 @@ describe('AUDITORÍA', () => {
   });
   it('update genera bitácora U', async () => {
     const r = await crearDirecto('400'); setSession(cat.parishA);
-    await update(makeReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '400' })), ctx(r.id_matrimonio.toString()));
+    await update(putReq(validBody({ numero_libro: '9', numero_pagina: '9', numero_registro: '400' })), ctx(r.id_matrimonio.toString()));
     expect(await prisma.bitacoraCrud.count({ where: { nombre_tabla: 'matrimonio', accion: 'U' } })).toBe(1);
   });
 });

@@ -34,6 +34,15 @@ interoperabilidad** → **Seguridad**.
 | D6 | Gestor de expedientes y escaneos: **fuera de v1**, pasa a v2. Almacenamiento a decidir entonces (R2 recomendado). |
 | D7 | El hub vive en este repo, carpeta `hub/`. *(recomendado; pendiente de confirmar)* |
 
+## Roles (decisión del PO, 2026-09-24)
+
+| Rol | Sacramentos | Consultas entre parroquias |
+|-----|-------------|----------------------------|
+| **Secretaria** | Registra y **edita**; no borra ni da de baja | Puede consultar, **no** aprobar |
+| **Párroco** | Ve todo y autoriza todo (`fullAccess`, incluidos usuarios y configuración) | Consulta y aprueba |
+
+- **Toda modificación de un sacramento exige justificación** (10 a 500 caracteres), para todos los roles. Se valida en el backend (`src/lib/justificacion.ts`) y queda en `bitacora_crud.new_values.justificacion`. El formulario la pide al guardar (`pedirJustificacion`).
+
 ## Estado
 
 Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
@@ -133,3 +142,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-09-24 | Claude (Opus 5.5) | 4d: hub listo con 10/10 tests. `hub/` queda excluido del tsc de la raíz; el lint de la raíz sí lo revisa (sin warnings nuevos). | Siguiente: 4e (UI de consultas y bandeja). |
 | 2026-09-24 | Claude (Opus 5.5) | 4e: UI de consultas. `pnpm build` OK. E2E real con tres servidores y tres BDs OK (detalle en Estado). | UI no revisada visualmente en navegador. Siguiente: 4f (runbook de despliegue). |
 | 2026-09-24 | Claude (Opus 5.5) | 4f: runbook de despliegue. **Fase 4 completa.** App 355+ tests y hub 10 tests en verde. | Pendiente del PO: crear los servicios en Railway, revisar la UI en navegador y confirmar los permisos (hoy el secretario puede consultar pero no aprobar). |
+| 2026-09-24 | Claude (Opus 5.5) | Roles: la secretaria puede editar sacramentos (sin borrar), el párroco pasa a acceso total y la justificación es obligatoria al editar (backend, UI y auditoría). 358/358 tests. | Por confirmar con el PO: la secretaria sigue sin poder crear ni editar Personas (`canManagePersonas`). |
