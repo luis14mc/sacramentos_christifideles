@@ -4,8 +4,9 @@ import {
   ministroSelect,
 } from '@/lib/sacramentos';
 
-// Roles que deben existir como Persona dentro de la MISMA parroquia.
-// Padrino y madrina son OPCIONALES individualmente: la regla de negocio v1
+// Roles que pueden existir como Persona dentro de la MISMA parroquia.
+// Madre y padre son opcionales e independientes según la documentación civil disponible.
+// Padrino y madrina son opcionales individualmente: la regla de negocio v1
 // exige al menos UNO de los dos (ver normalizeBautismoInput).
 export const ROLES_PERSONA = [
   ['numero_identidad_bautizado', 'bautizado'],
@@ -18,8 +19,8 @@ export const ROLES_PERSONA = [
 
 export interface BautismoInput {
   numero_identidad_bautizado: string;
-  numero_identidad_madre: string;
-  numero_identidad_padre: string;
+  numero_identidad_madre: string | null;
+  numero_identidad_padre: string | null;
   // Opcionales: al menos uno entre padrino y madrina debe estar presente.
   numero_identidad_madrina: string | null;
   numero_identidad_padrino: string | null;
@@ -49,8 +50,6 @@ export function normalizeBautismoInput(
 ): { input: BautismoInput } | { error: string } {
   const requeridosDni: [keyof BautismoInput, string][] = [
     ['numero_identidad_bautizado', 'bautizado'],
-    ['numero_identidad_madre', 'madre'],
-    ['numero_identidad_padre', 'padre'],
     ['numero_identidad_catequista', 'catequista'],
     ['numero_identidad_sacerdote', 'sacerdote'],
   ];
@@ -60,6 +59,10 @@ export function normalizeBautismoInput(
     if (!v) return { error: `Falta el DNI del ${label}` };
     values[field] = v;
   }
+
+  // Filiación opcional: se admite madre, padre, ambos o ninguno.
+  const madre = str(data.numero_identidad_madre);
+  const padre = str(data.numero_identidad_padre);
 
   // Padrino y madrina son opcionales; se admiten vacío o DNI.
   const madrina = str(data.numero_identidad_madrina);
@@ -97,8 +100,8 @@ export function normalizeBautismoInput(
   return {
     input: {
       numero_identidad_bautizado: values.numero_identidad_bautizado,
-      numero_identidad_madre: values.numero_identidad_madre,
-      numero_identidad_padre: values.numero_identidad_padre,
+      numero_identidad_madre: madre || null,
+      numero_identidad_padre: padre || null,
       numero_identidad_madrina: madrina || null,
       numero_identidad_padrino: padrino || null,
       numero_identidad_catequista: values.numero_identidad_catequista,
@@ -162,8 +165,6 @@ export function bautismoCreateData(
   const data: Record<string, unknown> = {
     parroquia: { connect: { id_parroquia: parishId } },
     bautizado: connectPersona(input.numero_identidad_bautizado),
-    madre: connectPersona(input.numero_identidad_madre),
-    padre: connectPersona(input.numero_identidad_padre),
     catequista: connectPersona(input.numero_identidad_catequista),
     sacerdote: {
       connect: {
@@ -181,6 +182,12 @@ export function bautismoCreateData(
     nota_marginal: input.nota_marginal,
   };
 
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  }
   if (input.numero_identidad_madrina) {
     data.madrina = connectPersona(input.numero_identidad_madrina);
   }
@@ -209,8 +216,6 @@ export function bautismoUpdateData(
 
   const data: Record<string, unknown> = {
     bautizado: connectPersona(input.numero_identidad_bautizado),
-    madre: connectPersona(input.numero_identidad_madre),
-    padre: connectPersona(input.numero_identidad_padre),
     catequista: connectPersona(input.numero_identidad_catequista),
     sacerdote: {
       connect: {
@@ -229,6 +234,16 @@ export function bautismoUpdateData(
   };
 
   // Opcionales: si hay DNI se conecta la relación; si no, se desconecta.
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  } else {
+    data.madre = { disconnect: true };
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  } else {
+    data.padre = { disconnect: true };
+  }
   if (input.numero_identidad_madrina) {
     data.madrina = connectPersona(input.numero_identidad_madrina);
   } else {
