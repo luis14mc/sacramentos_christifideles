@@ -31,7 +31,7 @@ interoperabilidad** → **Seguridad**.
 | D3 | Se conserva `id_parroquia` en el esquema (evita reescribir tablas). Dentro de cada BD tiene un único valor. |
 | D4 | Interoperabilidad **solo de consulta**, vía API y a través del hub. Ninguna instancia escribe en otra. |
 | D5 | Las solicitudes entre parroquias se notifican y **se aprueban manualmente** en la parroquia que recibe la solicitud. *(recomendado; pendiente de confirmar por el PO)* |
-| D6 | Escaneos de expedientes en almacenamiento de objetos S3-compatible (Cloudflare R2 recomendado). *(pendiente de confirmar)* |
+| D6 | Gestor de expedientes y escaneos: **fuera de v1**, pasa a v2. Almacenamiento a decidir entonces (R2 recomendado). |
 | D7 | El hub vive en este repo, carpeta `hub/`. *(recomendado; pendiente de confirmar)* |
 
 ## Estado
@@ -57,7 +57,10 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ⬜ La búsqueda global (`/buscar`, `src/lib/busqueda.ts`) todavía no muestra insignias
 - ⬜ Solo cuenta a la persona como sujeto principal (bautizado, comulgante, confirmado, cónyuge), no como padrino ni como padre o madre
 
-### Fase 3 — Gestor de expedientes (escaneos)
+### Fase 3 — Gestor de expedientes (escaneos) · **DIFERIDA A v2** (decisión del PO, 2026-09-24)
+
+> La v1 se enfoca en el registro de sacramentos. No implementar esta fase hasta que el PO la reactive.
+
 - ⬜ Confirmar D6 (almacenamiento)
 - ⬜ Modelo `Documento` + catálogo `TipoDocumento` + requisitos por sacramento (migración; alinear con `docs/christi_fidelis_bdd_pg_v3.sql`)
 - ⬜ Subida (URL firmada), visualización y checklist de requisitos
@@ -88,3 +91,4 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 |-------|--------|-------------|-------------------|
 | 2026-09-24 | Claude (Opus 5.5) | Plan y decisiones. Fase 1 implementada: seed por env, `/api/instancia`, tests y docs. | Tests de ruta sin ejecutar en local (falta `TEST_DATABASE_URL`); la lógica pura se validó aparte. Intentos de delegar a Gemini (cuota gratuita sin Pro) y MiniMax M3 (salió del repo: docker/sudo) fallaron sin dejar cambios. Otra sesión opencode en la misma carpeta metió estos archivos en su commit y luego hizo reset; se recuperaron desde `13ecf37` al worktree `../sacramentos_christifideles-fase1`. |
 | 2026-09-24 | Claude (Opus 5.5) | Fase 1 rebaseada sobre `master` (PR #31 mergeado). Fase 2: resumen de sacramentos en `GET /api/personas`, filtros e insignias en el listado, acceso al expediente. | Falta correr los tests de API con BD de test y hacer `pnpm build` completo. Pendiente: insignias en `/buscar`. |
+| 2026-09-24 | Claude (Opus 5.5) | El PO difiere la Fase 3 (gestor de expedientes) a v2. La v1 es el registro de sacramentos. | Por confirmar: si la Fase 4 (interoperabilidad) entra en v1. |
