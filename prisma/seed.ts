@@ -2,8 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { loadEnvFile } from 'node:process';
 import { leerParroquiaDesdeEnv } from '../src/lib/instancia-env';
-import { DEPARTAMENTOS, MUNICIPIOS } from './catalogos/honduras';
-import { ROLES } from './catalogos/roles';
+import { sembrarCatalogos } from './catalogos/sembrar';
 
 try {
   loadEnvFile();
@@ -33,59 +32,7 @@ async function main() {
 
   console.log('Seeding required development/testing data...');
 
-  // Catálogo territorial completo (nombres de municipios se respetan si ya existen).
-  for (const [codigo, nombre] of DEPARTAMENTOS) {
-    await prisma.departamento.upsert({
-      where: { codigo_departamento: codigo },
-      update: { nombre_departamento: nombre },
-      create: { codigo_departamento: codigo, nombre_departamento: nombre },
-    });
-  }
-  for (const [codigo, nombre] of MUNICIPIOS) {
-    await prisma.municipio.upsert({
-      where: { codigo_municipio: codigo },
-      update: {},
-      create: { codigo_municipio: codigo, codigo_departamento: codigo.slice(0, 2), nombre_municipio: nombre },
-    });
-  }
-  console.log(`✓ Ubicación asegurada: ${DEPARTAMENTOS.length} departamentos, ${MUNICIPIOS.length} municipios`);
-
-  for (const item of [
-    { nombre: 'Diocesano', abreviatura: 'DIOC', rama: 'M' },
-    { nombre: 'Salesiano', abreviatura: 'SDB', rama: 'M' },
-  ]) {
-    const existing = await prisma.ordenReligiosa.findFirst({
-      where: { nombre: item.nombre },
-      orderBy: { id_orden_religiosa: 'asc' },
-    });
-    const data = { ...item, descripcion: item.nombre };
-    if (existing) {
-      await prisma.ordenReligiosa.update({
-        where: { id_orden_religiosa: existing.id_orden_religiosa },
-        data,
-      });
-    } else {
-      await prisma.ordenReligiosa.create({ data });
-    }
-  }
-  console.log('✓ Órdenes religiosas aseguradas');
-
-  for (const nombre of ['Diácono', 'Sacerdote', 'Obispo']) {
-    const existing = await prisma.rangoOrdenSacerdotal.findFirst({
-      where: { nombre },
-      orderBy: { id_rango_sacerdotal: 'asc' },
-    });
-    const data = { nombre, descripcion: nombre };
-    if (existing) {
-      await prisma.rangoOrdenSacerdotal.update({
-        where: { id_rango_sacerdotal: existing.id_rango_sacerdotal },
-        data,
-      });
-    } else {
-      await prisma.rangoOrdenSacerdotal.create({ data });
-    }
-  }
-  console.log('✓ Rangos sacerdotales asegurados');
+  await sembrarCatalogos(prisma);
 
   const tipoSectorExisting = await prisma.tipoSectorParroquial.findFirst({
     where: { nombre: 'General' },
@@ -187,25 +134,15 @@ async function main() {
     console.log('✓ Personas de QA aseguradas');
   }
 
-  // Roles del sistema: los nombres deben coincidir con src/lib/permissions.ts.
-  let superAdminRolId: number | null = null;
-  for (const [nombre, descripcion] of ROLES) {
-    const existente = await prisma.rolUsuario.findFirst({
-      where: { nombre },
-      orderBy: { id_rol: 'asc' },
-    });
-    const data = { nombre, descripcion, estado: 1, id_usuario_creacion: BigInt(0) };
-    const rol = existente
-      ? await prisma.rolUsuario.update({ where: { id_rol: existente.id_rol }, data })
-      : await prisma.rolUsuario.create({ data });
-    if (nombre === 'Super Admin') superAdminRolId = rol.id_rol;
-  }
-  console.log(`✓ Roles asegurados: ${ROLES.map(([n]) => n).join(', ')}`);
+  const rolSuperAdmin = await prisma.rolUsuario.findFirstOrThrow({
+    where: { nombre: 'Super Admin' },
+    orderBy: { id_rol: 'asc' },
+  });
 
   const passwordHash = Buffer.from(await hash(adminPassword, 12));
   const userData = {
     id_parroquia: parish.id_parroquia,
-    id_rol: superAdminRolId!,
+    id_rol: rolSuperAdmin.id_rol,
     nombre: 'Super Admin',
     contrasena: passwordHash,
     estado: 1,
