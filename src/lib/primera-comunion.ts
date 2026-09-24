@@ -8,8 +8,8 @@ import {
 
 export interface ComunionInput {
   numero_identidad_persona: string;
-  numero_identidad_madre: string;
-  numero_identidad_padre: string;
+  numero_identidad_madre: string | null;
+  numero_identidad_padre: string | null;
   numero_identidad_catequista: string;
   numero_identidad_sacerdote: string;
   fecha_primera_comunion: Date;
@@ -22,8 +22,6 @@ export interface ComunionInput {
 
 const DNI_FIELDS: [keyof ComunionInput, string][] = [
   ['numero_identidad_persona', 'comulgante'],
-  ['numero_identidad_madre', 'madre'],
-  ['numero_identidad_padre', 'padre'],
   ['numero_identidad_catequista', 'catequista'],
   ['numero_identidad_sacerdote', 'sacerdote'],
 ];
@@ -44,6 +42,9 @@ export function normalizeComunionInput(
     if (!v) return { error: `Falta el DNI del ${label}` };
     values[field] = v;
   }
+  const madre = trimStr(data.numero_identidad_madre);
+  const padre = trimStr(data.numero_identidad_padre);
+
   for (const [field, label] of REGISTRAL_FIELDS) {
     const v = trimStr(data[field]);
     if (!v) return { error: `El número de ${label} es obligatorio` };
@@ -63,8 +64,8 @@ export function normalizeComunionInput(
   return {
     input: {
       numero_identidad_persona: values.numero_identidad_persona,
-      numero_identidad_madre: values.numero_identidad_madre,
-      numero_identidad_padre: values.numero_identidad_padre,
+      numero_identidad_madre: madre || null,
+      numero_identidad_padre: padre || null,
       numero_identidad_catequista: values.numero_identidad_catequista,
       numero_identidad_sacerdote: values.numero_identidad_sacerdote,
       fecha_primera_comunion: fecha,
@@ -83,8 +84,8 @@ export async function validarReferenciasComunion(
 ): Promise<string | null> {
   const personas = await validarPersonasTenant(parishId, [
     { label: 'comulgante', dni: input.numero_identidad_persona },
-    { label: 'madre', dni: input.numero_identidad_madre },
-    { label: 'padre', dni: input.numero_identidad_padre },
+    ...(input.numero_identidad_madre ? [{ label: 'madre', dni: input.numero_identidad_madre }] : []),
+    ...(input.numero_identidad_padre ? [{ label: 'padre', dni: input.numero_identidad_padre }] : []),
     { label: 'catequista', dni: input.numero_identidad_catequista },
   ]);
   if (personas) return personas;
