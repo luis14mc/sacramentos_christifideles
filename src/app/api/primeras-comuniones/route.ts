@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { jsonSafeSacramento as jsonSafe, ministroSelect } from '@/lib/sacramentos';
+import { jsonSafeSacramento as jsonSafe, ministroSelect, badRequest } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { isPrismaUniqueError } from '@/lib/sacramentos';
 import { siguienteRegistro } from '@/lib/numeradores';
@@ -97,11 +97,11 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const auto = data.numeracion_automatica === true;
     const parsed = normalizeComunionInput(data);
-    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    if ('error' in parsed) return badRequest(parsed.error);
     const input: ComunionInput = parsed.input;
 
     const refError = await validarReferenciasComunion(parishId, input);
-    if (refError) return NextResponse.json({ error: refError }, { status: 400 });
+    if (refError) return badRequest(refError);
 
     if (!auto) {
       const duplicado = await prisma.primeraComunion.findFirst({
