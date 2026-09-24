@@ -85,8 +85,10 @@ arranque. **No commitear secretos reales.**
 | `DEMO_CATEQUISTA_PASSWORD` | contraseña del Catequista demo | manual |
 
 > Ya no existe el asistente web `/setup`: cada instancia se inicializa sola en
-> su primer deploy (`scripts/railway-start.mjs` → migraciones + seed con
-> departamentos, municipios, roles, la parroquia de `PARROQUIA_*` y el admin).
+> su primer deploy (`scripts/railway-start.mjs`). En **cada** arranque corren las
+> migraciones y `pnpm db:seed:catalogos` (departamentos, municipios, roles,
+> órdenes y rangos; idempotente). Solo con la BD vacía corre además el seed de
+> la parroquia de `PARROQUIA_*` y su admin.
 
 ### 3.1 Una instancia por parroquia
 

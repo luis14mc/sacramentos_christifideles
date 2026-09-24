@@ -1,8 +1,9 @@
 /**
  * Arranque en Railway:
  * 1) aplica migraciones versionadas;
- * 2) inicializa datos base solo si no existen usuarios;
- * 3) arranca Next.js en 0.0.0.0:PORT.
+ * 2) aplica catálogos comunes (departamentos, municipios, roles…) en CADA arranque;
+ * 3) inicializa parroquia y admin solo si no existen usuarios;
+ * 4) arranca Next.js en 0.0.0.0:PORT.
  */
 import { execSync } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
@@ -18,6 +19,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 run('pnpm exec prisma migrate deploy');
+// Idempotente: así las instancias ya inicializadas reciben catálogos nuevos.
+run('pnpm db:seed:catalogos');
 
 const prisma = new PrismaClient();
 
