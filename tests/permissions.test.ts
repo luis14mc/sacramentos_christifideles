@@ -3,7 +3,9 @@ import {
   normalizeRole,
   getPermissionsForRole,
   hasPermission,
+  rolePermissions,
 } from '@/lib/permissions';
+import { ROLES } from '../prisma/catalogos/roles';
 
 describe('permissions: normalizeRole y alias', () => {
   it('normaliza mayúsculas y espacios', () => {
@@ -57,5 +59,11 @@ describe('permissions: matriz de roles', () => {
   it('super admin tiene acceso total', () => {
     expect(hasPermission('super admin', 'canManageUsuarios')).toBe(true);
     expect(hasPermission('super admin', 'canManageConfiguracion')).toBe(true);
+  });
+
+  it('todos los roles del seed tienen permisos definidos', () => {
+    for (const [nombre] of ROLES) {
+      expect(rolePermissions[normalizeRole(nombre)], nombre).toBeDefined();
+    }
   });
 });
