@@ -98,7 +98,9 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 - ✅ 4a. `src/lib/interop/firma.ts` (firmar y verificar) + `tests/interop-firma.test.ts` (5/5, pura)
 - ✅ 4b. Modelo `SolicitudInterop`, migración `20260925090000_solicitud_interop` (con CHECK de dirección y estado) y alineación con `docs/christi_fidelis_bdd_pg_v3.sql`. Migración generada con `prisma migrate diff`, **sin aplicar todavía a ninguna BD**
 - ✅ 4c. Endpoints de la instancia (`src/app/api/interop/*`, `src/lib/interop/{cliente,contrato,respuesta,solicitudes}.ts`) + `tests/interop.test.ts` (13). Permisos nuevos: `canSolicitarInterop` (admin, párroco, clero, secretario) y `canResolverInterop` (admin, párroco, clero; **no** secretario, ajustable por el PO). Las entrantes y respuestas que llegan del hub no generan `bitacora_crud` (no hay usuario); la fila de `solicitud_interop` es la traza
-- ⬜ 4d. App `hub/`: esquema, registro de instancias, reenvío y tests
+- ✅ 4d. `hub/`: servidor Node mínimo (`node:http` con handlers Request/Response, sin framework) + Prisma propio (`instancia`, `solicitud`), secretos HMAC cifrados con AES-256-GCM (`HUB_CLAVE_MAESTRA`), CLI `pnpm instancia registrar|rotar|activar|desactivar|listar`, `hub/railway.toml` y `hub/tests/hub.test.ts` (10). El hub no guarda motivo, DNI en claro ni respuestas
+  - Tests del hub: `cd hub && HUB_TEST_DATABASE_URL=postgresql://postgres:test@localhost:55432/christifideles_hub_test pnpm test` (crear antes la BD y correr `prisma migrate deploy`)
+  - ⚠️ Verificar en el primer deploy que Nixpacks respeta `hub/railway.toml` con Root Directory vacío
 - ⬜ 4e. UI: nueva consulta, bandeja con contador en el menú, aprobar o rechazar, ver respuesta
 - ⬜ 4f. Docs de despliegue: tres servicios en Railway y rotación de secretos
 
@@ -127,3 +129,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-09-24 | Claude (Opus 5.5) | Fase 1 rebaseada sobre `master` (PR #31 mergeado). Fase 2: resumen de sacramentos en `GET /api/personas`, filtros e insignias en el listado, acceso al expediente. | Falta correr los tests de API con BD de test y hacer `pnpm build` completo. Pendiente: insignias en `/buscar`. |
 | 2026-09-24 | Claude (Opus 5.5) | El PO difiere la Fase 3 (gestor de expedientes) a v2. La v1 es el registro de sacramentos. | Por confirmar: si la Fase 4 (interoperabilidad) entra en v1. |
 | 2026-09-24 | Claude (Opus 5.5) | El PO confirma que la interoperabilidad entra en v1. Diseño en el plan. 4a (firma HMAC), 4b (tabla y migración) y 4c (endpoints de la instancia y permisos) hechos. Suite completa: 355/355 contra el Postgres desechable en Docker. | Siguiente: 4d (app `hub/`), luego 4e (UI) y 4f (despliegue). |
+| 2026-09-24 | Claude (Opus 5.5) | 4d: hub listo con 10/10 tests. `hub/` queda excluido del tsc de la raíz; el lint de la raíz sí lo revisa (sin warnings nuevos). | Siguiente: 4e (UI de consultas y bandeja). |

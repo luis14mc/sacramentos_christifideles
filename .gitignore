@@ -48,3 +48,6 @@ next-env.d.ts
 
 # prisma
 /node_modules/.prisma/
+
+# Hub de interoperabilidad
+/hub/node_modules
