@@ -79,8 +79,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboardData() {
-      if (!session?.user?.id) return;
-      
+      if (!session?.user?.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('/api/dashboard');
         if (response.ok) {
@@ -96,10 +99,12 @@ export default function DashboardPage() {
       }
     }
 
-    if (session?.user?.id) {
+    if (status === 'authenticated') {
       loadDashboardData();
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, status]);
 
   if (status === 'loading' || loading) {
     return (

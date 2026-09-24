@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +27,9 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Credenciales inválidas. Verifique su email y contraseña.');
       } else {
-        // Redirigir al dashboard después del login exitoso
-        router.push('/dashboard');
-        router.refresh();
+        // Navegación completa para asegurar que la cookie/JWT de NextAuth
+        // esté disponible antes de montar las rutas protegidas.
+        window.location.assign('/dashboard');
       }
     } catch (err) {
       console.error('Login error:', err);
