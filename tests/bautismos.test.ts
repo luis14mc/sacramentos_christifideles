@@ -168,6 +168,21 @@ describe('CREATE /api/bautismos', () => {
     expect(res.status).toBe(201);
   });
 
+  it('permite solo madre -> 201', async () => {
+    setSession(parishA);
+    expect((await createBautismo(makeReq(validBody({ numero_identidad_padre: '' })))).status).toBe(201);
+  });
+
+  it('permite solo padre -> 201', async () => {
+    setSession(parishA);
+    expect((await createBautismo(makeReq(validBody({ numero_identidad_madre: '' })))).status).toBe(201);
+  });
+
+  it('permite filiación no informada -> 201', async () => {
+    setSession(parishA);
+    expect((await createBautismo(makeReq(validBody({ numero_identidad_madre: '', numero_identidad_padre: '' })))).status).toBe(201);
+  });
+
   it('sin sesión -> 401', async () => {
     setSession(null);
     expect((await createBautismo(makeReq(validBody()))).status).toBe(401);
