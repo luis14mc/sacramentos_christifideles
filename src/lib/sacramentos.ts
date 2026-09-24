@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { jsonSafe } from '@/lib/serialize';
 
@@ -61,6 +62,13 @@ export function flattenMinistroRelacion(value: unknown): unknown {
 
 export function jsonSafeSacramento(value: unknown): unknown {
   return jsonSafe(flattenMinistroRelacion(value));
+}
+
+// Respuesta uniforme 400 para validaciones de sacramentos.
+// Usa la clave `message` para mantener consistencia con el resto del backend y
+// con los tests de integración (que esperan `{ message: string }`).
+export function badRequest(message: string): NextResponse {
+  return NextResponse.json({ message }, { status: 400 });
 }
 
 export function isPrismaUniqueError(error: unknown): boolean {

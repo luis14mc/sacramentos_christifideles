@@ -4,9 +4,10 @@ import {
   ministroSelect,
 } from '@/lib/sacramentos';
 
-// Roles que deben existir como Persona dentro de la MISMA parroquia.
-// Padrino y madrina son OPCIONALES individualmente: la regla de negocio v1
-// exige al menos UNO de los dos (ver normalizeBautismoInput).
+// Roles que pueden existir como Persona dentro de la MISMA parroquia.
+// Madre y padre son opcionales e independientes según la documentación civil
+// disponible, pero la regla de negocio v1 exige al menos UNO de los dos
+// (ver normalizeBautismoInput). Padrino y madrina siguen la misma lógica.
 export const ROLES_PERSONA = [
   ['numero_identidad_bautizado', 'bautizado'],
   ['numero_identidad_madre', 'madre'],
@@ -18,9 +19,9 @@ export const ROLES_PERSONA = [
 
 export interface BautismoInput {
   numero_identidad_bautizado: string;
-  numero_identidad_madre: string;
-  numero_identidad_padre: string;
-  // Opcionales: al menos uno entre padrino y madrina debe estar presente.
+  numero_identidad_madre: string | null;
+  numero_identidad_padre: string | null;
+  // Opcionales individualmente: al menos uno entre padrino y madrina debe estar presente.
   numero_identidad_madrina: string | null;
   numero_identidad_padrino: string | null;
   numero_identidad_catequista: string;
@@ -41,16 +42,15 @@ function str(v: unknown): string {
  * Normaliza y valida los campos obligatorios del SQL v3. Devuelve el input
  * tipado o un mensaje de error (para responder 400). No toca la base de datos.
  *
- * Regla v1: padrino y madrina son opcionales individualmente; se exige al
- * menos UNO de los dos. La BD refuerza la misma regla con un CHECK.
+ * Regla v1: madre y padre son opcionales individualmente, pero se exige al
+ * menos UNO de los dos. Padrino y madrina siguen la misma lógica. La BD
+ * refuerza las dos reglas con CHECKs.
  */
 export function normalizeBautismoInput(
   data: Record<string, unknown>
 ): { input: BautismoInput } | { error: string } {
   const requeridosDni: [keyof BautismoInput, string][] = [
     ['numero_identidad_bautizado', 'bautizado'],
-    ['numero_identidad_madre', 'madre'],
-    ['numero_identidad_padre', 'padre'],
     ['numero_identidad_catequista', 'catequista'],
     ['numero_identidad_sacerdote', 'sacerdote'],
   ];
@@ -59,6 +59,17 @@ export function normalizeBautismoInput(
     const v = str(data[field]);
     if (!v) return { error: `Falta el DNI del ${label}` };
     values[field] = v;
+  }
+
+  // Filiación: madre y padre son opcionales individualmente, pero la regla v1
+  // exige al menos UNO de los dos (documentación civil con filiación
+  // parcialmente informada).
+  const madre = str(data.numero_identidad_madre);
+  const padre = str(data.numero_identidad_padre);
+  if (!madre && !padre) {
+    return {
+      error: 'Debe registrar al menos la madre o el padre del bautizado.',
+    };
   }
 
   // Padrino y madrina son opcionales; se admiten vacío o DNI.
@@ -97,8 +108,8 @@ export function normalizeBautismoInput(
   return {
     input: {
       numero_identidad_bautizado: values.numero_identidad_bautizado,
-      numero_identidad_madre: values.numero_identidad_madre,
-      numero_identidad_padre: values.numero_identidad_padre,
+      numero_identidad_madre: madre || null,
+      numero_identidad_padre: padre || null,
       numero_identidad_madrina: madrina || null,
       numero_identidad_padrino: padrino || null,
       numero_identidad_catequista: values.numero_identidad_catequista,
@@ -162,8 +173,6 @@ export function bautismoCreateData(
   const data: Record<string, unknown> = {
     parroquia: { connect: { id_parroquia: parishId } },
     bautizado: connectPersona(input.numero_identidad_bautizado),
-    madre: connectPersona(input.numero_identidad_madre),
-    padre: connectPersona(input.numero_identidad_padre),
     catequista: connectPersona(input.numero_identidad_catequista),
     sacerdote: {
       connect: {
@@ -181,6 +190,12 @@ export function bautismoCreateData(
     nota_marginal: input.nota_marginal,
   };
 
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  }
   if (input.numero_identidad_madrina) {
     data.madrina = connectPersona(input.numero_identidad_madrina);
   }
@@ -209,8 +224,6 @@ export function bautismoUpdateData(
 
   const data: Record<string, unknown> = {
     bautizado: connectPersona(input.numero_identidad_bautizado),
-    madre: connectPersona(input.numero_identidad_madre),
-    padre: connectPersona(input.numero_identidad_padre),
     catequista: connectPersona(input.numero_identidad_catequista),
     sacerdote: {
       connect: {
@@ -229,6 +242,16 @@ export function bautismoUpdateData(
   };
 
   // Opcionales: si hay DNI se conecta la relación; si no, se desconecta.
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  } else {
+    data.madre = { disconnect: true };
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  } else {
+    data.padre = { disconnect: true };
+  }
   if (input.numero_identidad_madrina) {
     data.madrina = connectPersona(input.numero_identidad_madrina);
   } else {

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { jsonSafeSacramento as jsonSafe, ministroSelect } from '@/lib/sacramentos';
+import { jsonSafeSacramento as jsonSafe, ministroSelect, badRequest } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { siguienteRegistro } from '@/lib/numeradores';
 import {
@@ -108,14 +108,14 @@ export async function POST(req: NextRequest) {
     const auto = data.numeracion_automatica === true;
     const parsed = normalizeBautismoInput(data);
     if ('error' in parsed) {
-      return NextResponse.json({ error: parsed.error }, { status: 400 });
+      return badRequest(parsed.error);
     }
     const input: BautismoInput = parsed.input;
 
     // Todas las Personas y el sacerdote deben existir en la misma parroquia.
     const refError = await validarReferenciasTenant(parishId, input);
     if (refError) {
-      return NextResponse.json({ error: refError }, { status: 400 });
+      return badRequest(refError);
     }
 
     // Unicidad registral: pre-check para UX (modo manual); el constraint es la

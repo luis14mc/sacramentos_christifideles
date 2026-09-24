@@ -108,9 +108,18 @@ export default function ComunionForm({ registroId }: { registroId?: string }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Participantes (Personas registradas)</h3>
+        <p className="mb-3 text-xs text-base-content/60">
+          Madre y padre son opcionales e independientes, pero debe informarse al menos uno según la documentación civil disponible.
+        </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {PARTICIPANTES.map(([field, label]) => (
-            <PersonaSelector key={field} label={label} required value={form[field]} onChange={(v) => setField(field, v)} />
+            <PersonaSelector
+              key={field}
+              label={label}
+              required={field !== 'numero_identidad_madre' && field !== 'numero_identidad_padre'}
+              value={form[field]}
+              onChange={(v) => setField(field, v)}
+            />
           ))}
         </div>
       </div>

@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { jsonSafeSacramento as jsonSafe, ministroSelect } from '@/lib/sacramentos';
+import { jsonSafeSacramento as jsonSafe, ministroSelect, badRequest } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { isPrismaUniqueError } from '@/lib/sacramentos';
 import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeComunionInput,
   validarReferenciasComunion,
+  comunionCreateData,
   comunionInclude,
   type ComunionInput,
 } from '@/lib/primera-comunion';
@@ -96,11 +97,11 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const auto = data.numeracion_automatica === true;
     const parsed = normalizeComunionInput(data);
-    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    if ('error' in parsed) return badRequest(parsed.error);
     const input: ComunionInput = parsed.input;
 
     const refError = await validarReferenciasComunion(parishId, input);
-    if (refError) return NextResponse.json({ error: refError }, { status: 400 });
+    if (refError) return badRequest(refError);
 
     if (!auto) {
       const duplicado = await prisma.primeraComunion.findFirst({
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
         ? String(await siguienteRegistro({ tx, parishId, modulo: 'primera_comunion' }))
         : input.numero_registro;
       const registro = await tx.primeraComunion.create({
-        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
+        data: comunionCreateData(input, parishId, { numero_registro: numeroRegistro }) as Prisma.PrimeraComunionCreateInput,
         include: comunionInclude,
       });
       const newValues: Prisma.InputJsonValue = { ...input, numero_registro: numeroRegistro, fecha_primera_comunion: input.fecha_primera_comunion.toISOString() };

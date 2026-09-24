@@ -8,6 +8,7 @@ import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import {
   normalizeConfirmacionInput,
   validarReferenciasConfirmacion,
+  confirmacionUpdateData,
   confirmacionInclude,
   type ConfirmacionInput,
 } from '@/lib/confirmacion';
@@ -105,7 +106,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const actualizado = await prisma.$transaction(async (tx) => {
       const registro = await tx.confirmacion.update({
         where: { id_confirmacion: idConfirmacion },
-        data: { ...input },
+        data: confirmacionUpdateData(input, parishId) as Prisma.ConfirmacionUpdateInput,
         include: confirmacionInclude,
       });
       await registrarBitacora(tx, {

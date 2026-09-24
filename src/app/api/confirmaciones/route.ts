@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
-import { jsonSafeSacramento as jsonSafe, ministroSelect } from '@/lib/sacramentos';
+import { jsonSafeSacramento as jsonSafe, ministroSelect, badRequest } from '@/lib/sacramentos';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import { isPrismaUniqueError } from '@/lib/sacramentos';
 import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeConfirmacionInput,
   validarReferenciasConfirmacion,
+  confirmacionCreateData,
   confirmacionInclude,
   type ConfirmacionInput,
 } from '@/lib/confirmacion';
@@ -96,11 +97,11 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const auto = data.numeracion_automatica === true;
     const parsed = normalizeConfirmacionInput(data);
-    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    if ('error' in parsed) return badRequest(parsed.error);
     const input: ConfirmacionInput = parsed.input;
 
     const refError = await validarReferenciasConfirmacion(parishId, input);
-    if (refError) return NextResponse.json({ error: refError }, { status: 400 });
+    if (refError) return badRequest(refError);
 
     if (!auto) {
       const duplicado = await prisma.confirmacion.findFirst({
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
         ? String(await siguienteRegistro({ tx, parishId, modulo: 'confirmacion' }))
         : input.numero_registro;
       const registro = await tx.confirmacion.create({
-        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
+        data: confirmacionCreateData(input, parishId, { numero_registro: numeroRegistro }) as Prisma.ConfirmacionCreateInput,
         include: confirmacionInclude,
       });
       const newValues: Prisma.InputJsonValue = { ...input, numero_registro: numeroRegistro, fecha_confirmacion: input.fecha_confirmacion.toISOString() };
