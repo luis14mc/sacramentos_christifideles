@@ -66,12 +66,41 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ⬜ Subida (URL firmada), visualización y checklist de requisitos
 - ⬜ Auditoría de subida y eliminación
 
-### Fase 4 — Interoperabilidad (hub)
-- ⬜ Confirmar D5 y D7
-- ⬜ Hub: registro de instancias (código, URL, clave), log de solicitudes
-- ⬜ Auth entre servicios con HMAC (API key por instancia)
-- ⬜ Instancia: bandeja de notificaciones, aprobar o rechazar, respuesta de solo lectura
-- ⬜ Tests de aislamiento: sin aprobación no sale ningún dato
+### Fase 4 — Interoperabilidad (hub) · **ENTRA EN v1, es el diferenciador** · rama `feature/fase4-interoperabilidad`
+
+#### Diseño
+
+```
+Parroquia A (solicita)          Hub central                 Parroquia B (responde)
+──────────────────────          ───────────                 ──────────────────────
+1. Usuario crea consulta ──▶ 2. Registra y reenvía ──▶ 3. Aparece en la bandeja
+   (DNI + motivo)               (sin datos sacramentales)      de notificaciones
+                                                         4. Un usuario aprueba o rechaza
+6. Ve la respuesta     ◀── 5. Reenvía la respuesta ◀──     (si aprueba se arma la respuesta)
+   (solo lectura)               y NO la guarda
+```
+
+- **Hub** (`hub/`, app Next.js mínima con su propio Prisma y Postgres): tabla `instancia` (código, URL, secreto, activa) y tabla `solicitud` (uuid, origen, destino, estado y fechas). **Nunca guarda el DNI en claro ni la respuesta**: guarda el hash SHA-256 del DNI, solo para auditoría.
+- **Instancia** (esta app): tabla `solicitud_interop` con `direccion` `S` (saliente) o `E` (entrante). Endpoints:
+  - `POST /api/interop/solicitudes` (usuario): crea la saliente y la envía al hub
+  - `GET /api/interop/solicitudes?direccion=` (usuario): bandejas
+  - `POST /api/interop/solicitudes/[id]/resolver` (usuario): aprobar o rechazar una entrante
+  - `POST /api/interop/entrantes` (solo el hub, firmado): recibe una solicitud
+  - `POST /api/interop/respuestas` (solo el hub, firmado): recibe una respuesta
+- **Autenticación entre servicios:** HMAC-SHA256 con un secreto compartido entre cada instancia y el hub. Cabeceras `x-interop-instancia`, `x-interop-timestamp` y `x-interop-firma`. La firma cubre `timestamp\nMETHOD\npath\nbody`. Se rechaza un desfase mayor a 5 minutos y la comparación se hace en tiempo constante.
+- **Variables de la instancia:** `INTEROP_HUB_URL`, `INTEROP_SECRET` y `PARROQUIA_CODIGO` (Fase 1).
+- **Datos que se comparten al aprobar** (ajustable por el PO): nombres, apellidos, fecha de nacimiento y, por cada sacramento como sujeto principal, tipo, fecha, libro, página, registro y folio. **Nunca** teléfono, email, dirección ni datos de padres o padrinos.
+- **Estados:** `pendiente` → `aprobada` o `rechazada`. Si falla la entrega: `error_envio`.
+- **Auditoría:** cada creación y cada resolución se registra en `bitacora_crud`.
+
+#### Casillas
+- ✅ D5 aprobación manual y D7 hub en `hub/` (asumidas con el OK del PO)
+- ✅ 4a. `src/lib/interop/firma.ts` (firmar y verificar) + `tests/interop-firma.test.ts` (5/5, pura)
+- ✅ 4b. Modelo `SolicitudInterop`, migración `20260925090000_solicitud_interop` (con CHECK de dirección y estado) y alineación con `docs/christi_fidelis_bdd_pg_v3.sql`. Migración generada con `prisma migrate diff`, **sin aplicar todavía a ninguna BD**
+- ⬜ 4c. Endpoints de la instancia + tests (aislamiento: sin aprobación no sale ningún dato)
+- ⬜ 4d. App `hub/`: esquema, registro de instancias, reenvío y tests
+- ⬜ 4e. UI: nueva consulta, bandeja con contador en el menú, aprobar o rechazar, ver respuesta
+- ⬜ 4f. Docs de despliegue: tres servicios en Railway y rotación de secretos
 
 ## Instrucciones para agentes
 

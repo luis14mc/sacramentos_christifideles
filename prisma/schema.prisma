@@ -51,6 +51,7 @@ model Parroquia {
   plantillas          PlantillaConstancia[]
   primeras_comuniones PrimeraComunion[]
   sectores            SectorParroquial[]
+  solicitudes_interop SolicitudInterop[]
   usuarios            Usuario[]
 
   @@map("parroquia")
@@ -514,4 +515,31 @@ model BitacoraPersonaParroquia {
   parroquia        Parroquia @relation(fields: [id_parroquia], references: [id_parroquia])
 
   @@map("bitacora_persona_parroquia")
+}
+
+/// Consulta entre parroquias vía hub (solo lectura). Ver docs/PLAN_MULTIPARROQUIA.md, Fase 4.
+/// direccion: 'S' = saliente (esta parroquia pregunta), 'E' = entrante (otra parroquia pregunta).
+model SolicitudInterop {
+  id_solicitud                 BigInt    @id @default(autoincrement())
+  id_parroquia                 Int       @db.SmallInt
+  /// Identificador global asignado por el hub; común a ambas instancias.
+  uuid                         String?   @unique @db.Uuid
+  direccion                    String    @db.Char(1)
+  codigo_parroquia_contraparte String    @db.VarChar(50)
+  nombre_parroquia_contraparte String?   @db.VarChar(100)
+  numero_identidad_consultado  String    @db.VarChar(20)
+  motivo                       String    @db.VarChar(500)
+  /// pendiente | aprobada | rechazada | error_envio
+  estado                       String    @default("pendiente") @db.VarChar(20)
+  id_usuario_solicitante       BigInt?
+  id_usuario_resolutor         BigInt?
+  motivo_rechazo               String?   @db.VarChar(500)
+  /// Solo en salientes aprobadas: datos recibidos de la otra parroquia.
+  respuesta                    Json?
+  created_at                   DateTime  @default(now()) @db.Timestamptz(6)
+  resuelta_at                  DateTime? @db.Timestamptz(6)
+  parroquia                    Parroquia @relation(fields: [id_parroquia], references: [id_parroquia], onUpdate: Restrict)
+
+  @@index([id_parroquia, direccion, estado, created_at])
+  @@map("solicitud_interop")
 }
