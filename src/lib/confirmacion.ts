@@ -8,8 +8,8 @@ import {
 
 export interface ConfirmacionInput {
   numero_identidad_confirmado: string;
-  numero_identidad_madre: string;
-  numero_identidad_padre: string;
+  numero_identidad_madre: string | null;
+  numero_identidad_padre: string | null;
   numero_identidad_madrina: string;
   numero_identidad_padrino: string;
   numero_identidad_catequista: string;
@@ -24,8 +24,6 @@ export interface ConfirmacionInput {
 
 const DNI_FIELDS: [keyof ConfirmacionInput, string][] = [
   ['numero_identidad_confirmado', 'confirmado'],
-  ['numero_identidad_madre', 'madre'],
-  ['numero_identidad_padre', 'padre'],
   ['numero_identidad_madrina', 'madrina'],
   ['numero_identidad_padrino', 'padrino'],
   ['numero_identidad_catequista', 'catequista'],
@@ -48,6 +46,9 @@ export function normalizeConfirmacionInput(
     if (!v) return { error: `Falta el DNI del ${label}` };
     values[field] = v;
   }
+  const madre = trimStr(data.numero_identidad_madre);
+  const padre = trimStr(data.numero_identidad_padre);
+
   for (const [field, label] of REGISTRAL_REQUERIDOS) {
     const v = trimStr(data[field]);
     if (!v) return { error: `El número de ${label} es obligatorio` };
@@ -68,8 +69,8 @@ export function normalizeConfirmacionInput(
   return {
     input: {
       numero_identidad_confirmado: values.numero_identidad_confirmado,
-      numero_identidad_madre: values.numero_identidad_madre,
-      numero_identidad_padre: values.numero_identidad_padre,
+      numero_identidad_madre: madre || null,
+      numero_identidad_padre: padre || null,
       numero_identidad_madrina: values.numero_identidad_madrina,
       numero_identidad_padrino: values.numero_identidad_padrino,
       numero_identidad_catequista: values.numero_identidad_catequista,
@@ -90,8 +91,8 @@ export async function validarReferenciasConfirmacion(
 ): Promise<string | null> {
   const personas = await validarPersonasTenant(parishId, [
     { label: 'confirmado', dni: input.numero_identidad_confirmado },
-    { label: 'madre', dni: input.numero_identidad_madre },
-    { label: 'padre', dni: input.numero_identidad_padre },
+    ...(input.numero_identidad_madre ? [{ label: 'madre', dni: input.numero_identidad_madre }] : []),
+    ...(input.numero_identidad_padre ? [{ label: 'padre', dni: input.numero_identidad_padre }] : []),
     { label: 'madrina', dni: input.numero_identidad_madrina },
     { label: 'padrino', dni: input.numero_identidad_padrino },
     { label: 'catequista', dni: input.numero_identidad_catequista },
