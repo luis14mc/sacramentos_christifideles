@@ -129,7 +129,7 @@ export default function BautismoForm({ bautismoId }: { bautismoId?: string }) {
       <div className="rounded-xl shadow-sm border border-base-300 bg-base-100 p-6">
         <h3 className="mb-3 font-semibold">Participantes (Personas registradas)</h3>
         <p className="mb-3 text-xs text-base-content/60">
-          Madre y padre son opcionales e independientes; registre únicamente los datos disponibles en la documentación.
+          Madre y padre son opcionales e independientes, pero debe informarse al menos uno según la documentación civil disponible.
         </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {PARTICIPANTES.map(([field, label]) => (

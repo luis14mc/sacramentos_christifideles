@@ -5,9 +5,9 @@ import {
 } from '@/lib/sacramentos';
 
 // Roles que pueden existir como Persona dentro de la MISMA parroquia.
-// Madre y padre son opcionales e independientes según la documentación civil disponible.
-// Padrino y madrina son opcionales individualmente: la regla de negocio v1
-// exige al menos UNO de los dos (ver normalizeBautismoInput).
+// Madre y padre son opcionales e independientes según la documentación civil
+// disponible, pero la regla de negocio v1 exige al menos UNO de los dos
+// (ver normalizeBautismoInput). Padrino y madrina siguen la misma lógica.
 export const ROLES_PERSONA = [
   ['numero_identidad_bautizado', 'bautizado'],
   ['numero_identidad_madre', 'madre'],
@@ -21,7 +21,7 @@ export interface BautismoInput {
   numero_identidad_bautizado: string;
   numero_identidad_madre: string | null;
   numero_identidad_padre: string | null;
-  // Opcionales: al menos uno entre padrino y madrina debe estar presente.
+  // Opcionales individualmente: al menos uno entre padrino y madrina debe estar presente.
   numero_identidad_madrina: string | null;
   numero_identidad_padrino: string | null;
   numero_identidad_catequista: string;
@@ -42,8 +42,9 @@ function str(v: unknown): string {
  * Normaliza y valida los campos obligatorios del SQL v3. Devuelve el input
  * tipado o un mensaje de error (para responder 400). No toca la base de datos.
  *
- * Regla v1: padrino y madrina son opcionales individualmente; se exige al
- * menos UNO de los dos. La BD refuerza la misma regla con un CHECK.
+ * Regla v1: madre y padre son opcionales individualmente, pero se exige al
+ * menos UNO de los dos. Padrino y madrina siguen la misma lógica. La BD
+ * refuerza las dos reglas con CHECKs.
  */
 export function normalizeBautismoInput(
   data: Record<string, unknown>
@@ -60,9 +61,16 @@ export function normalizeBautismoInput(
     values[field] = v;
   }
 
-  // Filiación opcional: se admite madre, padre, ambos o ninguno.
+  // Filiación: madre y padre son opcionales individualmente, pero la regla v1
+  // exige al menos UNO de los dos (documentación civil con filiación
+  // parcialmente informada).
   const madre = str(data.numero_identidad_madre);
   const padre = str(data.numero_identidad_padre);
+  if (!madre && !padre) {
+    return {
+      error: 'Debe registrar al menos la madre o el padre del bautizado.',
+    };
+  }
 
   // Padrino y madrina son opcionales; se admiten vacío o DNI.
   const madrina = str(data.numero_identidad_madrina);

@@ -10,6 +10,7 @@ import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeConfirmacionInput,
   validarReferenciasConfirmacion,
+  confirmacionCreateData,
   confirmacionInclude,
   type ConfirmacionInput,
 } from '@/lib/confirmacion';
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
         ? String(await siguienteRegistro({ tx, parishId, modulo: 'confirmacion' }))
         : input.numero_registro;
       const registro = await tx.confirmacion.create({
-        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
+        data: confirmacionCreateData(input, parishId, { numero_registro: numeroRegistro }) as Prisma.ConfirmacionCreateInput,
         include: confirmacionInclude,
       });
       const newValues: Prisma.InputJsonValue = { ...input, numero_registro: numeroRegistro, fecha_confirmacion: input.fecha_confirmacion.toISOString() };

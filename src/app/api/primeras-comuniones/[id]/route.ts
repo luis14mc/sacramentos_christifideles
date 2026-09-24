@@ -8,6 +8,7 @@ import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
 import {
   normalizeComunionInput,
   validarReferenciasComunion,
+  comunionUpdateData,
   comunionInclude,
   type ComunionInput,
 } from '@/lib/primera-comunion';
@@ -105,7 +106,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const actualizado = await prisma.$transaction(async (tx) => {
       const registro = await tx.primeraComunion.update({
         where: { id_primera_comunion: idComunion },
-        data: { ...input },
+        data: comunionUpdateData(input, parishId) as Prisma.PrimeraComunionUpdateInput,
         include: comunionInclude,
       });
       await registrarBitacora(tx, {

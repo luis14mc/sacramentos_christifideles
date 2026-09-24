@@ -8,6 +8,7 @@ import {
 
 export interface ConfirmacionInput {
   numero_identidad_confirmado: string;
+  // Madre y padre opcionales individualmente; al menos UNO debe estar presente.
   numero_identidad_madre: string | null;
   numero_identidad_padre: string | null;
   numero_identidad_madrina: string;
@@ -48,6 +49,11 @@ export function normalizeConfirmacionInput(
   }
   const madre = trimStr(data.numero_identidad_madre);
   const padre = trimStr(data.numero_identidad_padre);
+  if (!madre && !padre) {
+    return {
+      error: 'Debe registrar al menos la madre o el padre del confirmado.',
+    };
+  }
 
   for (const [field, label] of REGISTRAL_REQUERIDOS) {
     const v = trimStr(data[field]);
@@ -83,6 +89,90 @@ export function normalizeConfirmacionInput(
       nota_marginal: nota,
     },
   };
+}
+
+export function confirmacionCreateData(
+  input: ConfirmacionInput,
+  parishId: number,
+  overrides: { numero_registro?: string } = {}
+): Record<string, unknown> {
+  const connectPersona = (numero_identidad: string) => ({
+    connect: { id_parroquia_numero_identidad: { id_parroquia: parishId, numero_identidad } },
+  });
+
+  const data: Record<string, unknown> = {
+    parroquia: { connect: { id_parroquia: parishId } },
+    confirmado: connectPersona(input.numero_identidad_confirmado),
+    madrina: connectPersona(input.numero_identidad_madrina),
+    padrino: connectPersona(input.numero_identidad_padrino),
+    catequista: connectPersona(input.numero_identidad_catequista),
+    obispo: {
+      connect: {
+        id_parroquia_numero_identidad: {
+          id_parroquia: parishId,
+          numero_identidad: input.numero_identidad_obispo,
+        },
+      },
+    },
+    fecha_confirmacion: input.fecha_confirmacion,
+    numero_acta: input.numero_acta,
+    numero_libro: input.numero_libro,
+    numero_pagina: input.numero_pagina,
+    numero_registro: overrides.numero_registro ?? input.numero_registro,
+    nota_marginal: input.nota_marginal,
+  };
+
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  }
+
+  return data;
+}
+
+export function confirmacionUpdateData(
+  input: ConfirmacionInput,
+  parishId: number
+): Record<string, unknown> {
+  const connectPersona = (numero_identidad: string) => ({
+    connect: { id_parroquia_numero_identidad: { id_parroquia: parishId, numero_identidad } },
+  });
+
+  const data: Record<string, unknown> = {
+    confirmado: connectPersona(input.numero_identidad_confirmado),
+    madrina: connectPersona(input.numero_identidad_madrina),
+    padrino: connectPersona(input.numero_identidad_padrino),
+    catequista: connectPersona(input.numero_identidad_catequista),
+    obispo: {
+      connect: {
+        id_parroquia_numero_identidad: {
+          id_parroquia: parishId,
+          numero_identidad: input.numero_identidad_obispo,
+        },
+      },
+    },
+    fecha_confirmacion: input.fecha_confirmacion,
+    numero_acta: input.numero_acta,
+    numero_libro: input.numero_libro,
+    numero_pagina: input.numero_pagina,
+    numero_registro: input.numero_registro,
+    nota_marginal: input.nota_marginal,
+  };
+
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  } else {
+    data.madre = { disconnect: true };
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  } else {
+    data.padre = { disconnect: true };
+  }
+
+  return data;
 }
 
 export async function validarReferenciasConfirmacion(

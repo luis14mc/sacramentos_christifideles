@@ -10,6 +10,7 @@ import { siguienteRegistro } from '@/lib/numeradores';
 import {
   normalizeComunionInput,
   validarReferenciasComunion,
+  comunionCreateData,
   comunionInclude,
   type ComunionInput,
 } from '@/lib/primera-comunion';
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
         ? String(await siguienteRegistro({ tx, parishId, modulo: 'primera_comunion' }))
         : input.numero_registro;
       const registro = await tx.primeraComunion.create({
-        data: { id_parroquia: parishId, ...input, numero_registro: numeroRegistro },
+        data: comunionCreateData(input, parishId, { numero_registro: numeroRegistro }) as Prisma.PrimeraComunionCreateInput,
         include: comunionInclude,
       });
       const newValues: Prisma.InputJsonValue = { ...input, numero_registro: numeroRegistro, fecha_primera_comunion: input.fecha_primera_comunion.toISOString() };

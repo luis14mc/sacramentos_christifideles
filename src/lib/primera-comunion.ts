@@ -8,6 +8,7 @@ import {
 
 export interface ComunionInput {
   numero_identidad_persona: string;
+  // Madre y padre opcionales individualmente; al menos UNO debe estar presente.
   numero_identidad_madre: string | null;
   numero_identidad_padre: string | null;
   numero_identidad_catequista: string;
@@ -44,6 +45,11 @@ export function normalizeComunionInput(
   }
   const madre = trimStr(data.numero_identidad_madre);
   const padre = trimStr(data.numero_identidad_padre);
+  if (!madre && !padre) {
+    return {
+      error: 'Debe registrar al menos la madre o el padre del comulgante.',
+    };
+  }
 
   for (const [field, label] of REGISTRAL_FIELDS) {
     const v = trimStr(data[field]);
@@ -76,6 +82,86 @@ export function normalizeComunionInput(
       nota_marginal: nota,
     },
   };
+}
+
+export function comunionCreateData(
+  input: ComunionInput,
+  parishId: number,
+  overrides: { numero_registro?: string } = {}
+): Record<string, unknown> {
+  const connectPersona = (numero_identidad: string) => ({
+    connect: { id_parroquia_numero_identidad: { id_parroquia: parishId, numero_identidad } },
+  });
+
+  const data: Record<string, unknown> = {
+    parroquia: { connect: { id_parroquia: parishId } },
+    persona: connectPersona(input.numero_identidad_persona),
+    catequista: connectPersona(input.numero_identidad_catequista),
+    sacerdote: {
+      connect: {
+        id_parroquia_numero_identidad: {
+          id_parroquia: parishId,
+          numero_identidad: input.numero_identidad_sacerdote,
+        },
+      },
+    },
+    fecha_primera_comunion: input.fecha_primera_comunion,
+    numero_acta: input.numero_acta,
+    numero_libro: input.numero_libro,
+    numero_pagina: input.numero_pagina,
+    numero_registro: overrides.numero_registro ?? input.numero_registro,
+    nota_marginal: input.nota_marginal,
+  };
+
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  }
+
+  return data;
+}
+
+export function comunionUpdateData(
+  input: ComunionInput,
+  parishId: number
+): Record<string, unknown> {
+  const connectPersona = (numero_identidad: string) => ({
+    connect: { id_parroquia_numero_identidad: { id_parroquia: parishId, numero_identidad } },
+  });
+
+  const data: Record<string, unknown> = {
+    persona: connectPersona(input.numero_identidad_persona),
+    catequista: connectPersona(input.numero_identidad_catequista),
+    sacerdote: {
+      connect: {
+        id_parroquia_numero_identidad: {
+          id_parroquia: parishId,
+          numero_identidad: input.numero_identidad_sacerdote,
+        },
+      },
+    },
+    fecha_primera_comunion: input.fecha_primera_comunion,
+    numero_acta: input.numero_acta,
+    numero_libro: input.numero_libro,
+    numero_pagina: input.numero_pagina,
+    numero_registro: input.numero_registro,
+    nota_marginal: input.nota_marginal,
+  };
+
+  if (input.numero_identidad_madre) {
+    data.madre = connectPersona(input.numero_identidad_madre);
+  } else {
+    data.madre = { disconnect: true };
+  }
+  if (input.numero_identidad_padre) {
+    data.padre = connectPersona(input.numero_identidad_padre);
+  } else {
+    data.padre = { disconnect: true };
+  }
+
+  return data;
 }
 
 export async function validarReferenciasComunion(
