@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Orden religiosa opcional en Persona: solo se exige para clérigos
-    // (orden_sacerdotal). Si llega informada, validamos que exista.
+    // (orden_sacerdotal). Si llega informada, validamos rango y existencia.
     const idOrdenReligiosaRaw = data.id_orden_religiosa;
     let idOrdenReligiosa: number | null = null;
     if (
@@ -158,7 +158,11 @@ export async function POST(req: NextRequest) {
       idOrdenReligiosaRaw !== ''
     ) {
       const parsed = Number(idOrdenReligiosaRaw);
-      if (!Number.isInteger(parsed)) {
+      if (
+        !Number.isInteger(parsed) ||
+        parsed <= 0 ||
+        parsed > 32_767
+      ) {
         return NextResponse.json({ error: 'Orden religiosa inválida' }, { status: 400 });
       }
       const orden = await prisma.ordenReligiosa.findUnique({
