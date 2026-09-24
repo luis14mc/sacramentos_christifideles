@@ -45,7 +45,7 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ✅ `prisma/seed.ts` toma la parroquia de `PARROQUIA_*` (fallback: Cristo Resucitado)
 - ✅ `tests/instancia.test.ts`
 - ✅ Docs: `docs/RAILWAY_DEPLOYMENT.md` §3.1 y `.env.example`
-- ⬜ Correr `tests/instancia.test.ts` contra una BD de test (en local falta `TEST_DATABASE_URL`)
+- ✅ `tests/instancia.test.ts` pasa contra la BD de test
 - ⬜ Crear los dos servicios en Railway con sus variables (lo hace el PO)
 
 ### Fase 2 — Sacramentos en el módulo Personas · rama `feature/fase2-sacramentos-en-personas` (apilada sobre fase 1)
@@ -97,7 +97,7 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 - ✅ D5 aprobación manual y D7 hub en `hub/` (asumidas con el OK del PO)
 - ✅ 4a. `src/lib/interop/firma.ts` (firmar y verificar) + `tests/interop-firma.test.ts` (5/5, pura)
 - ✅ 4b. Modelo `SolicitudInterop`, migración `20260925090000_solicitud_interop` (con CHECK de dirección y estado) y alineación con `docs/christi_fidelis_bdd_pg_v3.sql`. Migración generada con `prisma migrate diff`, **sin aplicar todavía a ninguna BD**
-- ⬜ 4c. Endpoints de la instancia + tests (aislamiento: sin aprobación no sale ningún dato)
+- ✅ 4c. Endpoints de la instancia (`src/app/api/interop/*`, `src/lib/interop/{cliente,contrato,respuesta,solicitudes}.ts`) + `tests/interop.test.ts` (13). Permisos nuevos: `canSolicitarInterop` (admin, párroco, clero, secretario) y `canResolverInterop` (admin, párroco, clero; **no** secretario, ajustable por el PO). Las entrantes y respuestas que llegan del hub no generan `bitacora_crud` (no hay usuario); la fila de `solicitud_interop` es la traza
 - ⬜ 4d. App `hub/`: esquema, registro de instancias, reenvío y tests
 - ⬜ 4e. UI: nueva consulta, bandeja con contador en el menú, aprobar o rechazar, ver respuesta
 - ⬜ 4f. Docs de despliegue: tres servicios en Railway y rotación de secretos
@@ -109,7 +109,12 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
    **Cada agente trabaja en su propio `git worktree`** (`git worktree add ../sacramentos-<rama> <rama>`). Nunca cambies de rama, hagas `reset`/`stash` ni commits en la carpeta de otro agente: dos agentes en la misma carpeta se pisan el trabajo (ya pasó el 2026-09-24).
 3. **No leas ni modifiques `.env`** ni ningún archivo de secretos. No uses `sudo`, `docker` ni rutas fuera del repo.
 4. No toques `prisma/schema.prisma` ni migraciones salvo que la casilla lo pida. Si lo pide, crea una migración versionada (nunca `db push`).
-5. Verifica antes de reportar: `pnpm exec tsc --noEmit`, `pnpm lint` y los tests del área (necesitan `TEST_DATABASE_URL` apuntando a una BD `*_test`).
+5. Verifica antes de reportar: `pnpm exec tsc --noEmit`, `pnpm lint` y los tests. BD de test desechable:
+   ```bash
+   docker run -d --name christifideles-test-db -e POSTGRES_PASSWORD=test -e POSTGRES_DB=christifideles_test -p 127.0.0.1:55432:5432 postgres:16-alpine
+   export TEST_DATABASE_URL=postgresql://postgres:test@localhost:55432/christifideles_test
+   DATABASE_URL=$TEST_DATABASE_URL pnpm exec prisma migrate deploy && pnpm test
+   ```
 6. **No hagas commits ni push**: el revisor (Claude) revisa el diff y hace el commit.
 7. Al terminar, actualiza **Estado** (✅/🟡) y agrega una entrada en **Bitácora**: fecha, agente/modelo, qué hiciste, qué quedó pendiente y cómo verificarlo. Si algo falló, dilo tal cual.
 8. Ante una duda que afecte la integridad sacramental, la seguridad o el aislamiento entre parroquias: detente y déjala anotada en la Bitácora para el PO.
@@ -121,3 +126,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-09-24 | Claude (Opus 5.5) | Plan y decisiones. Fase 1 implementada: seed por env, `/api/instancia`, tests y docs. | Tests de ruta sin ejecutar en local (falta `TEST_DATABASE_URL`); la lógica pura se validó aparte. Intentos de delegar a Gemini (cuota gratuita sin Pro) y MiniMax M3 (salió del repo: docker/sudo) fallaron sin dejar cambios. Otra sesión opencode en la misma carpeta metió estos archivos en su commit y luego hizo reset; se recuperaron desde `13ecf37` al worktree `../sacramentos_christifideles-fase1`. |
 | 2026-09-24 | Claude (Opus 5.5) | Fase 1 rebaseada sobre `master` (PR #31 mergeado). Fase 2: resumen de sacramentos en `GET /api/personas`, filtros e insignias en el listado, acceso al expediente. | Falta correr los tests de API con BD de test y hacer `pnpm build` completo. Pendiente: insignias en `/buscar`. |
 | 2026-09-24 | Claude (Opus 5.5) | El PO difiere la Fase 3 (gestor de expedientes) a v2. La v1 es el registro de sacramentos. | Por confirmar: si la Fase 4 (interoperabilidad) entra en v1. |
+| 2026-09-24 | Claude (Opus 5.5) | El PO confirma que la interoperabilidad entra en v1. Diseño en el plan. 4a (firma HMAC), 4b (tabla y migración) y 4c (endpoints de la instancia y permisos) hechos. Suite completa: 355/355 contra el Postgres desechable en Docker. | Siguiente: 4d (app `hub/`), luego 4e (UI) y 4f (despliegue). |
