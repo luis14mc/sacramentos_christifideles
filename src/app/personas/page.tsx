@@ -18,6 +18,7 @@ import {
   FolderOpenIcon
 } from '@heroicons/react/24/outline';
 import type { ResumenSacramentos, SacramentoResumen } from '@/lib/persona';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const SACRAMENTO_INSIGNIA: Record<SacramentoResumen, { corto: string; nombre: string }> = {
   bautismo: { corto: 'B', nombre: 'Bautismo' },
@@ -54,6 +55,7 @@ interface Persona {
 
 export default function PersonasPage() {
   const router = useRouter();
+  const permisos = usePermissions();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -516,6 +518,7 @@ export default function PersonasPage() {
                             >
                               <PencilSquareIcon className="h-4 w-4" />
                             </button>
+{permisos.canDeletePersonas && (
                             <button
                               onClick={() => eliminarPersona(persona.numero_identidad)}
                               className="btn btn-ghost btn-xs hover:bg-error/20 hover:text-error transition-colors"
@@ -523,6 +526,7 @@ export default function PersonasPage() {
                             >
                               <TrashIcon className="h-4 w-4" />
                             </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -607,7 +611,7 @@ export default function PersonasPage() {
           onClose={cerrarModalVista}
           personaId={viewingPersonaId}
           onEdit={handleEditFromView}
-          onDelete={eliminarPersona}
+          onDelete={permisos.canDeletePersonas ? eliminarPersona : undefined}
         />
     </AuthenticatedLayout>
   );

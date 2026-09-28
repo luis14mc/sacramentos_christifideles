@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import Swal from 'sweetalert2';
+import { pedirJustificacion } from '@/components/sacramentos/pedirJustificacion';
 import { 
   ArrowLeftIcon,
   CheckIcon
@@ -153,6 +154,9 @@ export default function EditarPersona() {
       return;
     }
 
+    const justificacion = await pedirJustificacion();
+    if (!justificacion) return;
+
     try {
       setSaving(true);
       
@@ -161,10 +165,8 @@ export default function EditarPersona() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          id_parroquia: 3 // Parroquia Cristo Resucitado
-        }),
+        // La parroquia la determina el servidor desde la sesión.
+        body: JSON.stringify({ ...formData, justificacion }),
       });
 
       if (response.ok) {

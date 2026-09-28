@@ -45,6 +45,11 @@ function makeReq(body: unknown): NextRequest {
   }) as unknown as NextRequest;
 }
 
+/** PUT con la justificación obligatoria de modificación. */
+function putReq(body: object): NextRequest {
+  return makeReq({ ...body, justificacion: 'Corrección solicitada por el feligrés' });
+}
+
 function listReq(query = ''): NextRequest {
   return new Request(`http://test.local/api/personas${query}`) as unknown as NextRequest;
 }
@@ -280,7 +285,7 @@ describe('UPDATE /api/personas/[id]', () => {
   it('actualiza una Persona propia -> 200', async () => {
     await seedPersona(parishA, 'A3001', sectorA);
     setSession(parishA);
-    const res = await updatePersona(makeReq({ nombres: 'Nuevo' }), ctx('A3001'));
+    const res = await updatePersona(putReq({ nombres: 'Nuevo' }), ctx('A3001'));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.nombres).toBe('Nuevo');
@@ -289,42 +294,42 @@ describe('UPDATE /api/personas/[id]', () => {
   it('cross-tenant -> 404', async () => {
     await seedPersona(parishA, 'A3002', sectorA);
     setSession(parishB);
-    const res = await updatePersona(makeReq({ nombres: 'X' }), ctx('A3002'));
+    const res = await updatePersona(putReq({ nombres: 'X' }), ctx('A3002'));
     expect(res.status).toBe(404);
   });
 
   it('rechaza cambiar el DNI -> 400', async () => {
     await seedPersona(parishA, 'A3003', sectorA);
     setSession(parishA);
-    const res = await updatePersona(makeReq({ numero_identidad: 'OTRO' }), ctx('A3003'));
+    const res = await updatePersona(putReq({ numero_identidad: 'OTRO' }), ctx('A3003'));
     expect(res.status).toBe(400);
   });
 
   it('rechaza nombres vacíos -> 400', async () => {
     await seedPersona(parishA, 'A3004', sectorA);
     setSession(parishA);
-    const res = await updatePersona(makeReq({ nombres: '   ' }), ctx('A3004'));
+    const res = await updatePersona(putReq({ nombres: '   ' }), ctx('A3004'));
     expect(res.status).toBe(400);
   });
 
   it('rechaza apellidos vacíos -> 400', async () => {
     await seedPersona(parishA, 'A3005', sectorA);
     setSession(parishA);
-    const res = await updatePersona(makeReq({ apellidos: '' }), ctx('A3005'));
+    const res = await updatePersona(putReq({ apellidos: '' }), ctx('A3005'));
     expect(res.status).toBe(400);
   });
 
   it('rechaza teléfono vacío -> 400', async () => {
     await seedPersona(parishA, 'A3006', sectorA);
     setSession(parishA);
-    const res = await updatePersona(makeReq({ telefono: '   ' }), ctx('A3006'));
+    const res = await updatePersona(putReq({ telefono: '   ' }), ctx('A3006'));
     expect(res.status).toBe(400);
   });
 
   it('rechaza fecha de nacimiento inválida -> 400', async () => {
     await seedPersona(parishA, 'A3007', sectorA);
     setSession(parishA);
-    const res = await updatePersona(makeReq({ fecha_nacimiento: 'fecha-invalida' }), ctx('A3007'));
+    const res = await updatePersona(putReq({ fecha_nacimiento: 'fecha-invalida' }), ctx('A3007'));
     expect(res.status).toBe(400);
   });
 });
@@ -376,7 +381,7 @@ describe('RBAC', () => {
   it('solo lectura NO puede editar -> 403', async () => {
     await seedPersona(parishA, 'A5003', sectorA);
     setSession(parishA, 'solo lectura');
-    const res = await updatePersona(makeReq({ nombres: 'No permitido' }), ctx('A5003'));
+    const res = await updatePersona(putReq({ nombres: 'No permitido' }), ctx('A5003'));
     expect(res.status).toBe(403);
   });
 
@@ -391,5 +396,32 @@ describe('RBAC', () => {
     setSession(parishA, 'administrador');
     const res = await createPersona(makeReq(validBody('A5002', sectorA)));
     expect(res.status).toBe(201);
+  });
+
+  it('PUT sin justificación -> 400', async () => {
+    await seedPersona(parishA, 'A5010', sectorA);
+    setSession(parishA);
+    const res = await updatePersona(makeReq({ nombres: 'Sin motivo' }), ctx('A5010'));
+    expect(res.status).toBe(400);
+  });
+
+  it('secretaria crea y edita personas con justificación', async () => {
+    setSession(parishA, 'secretaria');
+    const creada = await createPersona(makeReq(validBody('A5011', sectorA)));
+    expect(creada.status).toBe(201);
+    const editada = await updatePersona(putReq({ nombres: 'Editada' }), ctx('A5011'));
+    expect(editada.status).toBe(200);
+    const audit = await prisma.bitacoraCrud.findFirst({
+      where: { nombre_tabla: 'persona', accion: 'U', id_parroquia: parishA },
+      orderBy: { id_accion: 'desc' },
+    });
+    expect(audit?.new_values).toMatchObject({ justificacion: 'Corrección solicitada por el feligrés' });
+  });
+
+  it('secretaria NO puede borrar personas -> 403', async () => {
+    await seedPersona(parishA, 'A5012', sectorA);
+    setSession(parishA, 'secretaria');
+    const res = await deletePersona(makeReq({}), ctx('A5012'));
+    expect(res.status).toBe(403);
   });
 });

@@ -46,7 +46,8 @@ interface Props {
   onClose: () => void;
   personaId: string | null;
   onEdit: (personaId: string) => void;
-  onDelete: (personaId: string) => void;
+  /** Si se omite, no se muestra el botón Eliminar (sin permiso de borrado). */
+  onDelete?: (personaId: string) => void;
 }
 
 export default function PersonaViewModal({ isOpen, onClose, personaId, onEdit, onDelete }: Props) {
@@ -100,7 +101,7 @@ export default function PersonaViewModal({ isOpen, onClose, personaId, onEdit, o
   };
 
   const handleDelete = () => {
-    if (personaId) {
+    if (personaId && onDelete) {
       onClose();
       onDelete(personaId);
     }
@@ -321,14 +322,16 @@ export default function PersonaViewModal({ isOpen, onClose, personaId, onEdit, o
           >
             Cerrar
           </button>
-          <button
-            onClick={handleDelete}
-            className="btn btn-error gap-2"
-            disabled={!persona}
-          >
-            <TrashIcon className="h-4 w-4" />
-            Eliminar
-          </button>
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              className="btn btn-error gap-2"
+              disabled={!persona}
+            >
+              <TrashIcon className="h-4 w-4" />
+              Eliminar
+            </button>
+          )}
           <button
             onClick={handleEdit}
             className="btn btn-primary gap-2"

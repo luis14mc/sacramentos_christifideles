@@ -32,6 +32,8 @@ describe('permissions: matriz de roles', () => {
     expect(hasPermission('secretaria', 'canEditSacramentos')).toBe(true);
     expect(hasPermission('secretaria', 'canDeleteSacramentos')).toBe(false);
     expect(hasPermission('secretaria', 'canResolverInterop')).toBe(false);
+    expect(hasPermission('secretaria', 'canManagePersonas')).toBe(true);
+    expect(hasPermission('secretaria', 'canDeletePersonas')).toBe(false);
     expect(hasPermission('secretaria', 'canGenerateConstancias')).toBe(true);
     expect(hasPermission('secretaria', 'canManageConfiguracion')).toBe(false);
   });

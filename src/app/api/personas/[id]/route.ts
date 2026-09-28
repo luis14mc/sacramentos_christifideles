@@ -10,6 +10,7 @@ import {
   isEstadoActivoValido,
 } from '@/lib/persona';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
+import { ERROR_JUSTIFICACION, leerJustificacion } from '@/lib/justificacion';
 
 const personaInclude = {
   sector: { select: { nombre: true } },
@@ -80,6 +81,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id: numeroIdentidad } = await params;
     const data = await req.json();
+
+    // Toda modificación de una persona exige justificación (auditoría).
+    const justificacion = leerJustificacion(data.justificacion);
+    if (!justificacion) {
+      return NextResponse.json({ error: ERROR_JUSTIFICACION }, { status: 400 });
+    }
 
     // El DNI es identidad estable: no se cambia desde un PUT normal.
     if (
@@ -278,7 +285,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         userId,
         accion: 'U',
         nombreTabla: 'persona',
-        newValues: { numero_identidad: numeroIdentidad },
+        newValues: { numero_identidad: numeroIdentidad, justificacion },
         actorIp,
         userAgent,
       });
@@ -299,7 +306,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    if (!hasPermission(context.session.user.rol, 'canManagePersonas')) {
+    if (!hasPermission(context.session.user.rol, 'canDeletePersonas')) {
       return NextResponse.json({ error: 'No tienes permiso para eliminar personas' }, { status: 403 });
     }
 
