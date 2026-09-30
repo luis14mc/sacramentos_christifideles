@@ -30,7 +30,7 @@ export default function PrimerasComunionesPage() {
 
   const cargar = (q = '') => {
     setLoading(true);
-    const url = q ? `/api/primeras-comuniones?nombre=${encodeURIComponent(q)}` : '/api/primeras-comuniones';
+    const url = q ? `/api/primeras-comuniones?q=${encodeURIComponent(q)}` : '/api/primeras-comuniones';
     fetch(url)
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((d) => setRows(Array.isArray(d.data) ? d.data : []))
@@ -63,7 +63,7 @@ export default function PrimerasComunionesPage() {
               <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50" />
               <input
                 className="input input-bordered w-full pl-10"
-                placeholder="Buscar por nombre del comulgante…"
+                placeholder="Buscar por nombre, DNI, libro o registro…"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && cargar(nombre)}
