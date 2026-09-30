@@ -28,6 +28,7 @@ export interface ConstanciaData {
   sacramento: SacramentoConstancia;
   id: string;
   parroquia: { nombre: string; direccion: string; telefono: string };
+  parroco: string | null;
   aliasLiturgico: string | null;
   tz: string;
   personaPrincipal: PersonaLite | null;
@@ -59,12 +60,13 @@ export async function cargarDatosConstancia(
   });
   const config = await prisma.parroquiaConfig.findUnique({
     where: { id_parroquia: parishId },
-    select: { alias_liturgico: true, tz: true },
+    select: { alias_liturgico: true, parroco_nombre: true, tz: true },
   });
   if (!parroquia) return null;
 
   const base = {
     parroquia,
+    parroco: config?.parroco_nombre ?? null,
     aliasLiturgico: config?.alias_liturgico ?? null,
     tz: config?.tz || TZ_DEFAULT,
   };
@@ -174,6 +176,7 @@ export const TOKENS_CONSTANCIA = [
   'parroquia.direccion',
   'parroquia.telefono',
   'parroquia.alias',
+  'parroquia.parroco',
   'persona.nombres',
   'persona.apellidos',
   'persona.dni',
@@ -201,6 +204,7 @@ export function construirTokens(d: ConstanciaData): Record<string, string> {
     'parroquia.direccion': d.parroquia.direccion,
     'parroquia.telefono': d.parroquia.telefono,
     'parroquia.alias': d.aliasLiturgico ?? d.parroquia.nombre,
+    'parroquia.parroco': d.parroco ?? '—',
     'persona.nombres': p?.nombres ?? '—',
     'persona.apellidos': p?.apellidos ?? '—',
     'persona.dni': p?.numero_identidad ?? '—',
