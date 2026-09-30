@@ -1,24 +1,46 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import {
   CogIcon,
   UsersIcon,
   UserCircleIcon,
   HomeModernIcon,
-  ShieldCheckIcon,
+  BuildingLibraryIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
-const configurationModules = [
+interface ConfigCard {
+  name: string;
+  description: string;
+  href: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  color: string;
+}
+
+const configurationModules: ConfigCard[] = [
   {
-    name: 'Rangos sacerdotales',
-    description: 'Catálogo de diácono, presbítero, obispo y demás rangos',
-    href: '/configuracion/rangos-sacerdotales',
-    icon: UserCircleIcon,
+    name: 'Datos de la parroquia',
+    description: 'Nombre, dirección, teléfono y párroco que firma las constancias',
+    href: '/configuracion/parroquia',
+    icon: BuildingLibraryIcon,
     color: 'bg-primary hover:bg-primary/80',
-    stats: 'Catálogo'
+  },
+  {
+    name: 'Sectores y capillas',
+    description: 'Organiza el territorio parroquial y las capillas',
+    href: '/configuracion/sectores',
+    icon: HomeModernIcon,
+    color: 'bg-info hover:bg-info/80',
+  },
+  {
+    name: 'Constancias',
+    description: 'Plantillas de texto y moldes PDF por sacramento',
+    href: '/configuracion/constancias',
+    icon: DocumentTextIcon,
+    color: 'bg-warning hover:bg-warning/80',
   },
   {
     name: 'Órdenes religiosas',
@@ -26,56 +48,35 @@ const configurationModules = [
     href: '/configuracion/ordenes-religiosas',
     icon: UsersIcon,
     color: 'bg-secondary hover:bg-secondary/80',
-    stats: 'Catálogo'
   },
   {
-    name: 'Grupos Parroquiales',
-    description: 'Gestionar grupos y comunidades parroquiales',
-    href: '/configuracion/grupos',
-    icon: UsersIcon,
-    color: 'bg-secondary hover:bg-secondary/80',
-    stats: '0 grupos'
-  },
-  {
-    name: 'Roles Parroquiales',
-    description: 'Definir roles y responsabilidades',
-    href: '/configuracion/roles',
-    icon: ShieldCheckIcon,
+    name: 'Rangos sacerdotales',
+    description: 'Catálogo de diácono, presbítero, obispo y demás rangos',
+    href: '/configuracion/rangos-sacerdotales',
+    icon: UserCircleIcon,
     color: 'bg-accent hover:bg-accent/80',
-    stats: '0 roles'
   },
-  {
-    name: 'Sectores Parroquiales',
-    description: 'Organizar sectores y capillas',
-    href: '/configuracion/sectores',
-    icon: HomeModernIcon,
-    color: 'bg-info hover:bg-info/80',
-    stats: '0 sectores'
-  },
-  {
-    name: 'Plantillas de constancia',
-    description: 'Plantillas de texto con placeholders por sacramento',
-    href: '/configuracion/constancias',
-    icon: DocumentTextIcon,
-    color: 'bg-warning hover:bg-warning/80',
-    stats: 'Plantilla de texto'
-  },
-  {
-    name: 'Moldes de constancia',
-    description: 'Sube un PDF con AcroForm por sacramento y tipo de constancia',
-    href: '/configuracion/moldes',
-    icon: DocumentTextIcon,
-    color: 'bg-success hover:bg-success/80',
-    stats: 'PDF con AcroForm'
-  }
 ];
 
 export default function Configuracion() {
-  const router = useRouter();
+  const [sectoresCount, setSectoresCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/configuracion/sectores')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setSectoresCount(Array.isArray(d) ? d.length : null))
+      .catch(() => setSectoresCount(null));
+  }, []);
+
+  const statsLabel = (key: string) => {
+    if (key === 'Sectores y capillas') {
+      return sectoresCount === null ? null : `${sectoresCount} sectores`;
+    }
+    return null;
+  };
 
   return (
     <AuthenticatedLayout>
-          {/* Header */}
           <div className="mb-6 sm:mb-8">
             <div className="flex items-center mb-4">
               <CogIcon className="h-8 w-8 text-primary mr-3" />
@@ -88,48 +89,36 @@ export default function Configuracion() {
             </p>
           </div>
 
-          {/* Configuration modules grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-            {configurationModules.map((module) => (
-              <button
-                key={module.name}
-                className="bg-base-100 rounded-xl shadow-sm border border-base-300 p-6 hover:shadow-md transition-all duration-200 text-left w-full"
-                onClick={() => router.push(module.href)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-3">
-                      <div className={`p-3 rounded-lg ${module.color} text-white mr-4`}>
-                        <module.icon className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-base-content">
-                          {module.name}
-                        </h3>
-                        <p className="text-sm text-base-content/60">
-                          {module.stats}
-                        </p>
-                      </div>
+            {configurationModules.map((module) => {
+              const stats = statsLabel(module.name);
+              return (
+                <Link
+                  key={module.name}
+                  href={module.href}
+                  className="bg-base-100 rounded-xl shadow-sm border border-base-300 p-6 hover:shadow-md transition-all duration-200 text-left w-full"
+                >
+                  <div className="flex items-center mb-3">
+                    <div className={`p-3 rounded-lg ${module.color} text-white mr-4`}>
+                      <module.icon className="h-6 w-6" />
                     </div>
-                    <p className="text-base-content/70 text-sm mb-4">
-                      {module.description}
-                    </p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(module.href);
-                      }}
-                      className={`btn btn-sm ${module.color.replace('bg-', 'btn-').replace(' hover:bg-', ' hover:btn-')} text-white`}
-                    >
-                      Administrar
-                    </button>
+                    <div>
+                      <h3 className="text-lg font-semibold text-base-content">
+                        {module.name}
+                      </h3>
+                      {stats && (
+                        <p className="text-sm text-base-content/60">{stats}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                  <p className="text-base-content/70 text-sm">
+                    {module.description}
+                  </p>
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Additional info */}
           <div className="mt-8 bg-info/10 border border-info/20 rounded-xl p-6">
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -143,7 +132,7 @@ export default function Configuracion() {
                 </h3>
                 <div className="mt-2 text-sm text-base-content/70">
                   <p>
-                    Desde este módulo puedes gestionar todos los aspectos organizacionales de tu parroquia.
+                    Desde este módulo puedes gestionar los aspectos organizacionales de tu parroquia.
                     Asegúrate de tener los permisos necesarios para realizar cambios.
                   </p>
                 </div>
