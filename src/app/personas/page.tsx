@@ -14,7 +14,6 @@ import {
   PencilSquareIcon,
   TrashIcon,
   EyeIcon,
-  FunnelIcon,
   FolderOpenIcon
 } from '@heroicons/react/24/outline';
 import type { ResumenSacramentos, SacramentoResumen } from '@/lib/persona';
@@ -288,9 +287,9 @@ export default function PersonasPage() {
             {/* Search and filters mejorados */}
             <div className="bg-base-100 rounded-xl shadow-sm border border-base-300">
               <div className="p-6">
-                <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3">
                   {/* Search mejorado */}
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="relative">
                       <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/50" />
                       <input
@@ -303,31 +302,36 @@ export default function PersonasPage() {
                     </div>
                   </div>
 
-                  {/* Filters mejorados */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex items-center gap-2">
-                      <FunnelIcon className="h-4 w-4 text-base-content/50 shrink-0" />
-                      <select
-                        className="select select-bordered select-sm focus:select-primary transition-colors"
-                        value={filterSexo}
-                        onChange={(e) => setFilterSexo(e.target.value)}
-                      >
-                        <option value="todos">Todos</option>
-                        <option value="M">👨 Masculino</option>
-                        <option value="F">👩 Femenino</option>
-                      </select>
-                    </div>
+                    {/* Filtros: misma altura que el buscador y mismo ancho entre sí */}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-[38rem] lg:shrink-0">
                     <select
-                      className="select select-bordered select-sm focus:select-primary transition-colors"
-                      value={filterEstado}
-                      onChange={(e) => setFilterEstado(e.target.value)}
+                      className="select select-bordered w-full focus:select-primary transition-colors"
+                      value={filterSexo}
+                      onChange={(e) => {
+                        setFilterSexo(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      aria-label="Filtrar por sexo"
                     >
-                      <option value="todos">Todos los estados</option>
-                      <option value="activos">✅ Activos</option>
-                      <option value="inactivos">❌ Inactivos</option>
+                      <option value="todos">Ambos sexos</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
                     </select>
                     <select
-                      className="select select-bordered select-sm focus:select-primary transition-colors"
+                      className="select select-bordered w-full focus:select-primary transition-colors"
+                      value={filterEstado}
+                      onChange={(e) => {
+                        setFilterEstado(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      aria-label="Filtrar por estado"
+                    >
+                      <option value="todos">Todos los estados</option>
+                      <option value="activos">Activos</option>
+                      <option value="inactivos">Inactivos</option>
+                    </select>
+                    <select
+                      className="select select-bordered w-full focus:select-primary transition-colors"
                       value={filterSacramento}
                       onChange={(e) => {
                         setFilterSacramento(e.target.value);
@@ -405,11 +409,11 @@ export default function PersonasPage() {
                     <tr>
                       <th className="font-semibold">Persona</th>
                       <th className="font-semibold">Contacto</th>
-                      <th className="font-semibold">Información</th>
-                      <th className="font-semibold">Sector</th>
+                      <th className="font-semibold hidden 2xl:table-cell">Información</th>
+                      <th className="font-semibold hidden 2xl:table-cell">Sector</th>
                       <th className="font-semibold">Sacramentos</th>
                       <th className="font-semibold">Estado</th>
-                      <th className="font-semibold">Acciones</th>
+                      <th className="font-semibold text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -434,7 +438,7 @@ export default function PersonasPage() {
                             </div>
                           </div>
                         </td>
-                        <td data-label="Contacto" className="text-sm">
+                        <td data-label="Contacto" className="whitespace-nowrap text-sm">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1">
                               <span>📞</span>
@@ -450,7 +454,7 @@ export default function PersonasPage() {
                             )}
                           </div>
                         </td>
-                        <td data-label="Información" className="text-sm text-base-content/70">
+                        <td data-label="Información" className="hidden 2xl:table-cell text-sm text-base-content/70">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1">
                               <span>{persona.sexo === 'M' ? '👨' : '👩'}</span>
@@ -465,7 +469,7 @@ export default function PersonasPage() {
                             </div>
                           </div>
                         </td>
-                        <td data-label="Sector" className="text-sm text-base-content/70">
+                        <td data-label="Sector" className="hidden 2xl:table-cell text-sm text-base-content/70">
                           <div className="truncate max-w-[120px]" title={persona.sector.nombre}>
                             <span className="inline-flex items-center gap-1">
                               <span>⛪</span>
@@ -474,7 +478,7 @@ export default function PersonasPage() {
                           </div>
                         </td>
                         <td data-label="Sacramentos">
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-nowrap gap-1">
                             {(Object.keys(SACRAMENTO_INSIGNIA) as SacramentoResumen[]).map((clave) => {
                               const tiene = persona.sacramentos?.[clave] ?? false;
                               const { corto, nombre } = SACRAMENTO_INSIGNIA[clave];
@@ -496,7 +500,7 @@ export default function PersonasPage() {
                           </span>
                         </td>
                         <td className="acciones">
-                          <div className="flex gap-1">
+                          <div className="flex flex-nowrap justify-end gap-1">
                             <button
                               onClick={() => abrirModalVista(persona.numero_identidad)}
                               className="btn btn-ghost btn-xs hover:bg-info/20 hover:text-info transition-colors"

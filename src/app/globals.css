@@ -129,3 +129,16 @@
     min-width: 2.5rem;
   }
 }
+
+/*
+ * `form-control` venía de DaisyUI 4 y en DaisyUI 5 ya no existe: sin esto la
+ * etiqueta queda al lado del campo. Se restaura el apilado etiqueta → campo.
+ */
+.form-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.form-control > :is(.input, .select, .textarea, .file-input) {
+  width: 100%;
+}
