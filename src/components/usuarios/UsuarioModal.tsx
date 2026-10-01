@@ -482,7 +482,7 @@ export default function UsuarioModal({ isOpen, onClose, mode, usuario, onSuccess
               </div>
 
               <div className="form-control col-span-full">
-                <label className="label cursor-pointer justify-start">
+                <label className="label cursor-pointer justify-start whitespace-normal">
                   <input
                     type="checkbox"
                     className="checkbox checkbox-primary mr-3"

@@ -135,33 +135,34 @@ export default function DetallePersona() {
     <AuthenticatedLayout>
       <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-start gap-2 sm:gap-4 mb-6">
             <button
               onClick={() => router.back()}
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm mt-1"
+              aria-label="Volver"
             >
               <ArrowLeftIcon className="h-4 w-4" />
             </button>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="avatar">
-                    <div className="w-16 h-16 rounded-full bg-primary text-primary-content grid place-items-center mr-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center min-w-0">
+                  <div className="avatar shrink-0">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary text-primary-content grid place-items-center mr-3 sm:mr-4">
                       <span className="text-xl font-bold">
                         {persona.nombres.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   </div>
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-base-content">
+                  <div className="min-w-0">
+                    <h1 className="text-xl sm:text-3xl font-bold text-base-content break-words">
                       {persona.nombres} {persona.apellidos}
                     </h1>
-                    <p className="text-base-content/70">
+                    <p className="text-base-content/70 whitespace-nowrap">
                       {persona.numero_identidad}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <span className={`badge ${getEstadoColor()}`}>
                     {getEstadoTexto()}
                   </span>

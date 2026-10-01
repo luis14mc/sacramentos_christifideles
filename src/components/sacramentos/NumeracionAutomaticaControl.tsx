@@ -45,15 +45,15 @@ export default function NumeracionAutomaticaControl({
 
   return (
     <div className="form-control md:col-span-2 rounded-lg border border-base-300 bg-base-200/40 p-3">
-      <label className="label cursor-pointer justify-start gap-3">
+      <label className="label cursor-pointer justify-start items-start gap-3 whitespace-normal">
         <input
           type="checkbox"
-          className="checkbox checkbox-primary"
+          className="checkbox checkbox-primary shrink-0"
           checked={enabled}
           disabled={loading}
           onChange={(e) => void toggle(e.target.checked)}
         />
-        <span className="label-text">
+        <span className="label-text whitespace-normal break-words">
           {loading ? 'Consultando numeración…' : 'Asignar número de registro automáticamente al guardar'}
         </span>
       </label>

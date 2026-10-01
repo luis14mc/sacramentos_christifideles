@@ -63,7 +63,7 @@ export default function PrimerasComunionesPage() {
               <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50" />
               <input
                 className="input input-bordered w-full pl-10"
-                placeholder="Buscar por nombre, DNI, libro o registro…"
+                placeholder="Nombre, DNI, libro o registro…"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && cargar(nombre)}
@@ -75,7 +75,7 @@ export default function PrimerasComunionesPage() {
 
         <PageCard padding={false} className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="table table-zebra">
+            <table className="table table-zebra tabla-tarjetas">
               <thead className="bg-base-200/50">
                 <tr>
                   <th className="font-semibold">Comulgante</th>
@@ -94,13 +94,13 @@ export default function PrimerasComunionesPage() {
                 {rows.map((b) => (
                   <tr key={b.id_primera_comunion} className="hover:bg-base-200/30">
                     <td>{b.persona ? `${b.persona.nombres} ${b.persona.apellidos}` : '—'}</td>
-                    <td className="font-mono text-sm">{b.persona?.numero_identidad ?? '—'}</td>
-                    <td>{b.fecha_primera_comunion ? String(b.fecha_primera_comunion).slice(0, 10) : '—'}</td>
-                    <td>{b.numero_libro}</td>
-                    <td>{b.numero_pagina}</td>
-                    <td>{b.numero_registro}</td>
-                    <td>{b.sacerdote ? `${b.sacerdote.nombres} ${b.sacerdote.apellidos}` : '—'}</td>
-                    <td className="text-right">
+                    <td data-label="DNI" className="whitespace-nowrap font-mono text-sm">{b.persona?.numero_identidad ?? '—'}</td>
+                    <td data-label="Fecha" className="whitespace-nowrap">{b.fecha_primera_comunion ? String(b.fecha_primera_comunion).slice(0, 10) : '—'}</td>
+                    <td data-label="Libro">{b.numero_libro}</td>
+                    <td data-label="Página">{b.numero_pagina}</td>
+                    <td data-label="Registro">{b.numero_registro}</td>
+                    <td data-label="Sacerdote">{b.sacerdote ? `${b.sacerdote.nombres} ${b.sacerdote.apellidos}` : '—'}</td>
+                    <td className="acciones text-right">
                       <div className="flex justify-end gap-1">
                         <Link href={`/primeras-comuniones/${b.id_primera_comunion}`} className="btn btn-ghost btn-xs" title="Ver"><EyeIcon className="h-4 w-4" /></Link>
                         {permissions.canEditSacramentos && (

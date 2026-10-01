@@ -75,7 +75,7 @@ export default function AuditoriaPage() {
 
         <PageCard padding={false} className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="table table-zebra table-sm">
+            <table className="table table-zebra tabla-tarjetas table-sm">
               <thead className="bg-base-200/50">
                 <tr>
                   <th className="font-semibold">Fecha</th>
@@ -92,11 +92,11 @@ export default function AuditoriaPage() {
                 {rows.map((r) => (
                   <tr key={r.id_accion} className="hover:bg-base-200/30">
                     <td>{new Date(r.fecha).toLocaleString('es')}</td>
-                    <td>{r.usuario_nombre ?? `#${r.id_usuario}`}</td>
-                    <td><span className="badge badge-ghost">{ACCION_LABEL[r.accion] ?? r.accion}</span></td>
-                    <td>{r.nombre_tabla}</td>
-                    <td>{r.id_tabla_afectado ?? '—'}</td>
-                    <td className="text-right"><button className="btn btn-ghost btn-xs" onClick={() => setDetalle(r)}>Ver</button></td>
+                    <td data-label="Usuario">{r.usuario_nombre ?? `#${r.id_usuario}`}</td>
+                    <td data-label="Acción"><span className="badge badge-ghost">{ACCION_LABEL[r.accion] ?? r.accion}</span></td>
+                    <td data-label="Módulo">{r.nombre_tabla}</td>
+                    <td data-label="Registro">{r.id_tabla_afectado ?? '—'}</td>
+                    <td className="acciones text-right"><button className="btn btn-ghost btn-xs" onClick={() => setDetalle(r)}>Ver</button></td>
                   </tr>
                 ))}
               </tbody>

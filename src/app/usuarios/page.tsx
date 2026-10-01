@@ -212,7 +212,7 @@ export default function UsuariosPage() {
             {/* Users table */}
             <div className="bg-base-100 rounded-lg border border-base-300 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="table table-zebra w-full">
+                <table className="table table-zebra tabla-tarjetas w-full">
                   <thead>
                     <tr className="bg-base-200">
                       <th>Usuario</th>
@@ -241,22 +241,22 @@ export default function UsuariosPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="text-base-content/70">{usuario.email}</td>
-                        <td className="text-base-content/70">{usuario.telefono || 'N/A'}</td>
-                        <td>
+                        <td data-label="Email" className="text-base-content/70">{usuario.email}</td>
+                        <td data-label="Teléfono" className="text-base-content/70">{usuario.telefono || 'N/A'}</td>
+                        <td data-label="Rol">
                           <span className={`badge ${getRolColor(usuario.rol)}`}>
                             {usuario.rol}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Estado">
                           <span className={`badge ${usuario.activo ? 'badge-success' : 'badge-error'}`}>
                             {usuario.activo ? 'Activo' : 'Inactivo'}
                           </span>
                         </td>
-                        <td className="text-base-content/70">
+                        <td data-label="Fecha Registro" className="text-base-content/70">
                           {new Date(usuario.createdAt).toLocaleDateString()}
                         </td>
-                        <td>
+                        <td className="acciones">
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleOpenModal('view', usuario)}

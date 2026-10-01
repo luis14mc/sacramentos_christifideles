@@ -66,6 +66,7 @@ function RespuestaDetalle({ respuesta }: { respuesta: RespuestaConsulta }) {
       {respuesta.sacramentos.length === 0 ? (
         <p className="text-base-content/70">Sin sacramentos registrados en esa parroquia.</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="table table-xs">
           <thead>
             <tr><th>Sacramento</th><th>Fecha</th><th>Libro</th><th>Página</th><th>Registro</th><th>Folio</th></tr>
@@ -83,6 +84,7 @@ function RespuestaDetalle({ respuesta }: { respuesta: RespuestaConsulta }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
@@ -278,7 +280,7 @@ function ConsultasContenido() {
           <p className="text-center text-sm text-base-content/60 py-8">No hay consultas.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="table table-sm">
+            <table className="table table-sm tabla-tarjetas">
               <thead>
                 <tr>
                   <th>Fecha</th>
@@ -294,13 +296,13 @@ function ConsultasContenido() {
                   <Fragment key={s.id_solicitud}>
                     <tr>
                       <td>{fecha(s.created_at)}</td>
-                      <td>{s.nombre_parroquia_contraparte ?? s.codigo_parroquia_contraparte}</td>
-                      <td className="font-mono text-xs">{s.numero_identidad_consultado}</td>
-                      <td className="max-w-xs truncate" title={s.motivo}>{s.motivo}</td>
-                      <td>
+                      <td data-label="Parroquia">{s.nombre_parroquia_contraparte ?? s.codigo_parroquia_contraparte}</td>
+                      <td data-label="Identidad" className="font-mono text-xs">{s.numero_identidad_consultado}</td>
+                      <td data-label="Motivo" className="max-w-xs truncate" title={s.motivo}>{s.motivo}</td>
+                      <td data-label="Estado">
                         <span className={`badge badge-sm ${ESTADO[s.estado].clase}`}>{ESTADO[s.estado].texto}</span>
                       </td>
-                      <td className="text-right whitespace-nowrap">
+                      <td className="acciones text-right whitespace-nowrap">
                         {tab === 'E' && s.estado === 'pendiente' && (
                           <>
                             <button className="btn btn-success btn-xs mr-1" onClick={() => resolver(s, 'aprobar')}>Aprobar</button>
