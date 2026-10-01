@@ -39,13 +39,26 @@ export async function GET(req: NextRequest) {
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10) || 20));
 
     const where: Prisma.ConfirmacionWhereInput = { id_parroquia: context.parishId };
+    const q = searchParams.get('q')?.trim();
     const dni = searchParams.get('dni')?.trim();
-    if (dni) where.numero_identidad_confirmado = dni;
     const libro = searchParams.get('libro')?.trim();
-    if (libro) where.numero_libro = libro;
     const registro = searchParams.get('registro')?.trim();
-    if (registro) where.numero_registro = registro;
     const nombre = searchParams.get('nombre')?.trim();
+    const termino = q || '';
+    if (termino) {
+      where.OR = [
+        { confirmado: { OR: [
+          { nombres: { contains: termino, mode: 'insensitive' } },
+          { apellidos: { contains: termino, mode: 'insensitive' } },
+        ] } },
+        { numero_identidad_confirmado: { contains: termino, mode: 'insensitive' } },
+        { numero_libro: { contains: termino, mode: 'insensitive' } },
+        { numero_registro: { contains: termino, mode: 'insensitive' } },
+      ];
+    }
+    if (dni) where.numero_identidad_confirmado = dni;
+    if (libro) where.numero_libro = libro;
+    if (registro) where.numero_registro = registro;
     if (nombre) {
       where.confirmado = {
         OR: [

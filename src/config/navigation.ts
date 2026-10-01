@@ -1,7 +1,6 @@
 import {
   HomeIcon,
   DocumentTextIcon,
-  ChartBarIcon,
   CogIcon,
   HeartIcon,
   BookOpenIcon,
@@ -79,22 +78,10 @@ export const navigationConfig: NavigationItem[] = [
     requiredPermission: 'canViewSacramentos'
   },
   {
-    name: 'Plantillas de constancia',
+    name: 'Constancias',
     href: '/configuracion/constancias',
     icon: DocumentTextIcon,
     requiredPermission: 'canViewConfiguracion'
-  },
-  {
-    name: 'Moldes de constancia',
-    href: '/configuracion/moldes',
-    icon: DocumentTextIcon,
-    requiredPermission: 'canViewConfiguracion'
-  },
-  {
-    name: 'Buscar',
-    href: '/buscar',
-    icon: DocumentTextIcon,
-    requiredPermission: 'canViewPersonas'
   },
   {
     name: 'Consultas entre parroquias',
@@ -106,12 +93,6 @@ export const navigationConfig: NavigationItem[] = [
     name: 'Auditoría',
     href: '/auditoria',
     icon: ClipboardDocumentListIcon,
-    requiredPermission: 'canViewReportes'
-  },
-  {
-    name: 'Reportes',
-    href: '/reportes',
-    icon: ChartBarIcon,
     requiredPermission: 'canViewReportes'
   },
   { 

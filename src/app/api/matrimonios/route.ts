@@ -38,15 +38,32 @@ export async function GET(req: NextRequest) {
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10) || 20));
 
     const where: Prisma.MatrimonioWhereInput = { id_parroquia: context.parishId };
+    const q = searchParams.get('q')?.trim();
     const dni = searchParams.get('dni')?.trim();
-    if (dni) {
+    const libro = searchParams.get('libro')?.trim();
+    const registro = searchParams.get('registro')?.trim();
+    const nombre = searchParams.get('nombre')?.trim();
+    const termino = q || '';
+    if (termino) {
+      const filtroPersona = {
+        OR: [
+          { nombres: { contains: termino, mode: 'insensitive' as const } },
+          { apellidos: { contains: termino, mode: 'insensitive' as const } },
+        ],
+      };
+      where.OR = [
+        { esposa: filtroPersona },
+        { esposo: filtroPersona },
+        { numero_identidad_esposa: { contains: termino, mode: 'insensitive' } },
+        { numero_identidad_esposo: { contains: termino, mode: 'insensitive' } },
+        { numero_libro: { contains: termino, mode: 'insensitive' } },
+        { numero_registro: { contains: termino, mode: 'insensitive' } },
+      ];
+    } else if (dni) {
       where.OR = [{ numero_identidad_esposa: dni }, { numero_identidad_esposo: dni }];
     }
-    const libro = searchParams.get('libro')?.trim();
     if (libro) where.numero_libro = libro;
-    const registro = searchParams.get('registro')?.trim();
     if (registro) where.numero_registro = registro;
-    const nombre = searchParams.get('nombre')?.trim();
     if (nombre) {
       const filtro = {
         OR: [

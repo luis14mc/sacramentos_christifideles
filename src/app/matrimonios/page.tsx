@@ -29,7 +29,7 @@ export default function MatrimoniosPage() {
 
   const cargar = (q = '') => {
     setLoading(true);
-    const url = q ? `/api/matrimonios?nombre=${encodeURIComponent(q)}` : '/api/matrimonios';
+    const url = q ? `/api/matrimonios?q=${encodeURIComponent(q)}` : '/api/matrimonios';
     fetch(url)
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((d) => setRows(Array.isArray(d.data) ? d.data : []))
@@ -62,7 +62,7 @@ export default function MatrimoniosPage() {
               <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50" />
               <input
                 className="input input-bordered w-full pl-10"
-                placeholder="Buscar por nombre de un contrayente…"
+                placeholder="Buscar por nombre, DNI, libro o registro…"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && cargar(nombre)}

@@ -39,13 +39,26 @@ export async function GET(req: NextRequest) {
 
     // Todos los filtros permanecen dentro del tenant de sesión.
     const where: Prisma.BautismoWhereInput = { id_parroquia: context.parishId };
+    const q = searchParams.get('q')?.trim();
     const dni = searchParams.get('dni')?.trim();
-    if (dni) where.numero_identidad_bautizado = dni;
     const libro = searchParams.get('libro')?.trim();
-    if (libro) where.numero_libro = libro;
     const registro = searchParams.get('registro')?.trim();
-    if (registro) where.numero_registro = registro;
     const nombre = searchParams.get('nombre')?.trim();
+    const termino = q || '';
+    if (termino) {
+      where.OR = [
+        { bautizado: { OR: [
+          { nombres: { contains: termino, mode: 'insensitive' } },
+          { apellidos: { contains: termino, mode: 'insensitive' } },
+        ] } },
+        { numero_identidad_bautizado: { contains: termino, mode: 'insensitive' } },
+        { numero_libro: { contains: termino, mode: 'insensitive' } },
+        { numero_registro: { contains: termino, mode: 'insensitive' } },
+      ];
+    }
+    if (dni) where.numero_identidad_bautizado = dni;
+    if (libro) where.numero_libro = libro;
+    if (registro) where.numero_registro = registro;
     if (nombre) {
       where.bautizado = {
         OR: [

@@ -60,6 +60,7 @@ model Parroquia {
 model ParroquiaConfig {
   id_parroquia      Int       @id @db.SmallInt
   alias_liturgico   String?   @db.VarChar(150)
+  parroco_nombre    String?   @db.VarChar(150)
   logo_url          String?
   sello_digital_url String?
   tz                String?   @default("America/Tegucigalpa")

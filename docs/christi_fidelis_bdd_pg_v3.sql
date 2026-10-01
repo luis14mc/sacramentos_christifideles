@@ -65,6 +65,7 @@ CREATE TABLE parroquia (
 CREATE TABLE parroquia_config (
   id_parroquia SMALLINT PRIMARY KEY REFERENCES parroquia(id_parroquia) ON DELETE CASCADE,
   alias_liturgico VARCHAR(150),
+  parroco_nombre VARCHAR(150),            -- párroco que firma las constancias (token {{parroquia.parroco}})
   logo_url TEXT,
   sello_digital_url TEXT,
   tz TEXT DEFAULT 'America/Tegucigalpa',

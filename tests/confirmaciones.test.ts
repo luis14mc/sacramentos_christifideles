@@ -123,6 +123,30 @@ describe('GET', () => {
     setSession(cat.parishA); expect((await getOne(getReq(), ctx(r.id_confirmacion.toString()))).status).toBe(200);
     setSession(cat.parishB); expect((await getOne(getReq(), ctx(r.id_confirmacion.toString()))).status).toBe(404);
   });
+  it('?q= busca por DNI del confirmado', async () => {
+    await crearDirecto('200');
+    setSession(cat.parishA);
+    const res = await list(getReq(`http://t/api/confirmaciones?q=${P.confirmado}`));
+    expect((await res.json()).total).toBe(1);
+  });
+  it('?q= busca por número de libro', async () => {
+    await crearDirecto('201');
+    setSession(cat.parishA);
+    const res = await list(getReq('http://t/api/confirmaciones?q=9'));
+    expect((await res.json()).total).toBe(1);
+  });
+  it('?q= busca por número de registro', async () => {
+    await crearDirecto('202');
+    setSession(cat.parishA);
+    const res = await list(getReq('http://t/api/confirmaciones?q=202'));
+    expect((await res.json()).total).toBe(1);
+  });
+  it('?q= no fuga entre parroquias', async () => {
+    const rA = await crearDirecto('203');
+    setSession(cat.parishB);
+    const res = await list(getReq(`http://t/api/confirmaciones?q=${rA.numero_registro}`));
+    expect((await res.json()).total).toBe(0);
+  });
 });
 
 describe('UPDATE', () => {
