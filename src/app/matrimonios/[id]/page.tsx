@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { PageCard } from '@/components/layout/PageHeader';
+import DetalleCampos from '@/components/common/DetalleCampos';
 import { usePermissions } from '@/hooks/usePermissions';
 import ConstanciaButton from '@/components/sacramentos/ConstanciaButton';
 import { ArrowLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
@@ -53,10 +54,10 @@ export default function DetalleMatrimonioPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <Link href="/matrimonios" className="btn btn-ghost btn-sm"><ArrowLeftIcon className="h-4 w-4" /></Link>
-              <h1 className="text-2xl font-bold">Detalle de Matrimonio</h1>
+              <h1 className="text-xl font-bold sm:text-2xl">Detalle de Matrimonio</h1>
             </div>
             {b && (
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-wrap gap-2 sm:shrink-0">
                 <ConstanciaButton sacramento="matrimonio" id={id} />
                 {permissions.canEditSacramentos && (
                   <Link href={`/matrimonios/${id}/editar`} className="btn btn-primary btn-sm"><PencilSquareIcon className="h-4 w-4" /> Editar</Link>
@@ -69,11 +70,7 @@ export default function DetalleMatrimonioPage() {
         {notFound && <PageCard><p className="text-error">Registro no encontrado.</p></PageCard>}
         {b && (
           <PageCard padding={false} className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="table">
-                <tbody>{filas.map(([k, v]) => (<tr key={k}><th className="w-56 bg-base-200">{k}</th><td>{v}</td></tr>))}</tbody>
-              </table>
-            </div>
+            <DetalleCampos filas={filas} />
           </PageCard>
         )}
       </div>

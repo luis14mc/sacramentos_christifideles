@@ -70,12 +70,13 @@ export default function ExpedientePersonaPage() {
   return (
     <AuthenticatedLayout>
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <button type="button" onClick={() => router.back()} className="btn btn-ghost btn-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
+          <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
+          <button type="button" onClick={() => router.back()} className="btn btn-ghost btn-sm mt-1" aria-label="Volver">
             <ArrowLeftIcon className="h-4 w-4" />
           </button>
-          <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-base-content">Expediente sacramental</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold text-base-content">Expediente sacramental</h1>
             {expediente ? (
               <p className="text-base-content/70">
                 {expediente.nombres} {expediente.apellidos} · {expediente.numero_identidad}
@@ -84,7 +85,8 @@ export default function ExpedientePersonaPage() {
               <p className="text-base-content/70">{numeroIdentidad}</p>
             )}
           </div>
-          <div className="flex gap-2">
+          </div>
+          <div className="flex flex-wrap gap-2">
             {permissions.canSolicitarInterop && (
               <Link
                 href={`/consultas?dni=${encodeURIComponent(numeroIdentidad)}`}

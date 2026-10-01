@@ -61,20 +61,20 @@ export default function DetalleSacerdotePage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         <PageCard>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Link href="/sacerdotes" className="btn btn-ghost btn-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <Link href="/sacerdotes" className="btn btn-ghost btn-sm" aria-label="Volver">
                 <ArrowLeftIcon className="h-4 w-4" />
               </Link>
               <div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-xl font-bold sm:text-2xl break-words">
                   {row ? `${row.nombres} ${row.apellidos}` : 'Sacerdote'}
                 </h1>
                 <p className="text-sm text-base-content/60">DNI {dni}</p>
               </div>
             </div>
             {row && permissions.canManageSacerdotes ? (
-              <Link href={`/sacerdotes/${encodeURIComponent(dni)}/editar`} className="btn btn-primary gap-2">
+              <Link href={`/sacerdotes/${encodeURIComponent(dni)}/editar`} className="btn btn-primary btn-sm gap-2 self-start sm:btn-md sm:self-auto">
                 <PencilSquareIcon className="h-4 w-4" />
                 Editar
               </Link>

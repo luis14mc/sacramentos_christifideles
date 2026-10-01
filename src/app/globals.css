@@ -75,3 +75,57 @@
   --noise: 0;
 }
 
+
+/*
+ * Tablas de listado en móvil: cada fila se muestra como tarjeta.
+ * Uso: <table className="table tabla-tarjetas"> y data-label="Columna" en cada <td>.
+ * La primera celda hace de título; la celda con className "acciones" va al pie.
+ */
+@media (max-width: 767px) {
+  .tabla-tarjetas thead {
+    display: none;
+  }
+  .tabla-tarjetas,
+  .tabla-tarjetas tbody,
+  .tabla-tarjetas tr,
+  .tabla-tarjetas td {
+    display: block;
+    width: 100%;
+  }
+  .tabla-tarjetas tbody tr {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-base-300);
+  }
+  .tabla-tarjetas tbody td {
+    padding: 0.125rem 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .tabla-tarjetas tbody td[data-label]::before {
+    content: attr(data-label);
+    display: inline-block;
+    min-width: 6.5rem;
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.6;
+  }
+  .tabla-tarjetas tbody td:first-child {
+    font-size: 1rem;
+    font-weight: 600;
+    padding-bottom: 0.25rem;
+  }
+  .tabla-tarjetas tbody td.acciones {
+    padding-top: 0.5rem;
+  }
+  .tabla-tarjetas tbody td.acciones > div {
+    justify-content: flex-start;
+  }
+  /* Botones de icono con área táctil cómoda */
+  .tabla-tarjetas tbody td.acciones .btn {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+  }
+}

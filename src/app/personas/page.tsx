@@ -295,7 +295,7 @@ export default function PersonasPage() {
                       <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/50" />
                       <input
                         type="text"
-                        placeholder="Buscar por nombre, apellido, identidad o teléfono..."
+                        placeholder="Nombre, DNI o teléfono…"
                         className="input input-bordered w-full pl-10 focus:input-primary transition-colors"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -400,7 +400,7 @@ export default function PersonasPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="table table-zebra">
+                <table className="table table-zebra tabla-tarjetas">
                   <thead className="bg-base-200/50">
                     <tr>
                       <th className="font-semibold">Persona</th>
@@ -434,7 +434,7 @@ export default function PersonasPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="text-sm">
+                        <td data-label="Contacto" className="text-sm">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1">
                               <span>📞</span>
@@ -450,7 +450,7 @@ export default function PersonasPage() {
                             )}
                           </div>
                         </td>
-                        <td className="text-sm text-base-content/70">
+                        <td data-label="Información" className="text-sm text-base-content/70">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1">
                               <span>{persona.sexo === 'M' ? '👨' : '👩'}</span>
@@ -465,7 +465,7 @@ export default function PersonasPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="text-sm text-base-content/70">
+                        <td data-label="Sector" className="text-sm text-base-content/70">
                           <div className="truncate max-w-[120px]" title={persona.sector.nombre}>
                             <span className="inline-flex items-center gap-1">
                               <span>⛪</span>
@@ -473,7 +473,7 @@ export default function PersonasPage() {
                             </span>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Sacramentos">
                           <div className="flex flex-wrap gap-1">
                             {(Object.keys(SACRAMENTO_INSIGNIA) as SacramentoResumen[]).map((clave) => {
                               const tiene = persona.sacramentos?.[clave] ?? false;
@@ -490,12 +490,12 @@ export default function PersonasPage() {
                             })}
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Estado">
                           <span className={`badge badge-sm ${getEstadoColor(persona)} shadow-sm`}>
                             {getEstadoTexto(persona)}
                           </span>
                         </td>
-                        <td>
+                        <td className="acciones">
                           <div className="flex gap-1">
                             <button
                               onClick={() => abrirModalVista(persona.numero_identidad)}

@@ -104,7 +104,7 @@ export default function SacerdotesPage() {
 
         <PageCard padding={false}>
           <div className="overflow-x-auto">
-            <table className="table">
+            <table className="table tabla-tarjetas">
               <thead>
                 <tr>
                   <th>DNI</th>
@@ -136,21 +136,21 @@ export default function SacerdotesPage() {
                   rows.map((r) => (
                     <tr key={r.numero_identidad}>
                       <td>{r.numero_identidad}</td>
-                      <td>
+                      <td data-label="Nombre">
                         {r.nombres} {r.apellidos}
                       </td>
-                      <td>{r.telefono || '—'}</td>
-                      <td>{r.email || '—'}</td>
-                      <td>{labelVital(r.estado_vital)}</td>
-                      <td>{r.rango?.nombre || '—'}</td>
-                      <td>{r.orden_religiosa?.nombre || '—'}</td>
-                      <td>{r.es_parroco === 1 ? 'Sí' : 'No'}</td>
-                      <td>
+                      <td data-label="Teléfono">{r.telefono || '—'}</td>
+                      <td data-label="Correo">{r.email || '—'}</td>
+                      <td data-label="Estado vital">{labelVital(r.estado_vital)}</td>
+                      <td data-label="Rango">{r.rango?.nombre || '—'}</td>
+                      <td data-label="Orden">{r.orden_religiosa?.nombre || '—'}</td>
+                      <td data-label="Párroco">{r.es_parroco === 1 ? 'Sí' : 'No'}</td>
+                      <td data-label="Ministerio">
                         <span className={`badge ${r.estado_ministerial === 1 ? 'badge-success' : 'badge-ghost'}`}>
                           {r.estado_ministerial === 1 ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
-                      <td className="flex gap-1">
+                      <td className="acciones flex gap-1">
                         <Link href={`/sacerdotes/${encodeURIComponent(r.numero_identidad)}`} className="btn btn-ghost btn-sm">
                           <EyeIcon className="h-4 w-4" />
                         </Link>
