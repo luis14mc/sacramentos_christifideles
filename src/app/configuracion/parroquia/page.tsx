@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { PageCard, PageHeader } from '@/components/layout/PageHeader';
 import { usePermissions } from '@/hooks/usePermissions';
 import Swal from 'sweetalert2';
+import LogoParroquia from '@/components/configuracion/LogoParroquia';
 import { BuildingLibraryIcon } from '@heroicons/react/24/outline';
 
 interface ParroquiaData {
@@ -15,6 +16,7 @@ interface ParroquiaData {
   email: string | null;
   alias_liturgico: string | null;
   parroco_nombre: string | null;
+  tiene_logo: boolean;
 }
 
 interface FormState {
@@ -126,6 +128,12 @@ export default function ConfiguracionParroquiaPage() {
         {loading && (
           <PageCard>
             <p className="text-base-content/60">Cargando…</p>
+          </PageCard>
+        )}
+
+        {!loading && data && (
+          <PageCard>
+            <LogoParroquia tieneLogo={data.tiene_logo} puedeGestionar={puedeGestionar} />
           </PageCard>
         )}
 
