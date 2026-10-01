@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import useTheme from '@/hooks/useTheme';
+import MarcaParroquia from '@/components/layout/MarcaParroquia';
 import {
     Bars3Icon,
     UserCircleIcon,
@@ -15,7 +16,7 @@ interface HeaderProps {
     readonly parroquiaNombre?: string;
 }
 
-export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps) {
+export default function Header({ setSidebarOpen }: HeaderProps) {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const { data: session } = useSession();
     const { theme, toggleTheme } = useTheme();
@@ -35,8 +36,8 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
     return (
         <header className="bg-base-100 shadow-sm border-b border-base-300 h-16">
             <div className="flex items-center justify-between px-4 h-full">
-                {/* Mobile menu button */}
-                <div className="flex items-center">
+                {/* Menú móvil + marca de la parroquia */}
+                <div className="flex min-w-0 items-center gap-2">
                     <button
                         className="lg:hidden p-2 rounded-md text-base-content/60 hover:text-base-content hover:bg-base-200 transition-colors"
                         onClick={() => setSidebarOpen(true)}
@@ -45,22 +46,13 @@ export default function Header({ setSidebarOpen, parroquiaNombre }: HeaderProps)
                         <Bars3Icon className="h-6 w-6" />
                     </button>
 
-                    {/* Parish name - only on desktop */}
-                    <div className="hidden lg:block ml-4">
-                        <h1 className="text-lg font-semibold text-base-content">
-                            {parroquiaNombre || 'Sistema de Gestión Parroquial'}
-                        </h1>
+                    <div className="min-w-0 lg:ml-2">
+                        <MarcaParroquia />
                     </div>
                 </div>
 
                 {/* Right side - Theme toggle and user menu */}
-                <div className="flex items-center space-x-4">
-                    {/* Parish name - mobile */}
-                    <div className="lg:hidden">
-                        <p className="text-sm font-medium text-base-content truncate max-w-32">
-                            {parroquiaNombre}
-                        </p>
-                    </div>
+                <div className="flex shrink-0 items-center space-x-4">
 
                     {/* Theme toggle con DaisyUI */}
                     <label className="swap swap-rotate">

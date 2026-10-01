@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { PhotoIcon } from '@heroicons/react/24/outline';
+import { EVENTO_LOGO_ACTUALIZADO } from '@/components/layout/MarcaParroquia';
 
 /** Vista previa, carga y eliminación del logo de la parroquia. */
 export default function LogoParroquia({
@@ -30,6 +31,7 @@ export default function LogoParroquia({
       }
       setTieneLogo(true);
       setVersion((v) => v + 1);
+      window.dispatchEvent(new Event(EVENTO_LOGO_ACTUALIZADO));
     } finally {
       setSubiendo(false);
       if (input.current) input.current.value = '';
@@ -47,7 +49,10 @@ export default function LogoParroquia({
     });
     if (!ok.isConfirmed) return;
     const res = await fetch('/api/configuracion/parroquia/logo', { method: 'DELETE' });
-    if (res.ok) setTieneLogo(false);
+    if (res.ok) {
+      setTieneLogo(false);
+      window.dispatchEvent(new Event(EVENTO_LOGO_ACTUALIZADO));
+    }
   };
 
   return (
