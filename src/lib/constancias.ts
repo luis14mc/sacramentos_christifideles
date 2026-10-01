@@ -30,6 +30,8 @@ export interface ConstanciaData {
   parroquia: { nombre: string; direccion: string; telefono: string };
   parroco: string | null;
   aliasLiturgico: string | null;
+  /** Logo de la parroquia (PNG/JPEG) para constancias sin hoja membretada. */
+  logo: { bytes: Uint8Array; mime: string } | null;
   tz: string;
   personaPrincipal: PersonaLite | null;
   conyuge: PersonaLite | null;
@@ -60,7 +62,7 @@ export async function cargarDatosConstancia(
   });
   const config = await prisma.parroquiaConfig.findUnique({
     where: { id_parroquia: parishId },
-    select: { alias_liturgico: true, parroco_nombre: true, tz: true },
+    select: { alias_liturgico: true, parroco_nombre: true, tz: true, logo_archivo: true, logo_mime: true },
   });
   if (!parroquia) return null;
 
@@ -68,6 +70,10 @@ export async function cargarDatosConstancia(
     parroquia,
     parroco: config?.parroco_nombre ?? null,
     aliasLiturgico: config?.alias_liturgico ?? null,
+    logo:
+      config?.logo_archivo && config.logo_mime
+        ? { bytes: new Uint8Array(config.logo_archivo), mime: config.logo_mime }
+        : null,
     tz: config?.tz || TZ_DEFAULT,
   };
 
@@ -288,36 +294,30 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines;
 }
 
-export async function generarConstanciaPdf(datos: ConstanciaData, contenidoPlantilla: string): Promise<Uint8Array> {
-  const tokens = construirTokens(datos);
-  const cuerpo = renderPlantilla(contenidoPlantilla, tokens);
+const A4: [number, number] = [595.28, 841.89];
+const MARGEN_LATERAL = 56;
 
-  const pdf = await PDFDocument.create();
-  const page: PDFPage = pdf.addPage([595.28, 841.89]); // A4
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+interface Fuentes {
+  normal: PDFFont;
+  negrita: PDFFont;
+}
 
-  const margin = 56;
+/**
+ * Dibuja título, cuerpo, datos registrales, nota marginal, emisión y firma a
+ * partir de `yInicio`. Lo comparten la constancia sin molde y la hoja membretada.
+ */
+function dibujarCuerpo(page: PDFPage, f: Fuentes, datos: ConstanciaData, cuerpo: string, yInicio: number): void {
+  const margin = MARGEN_LATERAL;
   const width = page.getWidth() - margin * 2;
-  let y = page.getHeight() - margin;
   const negro = rgb(0.1, 0.1, 0.1);
+  let y = yInicio;
 
-  const centrar = (texto: string, f: PDFFont, size: number) => {
-    const w = f.widthOfTextAtSize(texto, size);
-    page.drawText(texto, { x: margin + (width - w) / 2, y, size, font: f, color: negro });
-  };
-
-  centrar(datos.aliasLiturgico || datos.parroquia.nombre, bold, 16);
-  y -= 20;
-  centrar(datos.parroquia.direccion, font, 10);
-  y -= 14;
-  centrar(`Tel. ${datos.parroquia.telefono}`, font, 10);
-  y -= 34;
-  centrar(TITULOS[datos.sacramento], bold, 14);
+  const tituloW = f.negrita.widthOfTextAtSize(TITULOS[datos.sacramento], 14);
+  page.drawText(TITULOS[datos.sacramento], { x: margin + (width - tituloW) / 2, y, size: 14, font: f.negrita, color: negro });
   y -= 34;
 
-  for (const linea of wrapText(cuerpo, font, 12, width)) {
-    page.drawText(linea, { x: margin, y, size: 12, font, color: negro });
+  for (const linea of wrapText(cuerpo, f.normal, 12, width)) {
+    page.drawText(linea, { x: margin, y, size: 12, font: f.normal, color: negro });
     y -= 18;
   }
   y -= 16;
@@ -331,22 +331,104 @@ export async function generarConstanciaPdf(datos: ConstanciaData, contenidoPlant
     ['Ministro', nombreCompleto(datos.ministro)],
   ];
   for (const [k, v] of datosLinea) {
-    page.drawText(`${k}:`, { x: margin, y, size: 11, font: bold, color: negro });
-    page.drawText(v, { x: margin + 150, y, size: 11, font, color: negro });
+    page.drawText(`${k}:`, { x: margin, y, size: 11, font: f.negrita, color: negro });
+    page.drawText(v, { x: margin + 150, y, size: 11, font: f.normal, color: negro });
     y -= 16;
   }
   if (datos.nota_marginal) {
     y -= 8;
-    page.drawText('Nota marginal:', { x: margin, y, size: 11, font: bold, color: negro });
+    page.drawText('Nota marginal:', { x: margin, y, size: 11, font: f.negrita, color: negro });
     y -= 16;
-    for (const linea of wrapText(datos.nota_marginal, font, 11, width)) {
-      page.drawText(linea, { x: margin, y, size: 11, font, color: negro });
+    for (const linea of wrapText(datos.nota_marginal, f.normal, 11, width)) {
+      page.drawText(linea, { x: margin, y, size: 11, font: f.normal, color: negro });
       y -= 15;
     }
   }
 
   y -= 24;
-  page.drawText(`Emitida el ${fmtFecha(new Date(), datos.tz)}`, { x: margin, y, size: 10, font, color: negro });
+  page.drawText(`Emitida el ${fmtFecha(new Date(), datos.tz)}`, { x: margin, y, size: 10, font: f.normal, color: negro });
 
+  // Firma del párroco
+  y -= 70;
+  const firmaW = 220;
+  const firmaX = margin + (width - firmaW) / 2;
+  page.drawLine({ start: { x: firmaX, y }, end: { x: firmaX + firmaW, y }, thickness: 0.8, color: negro });
+  y -= 14;
+  const nombreFirma = datos.parroco || 'Párroco';
+  const nfW = f.normal.widthOfTextAtSize(nombreFirma, 11);
+  page.drawText(nombreFirma, { x: margin + (width - nfW) / 2, y, size: 11, font: f.normal, color: negro });
+  if (datos.parroco) {
+    y -= 13;
+    const cargoW = f.normal.widthOfTextAtSize('Párroco', 10);
+    page.drawText('Párroco', { x: margin + (width - cargoW) / 2, y, size: 10, font: f.normal, color: negro });
+  }
+}
+
+async function fuentes(pdf: PDFDocument): Promise<Fuentes> {
+  return {
+    normal: await pdf.embedFont(StandardFonts.Helvetica),
+    negrita: await pdf.embedFont(StandardFonts.HelveticaBold),
+  };
+}
+
+/** Constancia sin molde: encabezado con logo y datos de la parroquia. */
+export async function generarConstanciaPdf(datos: ConstanciaData, contenidoPlantilla: string): Promise<Uint8Array> {
+  const cuerpo = renderPlantilla(contenidoPlantilla, construirTokens(datos));
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage(A4);
+  const f = await fuentes(pdf);
+  const margin = MARGEN_LATERAL;
+  const width = page.getWidth() - margin * 2;
+  const negro = rgb(0.1, 0.1, 0.1);
+  let y = page.getHeight() - margin;
+
+  if (datos.logo) {
+    try {
+      const img = datos.logo.mime === 'image/png' ? await pdf.embedPng(datos.logo.bytes) : await pdf.embedJpg(datos.logo.bytes);
+      const alto = 64;
+      const ancho = (img.width / img.height) * alto;
+      page.drawImage(img, { x: margin + (width - ancho) / 2, y: y - alto, width: ancho, height: alto });
+      y -= alto + 16;
+    } catch (e) {
+      console.error('No se pudo insertar el logo en la constancia:', e);
+    }
+  }
+
+  const centrar = (texto: string, font: PDFFont, size: number) => {
+    const w = font.widthOfTextAtSize(texto, size);
+    page.drawText(texto, { x: margin + (width - w) / 2, y, size, font, color: negro });
+  };
+  centrar(datos.aliasLiturgico || datos.parroquia.nombre, f.negrita, 16);
+  y -= 20;
+  if (datos.parroquia.direccion) {
+    centrar(datos.parroquia.direccion, f.normal, 10);
+    y -= 14;
+  }
+  if (datos.parroquia.telefono) {
+    centrar(`Tel. ${datos.parroquia.telefono}`, f.normal, 10);
+    y -= 14;
+  }
+  y -= 20;
+
+  dibujarCuerpo(page, f, datos, cuerpo, y);
+  return pdf.save();
+}
+
+/**
+ * Hoja membretada: PDF sin campos rellenables. Se conserva su diseño (logo,
+ * encabezado, pie) y se escribe la constancia en la primera página, debajo del
+ * margen superior configurado en el molde.
+ */
+export async function generarConstanciaMembretada(
+  hojaPdf: Uint8Array,
+  datos: ConstanciaData,
+  contenidoPlantilla: string,
+  margenSuperior: number
+): Promise<Uint8Array> {
+  const cuerpo = renderPlantilla(contenidoPlantilla, construirTokens(datos));
+  const pdf = await PDFDocument.load(hojaPdf, { ignoreEncryption: true });
+  const page = pdf.getPage(0);
+  const f = await fuentes(pdf);
+  dibujarCuerpo(page, f, datos, cuerpo, page.getHeight() - margenSuperior);
   return pdf.save();
 }

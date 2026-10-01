@@ -82,8 +82,9 @@ export async function POST(req: NextRequest) {
     }
 
     const buf = new Uint8Array(await archivo.arrayBuffer());
+    let conCampos: boolean;
     try {
-      await validarPdfMolde(buf);
+      conCampos = (await validarPdfMolde(buf)).campos > 0;
     } catch (e) {
       return NextResponse.json({ error: (e as Error).message }, { status: 400 });
     }
@@ -103,6 +104,8 @@ export async function POST(req: NextRequest) {
           archivo_mime: archivo.type || MOLDE_MIME,
           archivo_bytes: buf.byteLength,
           mapa_campos: {},
+          // Sin campos rellenables: se usa como hoja membretada.
+          con_campos: conCampos,
           activo: false,
         },
       });
@@ -125,7 +128,10 @@ export async function POST(req: NextRequest) {
       return m;
     });
 
-    return NextResponse.json(jsonSafe(creado), { status: 201 });
+    // No se devuelve el PDF en la respuesta: solo los metadatos del borrador.
+    const { archivo: _archivo, ...resumen } = creado;
+    void _archivo;
+    return NextResponse.json(jsonSafe(resumen), { status: 201 });
   } catch (error) {
     if (isPrismaUniqueError(error)) return NextResponse.json({ error: DUPLICADO }, { status: 409 });
     console.error('Error al crear molde:', error);

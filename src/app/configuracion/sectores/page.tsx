@@ -17,25 +17,19 @@ interface Sector {
   tipo_sector?: { nombre: string } | null;
 }
 
-interface TipoSector {
-  id_tipo_sector_parroquial: number;
-  nombre: string;
-}
 
 interface FormState {
-  id_tipo_sector_parroquial: string;
   nombre: string;
   nombre_capilla: string;
   direccion: string;
 }
 
-const EMPTY_FORM: FormState = { id_tipo_sector_parroquial: '', nombre: '', nombre_capilla: '', direccion: '' };
+const EMPTY_FORM: FormState = { nombre: '', nombre_capilla: '', direccion: '' };
 
 export default function ConfiguracionSectoresPage() {
   const permissions = usePermissions();
   const puedeGestionar = permissions.canManageConfiguracion;
   const [sectores, setSectores] = useState<Sector[]>([]);
-  const [tipos, setTipos] = useState<TipoSector[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
@@ -43,13 +37,9 @@ export default function ConfiguracionSectoresPage() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const [rSect, rTipos] = await Promise.all([
-        fetch('/api/configuracion/sectores'),
-        fetch('/api/sectores'),
-      ]);
-      const [dSect, dTipos] = await Promise.all([rSect.json().catch(() => []), rTipos.json().catch(() => [])]);
+      const rSect = await fetch('/api/configuracion/sectores');
+      const dSect = await rSect.json().catch(() => []);
       setSectores(Array.isArray(dSect) ? dSect : []);
-      setTipos(Array.isArray(dTipos) ? dTipos : []);
     } catch {
       setSectores([]);
     } finally {
@@ -63,13 +53,12 @@ export default function ConfiguracionSectoresPage() {
 
   const iniciarNuevo = () => {
     setEditId(null);
-    setForm({ ...EMPTY_FORM, id_tipo_sector_parroquial: tipos[0] ? String(tipos[0].id_tipo_sector_parroquial) : '' });
+    setForm(EMPTY_FORM);
   };
 
   const editar = (s: Sector) => {
     setEditId(s.id_sector_parroquial);
     setForm({
-      id_tipo_sector_parroquial: String(s.id_tipo_sector_parroquial),
       nombre: s.nombre,
       nombre_capilla: s.nombre_capilla ?? '',
       direccion: s.direccion,
@@ -79,7 +68,6 @@ export default function ConfiguracionSectoresPage() {
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     const body = {
-      id_tipo_sector_parroquial: form.id_tipo_sector_parroquial,
       nombre: form.nombre,
       nombre_capilla: form.nombre_capilla,
       direccion: form.direccion,
@@ -137,25 +125,10 @@ export default function ConfiguracionSectoresPage() {
               <h3 className="font-semibold">{editId ? 'Editar sector' : 'Nuevo sector'}</h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="form-control">
-                  <span className="label-text">Tipo de sector *</span>
-                  <select
-                    className="select select-bordered"
-                    value={form.id_tipo_sector_parroquial}
-                    onChange={(e) => setForm({ ...form, id_tipo_sector_parroquial: e.target.value })}
-                    required
-                  >
-                    <option value="">— Selecciona —</option>
-                    {tipos.map((t) => (
-                      <option key={t.id_tipo_sector_parroquial} value={t.id_tipo_sector_parroquial}>
-                        {t.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-control">
                   <span className="label-text">Nombre *</span>
                   <input
                     className="input input-bordered"
+                    placeholder="Ej. Sede parroquial, Sector Las Uvas"
                     value={form.nombre}
                     onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                     maxLength={55}
@@ -197,7 +170,6 @@ export default function ConfiguracionSectoresPage() {
             <table className="table table-zebra">
               <thead className="bg-base-200/50">
                 <tr>
-                  <th className="font-semibold">Tipo</th>
                   <th className="font-semibold">Nombre</th>
                   <th className="font-semibold">Capilla</th>
                   <th className="font-semibold">Dirección</th>
@@ -206,14 +178,13 @@ export default function ConfiguracionSectoresPage() {
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={5} className="text-center text-base-content/60 py-12">Cargando…</td></tr>
+                  <tr><td colSpan={4} className="text-center text-base-content/60 py-12">Cargando…</td></tr>
                 )}
                 {!loading && sectores.length === 0 && (
-                  <tr><td colSpan={5} className="text-center text-base-content/60 py-12">Sin sectores.</td></tr>
+                  <tr><td colSpan={4} className="text-center text-base-content/60 py-12">Sin sectores.</td></tr>
                 )}
                 {sectores.map((s) => (
                   <tr key={s.id_sector_parroquial} className="hover:bg-base-200/30">
-                    <td>{s.tipo_sector?.nombre ?? s.id_tipo_sector_parroquial}</td>
                     <td>{s.nombre}</td>
                     <td>{s.nombre_capilla || '—'}</td>
                     <td className="max-w-md truncate" title={s.direccion}>{s.direccion}</td>

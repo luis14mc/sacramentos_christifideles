@@ -59,12 +59,13 @@ export async function GET() {
     if (!parroquia) return NextResponse.json({ error: 'Parroquia no encontrada' }, { status: 404 });
     const config = await prisma.parroquiaConfig.findUnique({
       where: { id_parroquia: parishId },
-      select: { alias_liturgico: true, parroco_nombre: true },
+      select: { alias_liturgico: true, parroco_nombre: true, logo_mime: true },
     });
     return NextResponse.json(jsonSafe({
       ...parroquia,
       alias_liturgico: config?.alias_liturgico ?? null,
       parroco_nombre: config?.parroco_nombre ?? null,
+      tiene_logo: !!config?.logo_mime,
     }));
   } catch (error) {
     console.error('Error al obtener datos de la parroquia:', error);

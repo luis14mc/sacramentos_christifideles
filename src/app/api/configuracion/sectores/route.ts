@@ -4,6 +4,7 @@ import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission } from '@/lib/permissions';
 import { contextoAuditoria, registrarBitacora } from '@/lib/bitacora';
+import { idTipoSectorGeneral } from '@/lib/sectores';
 import { jsonSafe } from '@/lib/serialize';
 
 const MAX_NOMBRE = 55;
@@ -39,14 +40,6 @@ function optionalString(v: unknown, max: number): { ok: true; value: string | nu
   const trimmed = v.trim();
   if (trimmed.length > max) return { ok: false, error: `Longitud máxima excedida (${max})` };
   return { ok: true, value: trimmed.length === 0 ? null : trimmed };
-}
-
-function requiredInt(v: unknown, label: string): { ok: true; value: number } | { ok: false; error: string } {
-  const n = typeof v === 'string' ? parseInt(v, 10) : v;
-  if (typeof n !== 'number' || !Number.isInteger(n) || n <= 0) {
-    return { ok: false, error: `${label} inválido` };
-  }
-  return { ok: true, value: n };
 }
 
 export async function GET() {
@@ -88,23 +81,17 @@ export async function POST(req: NextRequest) {
     if (!direccionRes.ok) return badRequest(direccionRes.error);
     const capillaRes = optionalString(data.nombre_capilla, MAX_CAPILLA);
     if (!capillaRes.ok) return badRequest(capillaRes.error);
-    const tipoRes = requiredInt(data.id_tipo_sector_parroquial, 'Tipo de sector');
-    if (!tipoRes.ok) return badRequest(tipoRes.error);
-
-    const tipo = await prisma.tipoSectorParroquial.findUnique({
-      where: { id_tipo_sector_parroquial: tipoRes.value },
-      select: { id_tipo_sector_parroquial: true },
-    });
-    if (!tipo) return badRequest('Tipo de sector inexistente');
 
     const userId = BigInt(session.user.id);
     const { actorIp, userAgent } = contextoAuditoria(req);
 
     const creado = await prisma.$transaction(async (tx) => {
+      // El tipo no se pide al usuario: el nombre describe el sector.
+      const idTipo = await idTipoSectorGeneral(tx);
       const s = await tx.sectorParroquial.create({
         data: {
           id_parroquia: parishId,
-          id_tipo_sector_parroquial: tipoRes.value,
+          id_tipo_sector_parroquial: idTipo,
           nombre: nombreRes.value,
           nombre_capilla: capillaRes.value,
           direccion: direccionRes.value,
@@ -120,7 +107,6 @@ export async function POST(req: NextRequest) {
           nombre: nombreRes.value,
           nombre_capilla: capillaRes.value,
           direccion: direccionRes.value,
-          id_tipo_sector_parroquial: tipoRes.value,
         }) as import('@prisma/client').Prisma.InputJsonValue,
         actorIp,
         userAgent,

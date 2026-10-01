@@ -67,6 +67,8 @@ CREATE TABLE parroquia_config (
   alias_liturgico VARCHAR(150),
   parroco_nombre VARCHAR(150),            -- párroco que firma las constancias (token {{parroquia.parroco}})
   logo_url TEXT,
+  logo_archivo BYTEA,                -- logo PNG/JPEG (máx. 1 MB)
+  logo_mime VARCHAR(50),
   sello_digital_url TEXT,
   tz TEXT DEFAULT 'America/Tegucigalpa',
   idioma CHAR(2) DEFAULT 'es',

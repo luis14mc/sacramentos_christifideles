@@ -9,6 +9,8 @@ import {
   cargarDatosConstancia,
   construirTokens,
   obtenerPlantilla,
+  generarConstanciaMembretada,
+  plantillaDefault,
   generarConstanciaPdf,
 } from '@/lib/constancias';
 import {
@@ -63,11 +65,19 @@ export async function GET(
     }
 
     let pdf: Uint8Array;
-    let fuente: 'molde' | 'plantilla';
+    let fuente: 'molde' | 'membrete' | 'plantilla';
     const molde = await obtenerMoldeActivo(parishId, sacramento, tipoSolicitado);
-    if (molde) {
+    if (molde?.con_campos) {
       pdf = await renderMoldePdf(molde.archivo, molde.mapa_campos, construirTokens(datos));
       fuente = 'molde';
+    } else if (molde) {
+      pdf = await generarConstanciaMembretada(
+        molde.archivo,
+        datos,
+        molde.contenido?.trim() || plantillaDefault(sacramento),
+        molde.margen_superior
+      );
+      fuente = 'membrete';
     } else {
       const contenido = await obtenerPlantilla(parishId, sacramento);
       pdf = await generarConstanciaPdf(datos, contenido);

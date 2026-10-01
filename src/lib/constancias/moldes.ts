@@ -27,6 +27,10 @@ export interface MoldeResumen {
   archivo_bytes: number;
   activo: boolean;
   mapa_campos: Record<string, string>;
+  /** true: PDF con campos rellenables; false: hoja membretada. */
+  con_campos: boolean;
+  contenido: string | null;
+  margen_superior: number;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +45,9 @@ function toResumen(row: {
   archivo_bytes: number;
   activo: boolean;
   mapa_campos: unknown;
+  con_campos: boolean;
+  contenido: string | null;
+  margen_superior: number;
   created_at: Date;
   updated_at: Date;
 }): MoldeResumen {
@@ -54,6 +61,9 @@ function toResumen(row: {
     archivo_bytes: row.archivo_bytes,
     activo: row.activo,
     mapa_campos: (row.mapa_campos as Record<string, string>) ?? {},
+    con_campos: row.con_campos,
+    contenido: row.contenido,
+    margen_superior: row.margen_superior,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };
@@ -119,13 +129,14 @@ export async function listarCamposAcroForm(pdfBytes: Uint8Array): Promise<string
 }
 
 /**
- * Valida que el archivo sea un PDF aceptable:
+ * Valida que el archivo sea un PDF aceptable y devuelve cuántos campos
+ * AcroForm tiene:
  * - header %PDF-
  * - tamaño <= MAX_MOLDE_BYTES
- * - tiene al menos un campo AcroForm (no se admiten PDFs escaneados planos)
  * - sin streams /JS o /Launch (defensa contra payloads maliciosos)
+ * Con campos se rellena; sin campos se usa como hoja membretada.
  */
-export async function validarPdfMolde(pdfBytes: Uint8Array): Promise<void> {
+export async function validarPdfMolde(pdfBytes: Uint8Array): Promise<{ campos: number }> {
   if (pdfBytes.byteLength === 0) throw new Error('PDF vacío');
   if (pdfBytes.byteLength > MAX_MOLDE_BYTES) {
     throw new Error(`PDF demasiado grande (máx ${MAX_MOLDE_BYTES} bytes)`);
@@ -144,11 +155,12 @@ export async function validarPdfMolde(pdfBytes: Uint8Array): Promise<void> {
   } catch (e) {
     throw new Error(`PDF inválido: ${(e as Error).message}`);
   }
-  const form = pdf.getForm();
-  if (form.getFields().length === 0) {
-    throw new Error('El PDF no contiene campos AcroForm editables');
-  }
+  return { campos: pdf.getForm().getFields().length };
 }
+
+/** Límites del texto y del margen para hojas membretadas. */
+export const MAX_CONTENIDO_MOLDE = 4000;
+export const MARGEN_SUPERIOR_MAX = 600;
 
 /**
  * Valida el mapa de campos contra la lista de tokens permitidos.
