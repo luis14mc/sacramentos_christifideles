@@ -1,7 +1,6 @@
 import {
   HomeIcon,
   DocumentTextIcon,
-  ChartBarIcon,
   CogIcon,
   HeartIcon,
   BookOpenIcon,

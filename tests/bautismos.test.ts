@@ -284,6 +284,38 @@ describe('GET /api/bautismos', () => {
     setSession(parishB);
     expect((await getBautismo(getReq('http://x'), ctx(b.id_bautismo.toString()))).status).toBe(404);
   });
+
+  it('?q= busca por DNI de bautizado', async () => {
+    await crearBautismoDirecto('200');
+    setSession(parishA);
+    const res = await listBautismos(getReq(`http://test.local/api/bautismos?q=${P.bautizado}`));
+    const json = await res.json();
+    expect(json.total).toBe(1);
+  });
+
+  it('?q= busca por número de libro', async () => {
+    await crearBautismoDirecto('201');
+    setSession(parishA);
+    const res = await listBautismos(getReq(`http://test.local/api/bautismos?q=9`));
+    const json = await res.json();
+    expect(json.total).toBe(1);
+  });
+
+  it('?q= busca por número de registro', async () => {
+    await crearBautismoDirecto('202');
+    setSession(parishA);
+    const res = await listBautismos(getReq(`http://test.local/api/bautismos?q=202`));
+    const json = await res.json();
+    expect(json.total).toBe(1);
+  });
+
+  it('?q= no fuga entre parroquias', async () => {
+    const bA = await crearBautismoDirecto('203');
+    setSession(parishB);
+    const res = await listBautismos(getReq(`http://test.local/api/bautismos?q=${bA.numero_registro}`));
+    const json = await res.json();
+    expect(json.total).toBe(0);
+  });
 });
 
 describe('UPDATE /api/bautismos/[id]', () => {

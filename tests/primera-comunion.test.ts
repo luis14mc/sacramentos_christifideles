@@ -121,6 +121,30 @@ describe('GET', () => {
     setSession(cat.parishA); expect((await getOne(getReq(), ctx(r.id_primera_comunion.toString()))).status).toBe(200);
     setSession(cat.parishB); expect((await getOne(getReq(), ctx(r.id_primera_comunion.toString()))).status).toBe(404);
   });
+  it('?q= busca por DNI del comulgante', async () => {
+    await crearDirecto('200');
+    setSession(cat.parishA);
+    const res = await list(getReq(`http://t/api/primeras-comuniones?q=${P.persona}`));
+    expect((await res.json()).total).toBe(1);
+  });
+  it('?q= busca por número de libro', async () => {
+    await crearDirecto('201');
+    setSession(cat.parishA);
+    const res = await list(getReq('http://t/api/primeras-comuniones?q=9'));
+    expect((await res.json()).total).toBe(1);
+  });
+  it('?q= busca por número de registro', async () => {
+    await crearDirecto('202');
+    setSession(cat.parishA);
+    const res = await list(getReq('http://t/api/primeras-comuniones?q=202'));
+    expect((await res.json()).total).toBe(1);
+  });
+  it('?q= no fuga entre parroquias', async () => {
+    const rA = await crearDirecto('203');
+    setSession(cat.parishB);
+    const res = await list(getReq(`http://t/api/primeras-comuniones?q=${rA.numero_registro}`));
+    expect((await res.json()).total).toBe(0);
+  });
 });
 
 describe('UPDATE', () => {
