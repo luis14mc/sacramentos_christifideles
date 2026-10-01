@@ -41,14 +41,6 @@ function optionalString(v: unknown, max: number): { ok: true; value: string | nu
   return { ok: true, value: trimmed.length === 0 ? null : trimmed };
 }
 
-function requiredInt(v: unknown, label: string): { ok: true; value: number } | { ok: false; error: string } {
-  const n = typeof v === 'string' ? parseInt(v, 10) : v;
-  if (typeof n !== 'number' || !Number.isInteger(n) || n <= 0) {
-    return { ok: false, error: `${label} inválido` };
-  }
-  return { ok: true, value: n };
-}
-
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const context = await getContext();
@@ -72,7 +64,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (!previo) return NextResponse.json({ error: 'Sector no encontrado' }, { status: 404 });
 
     const data = await req.json();
-    const update: { nombre?: string; nombre_capilla?: string | null; direccion?: string; id_tipo_sector_parroquial?: number } = {};
+    const update: { nombre?: string; nombre_capilla?: string | null; direccion?: string } = {};
 
     if (data.nombre !== undefined) {
       const r = requiredString(data.nombre, MAX_NOMBRE, 'Nombre');
@@ -88,16 +80,6 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       const r = requiredString(data.direccion, MAX_DIRECCION, 'Dirección');
       if (!r.ok) return badRequest(r.error);
       update.direccion = r.value;
-    }
-    if (data.id_tipo_sector_parroquial !== undefined) {
-      const r = requiredInt(data.id_tipo_sector_parroquial, 'Tipo de sector');
-      if (!r.ok) return badRequest(r.error);
-      const tipo = await prisma.tipoSectorParroquial.findUnique({
-        where: { id_tipo_sector_parroquial: r.value },
-        select: { id_tipo_sector_parroquial: true },
-      });
-      if (!tipo) return badRequest('Tipo de sector inexistente');
-      update.id_tipo_sector_parroquial = r.value;
     }
 
     const userId = BigInt(session.user.id);

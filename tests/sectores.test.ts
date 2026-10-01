@@ -189,23 +189,28 @@ describe('POST /api/configuracion/sectores', () => {
     expect(res.status).toBe(400);
   });
 
-  it('sin tipo de sector -> 400', async () => {
+  it('sin tipo de sector -> 201 (el tipo ya no se pide)', async () => {
     setSession(parishA);
     const res = await createSector(postReq({
-      nombre: 'X',
+      nombre: 'Capilla San José',
       direccion: 'y',
     }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
   });
 
-  it('tipo inexistente -> 400', async () => {
+  it('ignora el tipo enviado por el cliente y asigna "General"', async () => {
     setSession(parishA);
     const res = await createSector(postReq({
       id_tipo_sector_parroquial: 9999,
-      nombre: 'X',
-      direccion: 'y',
+      nombre: 'Sede parroquial',
+      direccion: 'Loarque',
     }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    const creado = await prisma.sectorParroquial.findFirst({
+      where: { nombre: 'Sede parroquial' },
+      include: { tipo_sector: true },
+    });
+    expect(creado?.tipo_sector.nombre).toBe('General');
   });
 
   it('rol secretaria -> 403', async () => {
