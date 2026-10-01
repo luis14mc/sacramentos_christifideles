@@ -12,6 +12,8 @@ import {
   listarTiposAcroFormNoSoportados,
   obtenerMoldePorId,
   validarMapaCampos,
+  MAX_CONTENIDO_MOLDE,
+  MARGEN_SUPERIOR_MAX,
 } from '@/lib/constancias/moldes';
 
 async function getContext() {
@@ -98,6 +100,30 @@ export async function PUT(
       newValues.nombre = trimmed;
     }
 
+    // Hoja membretada: texto y margen superior editables.
+    if (body.contenido !== undefined) {
+      if (body.contenido !== null && typeof body.contenido !== 'string') {
+        return NextResponse.json({ error: 'Texto inválido' }, { status: 400 });
+      }
+      const contenido = typeof body.contenido === 'string' ? body.contenido.trim() : '';
+      if (contenido.length > MAX_CONTENIDO_MOLDE) {
+        return NextResponse.json({ error: `El texto excede ${MAX_CONTENIDO_MOLDE} caracteres` }, { status: 400 });
+      }
+      update.contenido = contenido || null;
+      newValues.contenido = contenido || null;
+    }
+    if (body.margen_superior !== undefined) {
+      const margen = Number(body.margen_superior);
+      if (!Number.isInteger(margen) || margen < 0 || margen > MARGEN_SUPERIOR_MAX) {
+        return NextResponse.json(
+          { error: `El margen superior debe ser un entero entre 0 y ${MARGEN_SUPERIOR_MAX}` },
+          { status: 400 }
+        );
+      }
+      update.margen_superior = margen;
+      newValues.margen_superior = margen;
+    }
+
     let mapaNormalizado: Record<string, string> | undefined;
     if (body.mapa_campos !== undefined) {
       mapaNormalizado = body.mapa_campos as Record<string, string>;
@@ -108,7 +134,9 @@ export async function PUT(
     let nuevoActivo = existente.activo;
     if (typeof body.activo === 'boolean') nuevoActivo = body.activo;
 
-    if (nuevoActivo) {
+    if (nuevoActivo && !existente.con_campos) {
+      // Hoja membretada: no requiere mapa de campos.
+    } else if (nuevoActivo) {
       if (!mapaNormalizado) {
         return NextResponse.json(
           { error: 'Para activar el molde debe incluir mapa_campos no vacío' },

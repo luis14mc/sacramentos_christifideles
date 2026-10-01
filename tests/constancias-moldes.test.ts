@@ -46,7 +46,7 @@ describe('moldes · utilidades', () => {
 describe('moldes · validarPdfMolde', () => {
   it('acepta un PDF válido con AcroForm', async () => {
     const pdf = await pdfConCampos(['nombre', 'apellido']);
-    await expect(validarPdfMolde(pdf)).resolves.toBeUndefined();
+    await expect(validarPdfMolde(pdf)).resolves.toEqual({ campos: 2 });
   });
 
   it('rechaza PDF vacío', async () => {
@@ -58,11 +58,11 @@ describe('moldes · validarPdfMolde', () => {
     await expect(validarPdfMolde(falso)).rejects.toThrow(/no es un PDF válido/);
   });
 
-  it('rechaza PDF sin campos AcroForm', async () => {
+  it('acepta PDF sin campos (hoja membretada) y reporta 0 campos', async () => {
     const pdf = await PDFDocument.create();
     pdf.addPage([300, 300]);
     const bytes = await pdf.save();
-    await expect(validarPdfMolde(bytes)).rejects.toThrow(/AcroForm/);
+    await expect(validarPdfMolde(bytes)).resolves.toEqual({ campos: 0 });
   });
 
   it('rechaza PDF mayor a MAX_MOLDE_BYTES', async () => {

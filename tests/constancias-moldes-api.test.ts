@@ -83,15 +83,16 @@ describe('POST /api/configuracion/moldes', () => {
     expect(res.status).toBe(403);
   });
 
-  it('PDF sin AcroForm -> 400', async () => {
+  it('PDF sin campos -> 201 como hoja membretada, sin devolver el archivo', async () => {
     setSession(cat.parishA);
     const pdf = await PDFDocument.create();
     pdf.addPage([300, 300]);
     const bytes = await pdf.save();
     const res = await POST(makeReq(formDataWith(bytes)));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.error).toMatch(/AcroForm/);
+    expect(body.con_campos).toBe(false);
+    expect(body).not.toHaveProperty('archivo');
   });
 
   it('PDF > 5 MB -> 400', async () => {
@@ -343,6 +344,34 @@ describe('PUT /api/configuracion/moldes/[id]', () => {
     setSession(cat.parishB);
     const res = await putById(makePutReq({ nombre: 'hack' }), ctx(m.id.toString()));
     expect(res.status).toBe(404);
+  });
+});
+
+describe('Hoja membretada (PDF sin campos)', () => {
+  async function subirMembrete() {
+    const pdf = await PDFDocument.create();
+    pdf.addPage([595.28, 841.89]);
+    setSession(cat.parishA);
+    const creado = await POST(makeReq(formDataWith(await pdf.save())));
+    return (await creado.json()).id as string;
+  }
+
+  it('se activa sin mapa de campos y guarda texto y margen', async () => {
+    const id = await subirMembrete();
+    const res = await putById(
+      makePutReq({ activo: true, contenido: 'Hace constar que {{persona.nombre_completo}}', margen_superior: 200 }),
+      ctx(id)
+    );
+    expect(res.status).toBe(200);
+    const fila = await prisma.moldeConstancia.findFirstOrThrow({ where: { id: BigInt(id) } });
+    expect(fila).toMatchObject({ activo: true, con_campos: false, margen_superior: 200 });
+    expect(fila.contenido).toContain('{{persona.nombre_completo}}');
+  });
+
+  it('rechaza margen fuera de rango o texto demasiado largo', async () => {
+    const id = await subirMembrete();
+    expect((await putById(makePutReq({ margen_superior: 900 }), ctx(id))).status).toBe(400);
+    expect((await putById(makePutReq({ contenido: 'x'.repeat(4001) }), ctx(id))).status).toBe(400);
   });
 });
 
