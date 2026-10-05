@@ -317,19 +317,17 @@ Arquitectura: **tres servicios, tres PostgreSQL**. Ninguna base se comparte.
 |----------|--------|--------|----|
 | `cristo-resucitado` | raíz del repo | `railway.toml` | Postgres propio |
 | `salvador-del-mundo` | raíz del repo | `railway.toml` | Postgres propio |
-| `hub` | `hub/` | `hub/railway.toml` (Root Directory **vacío**) | Postgres propio |
+| `hub` | rama **`hub`** | `hub/railway.toml` (Root Directory **vacío**) | Postgres propio |
 
-### 16.1 Hub
-1. Nuevo servicio desde el mismo repo → Settings → *Railway config file* = `hub/railway.toml`.
-2. Agregar un plugin PostgreSQL propio al hub.
-3. Variables:
-
-| Variable | Valor |
-|----------|-------|
-| `DATABASE_URL` | `${{Postgres-hub.DATABASE_URL}}` |
-| `HUB_CLAVE_MAESTRA` | `openssl rand -base64 32` (si se pierde, hay que rotar los secretos de todas las instancias) |
-
-4. Dominio público y comprobación: `GET https://<hub>/api/health` → `{"status":"ok"}`.
+### 16.1 Hub (centralizador)
+El centralizador vive en la **rama `hub`** (no en `master`). Instrucciones completas
+en `hub/README.md` de esa rama. Resumen:
+1. Nuevo servicio desde el mismo repo → Settings → Source → **Branch = `hub`**.
+2. Config file: `hub/railway.toml` · Root Directory: vacío.
+3. PostgreSQL propio para el hub.
+4. Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}` y `HUB_CLAVE_MAESTRA`
+   (`openssl rand -base64 32`, guardarla en lugar seguro).
+5. Dominio público y comprobación: `GET https://<hub>/api/health` → `{"status":"ok"}`.
 
 ### 16.2 Registrar cada parroquia en el hub
 Desde la shell del servicio hub (`railway ssh` o `railway run`):
