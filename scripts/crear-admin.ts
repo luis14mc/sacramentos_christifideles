@@ -40,7 +40,8 @@ async function main() {
 
   if (!email || !EMAIL_RE.test(email)) throw new Error('ADMIN_EMAIL es obligatorio y debe ser un email válido.');
   if (!password || password.length < MIN_PASSWORD) {
-    throw new Error(`ADMIN_PASSWORD es obligatoria y debe tener al menos ${MIN_PASSWORD} caracteres.`);
+    const variable = modoGeneral ? 'ADMIN_GENERAL_PASSWORD' : 'ADMIN_PASSWORD';
+    throw new Error(`${variable} es obligatoria y debe tener al menos ${MIN_PASSWORD} caracteres.`);
   }
 
   const parroquia = await prisma.parroquia.findFirst({ orderBy: { id_parroquia: 'asc' } });
