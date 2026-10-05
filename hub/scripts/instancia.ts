@@ -10,34 +10,26 @@
  * El secreto impreso se configura como INTEROP_SECRET en la instancia parroquial.
  */
 import { prisma } from '../src/prisma';
-import { cifrar, generarSecreto } from '../src/cifrado';
-
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+import { cambiarEstado, registrarParroquia, rotarSecreto } from '../src/parroquias';
 
 async function main() {
   const [accion, codigo, nombre, url] = process.argv.slice(2);
 
   switch (accion) {
     case 'registrar': {
-      if (!codigo || !SLUG.test(codigo) || !nombre || !url || !/^https?:\/\//.test(url)) {
-        throw new Error('Uso: registrar <codigo-slug> "<nombre>" <https://url>');
-      }
-      const secreto = generarSecreto();
-      await prisma.instancia.create({
-        data: { codigo, nombre, url: url.replace(/\/+$/, ''), secreto_cifrado: cifrar(secreto) },
-      });
+      if (!codigo || !nombre || !url) throw new Error('Uso: registrar <codigo-slug> "<nombre>" <https://url>');
+      const secreto = await registrarParroquia(codigo, nombre, url);
       console.log(`Instancia ${codigo} registrada.\nINTEROP_SECRET=${secreto}\n(Guárdalo ahora: no se vuelve a mostrar.)`);
       break;
     }
     case 'rotar': {
-      const secreto = generarSecreto();
-      await prisma.instancia.update({ where: { codigo }, data: { secreto_cifrado: cifrar(secreto) } });
+      const secreto = await rotarSecreto(codigo);
       console.log(`Nuevo INTEROP_SECRET para ${codigo}:\n${secreto}`);
       break;
     }
     case 'desactivar':
     case 'activar':
-      await prisma.instancia.update({ where: { codigo }, data: { activa: accion === 'activar' } });
+      await cambiarEstado(codigo, accion === 'activar');
       console.log(`Instancia ${codigo} ${accion === 'activar' ? 'activada' : 'desactivada'}.`);
       break;
     case 'listar': {

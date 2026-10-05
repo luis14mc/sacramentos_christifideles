@@ -29,9 +29,23 @@ mergean a `hub` (nunca a `master`).
 - Source → Branch: **`hub`** (imprescindible: con `master` se construye la app parroquial)
 - Root Directory: vacío. En esta rama el `railway.toml` de la raíz ya construye el
   centralizador; no hace falta configurar "Railway config file".
-- Variables: `DATABASE_URL`, `HUB_CLAVE_MAESTRA` (`openssl rand -base64 32`, guardarla)
+- **PostgreSQL propio y vacío** (no reutilizar la BD de una parroquia).
+- Variables:
+  - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+  - `HUB_CLAVE_MAESTRA` (`openssl rand -base64 32`, guardarla: cifra las llaves y firma la sesión del panel)
+  - `HUB_ADMIN_PASSWORD` (mín. 12 caracteres): contraseña del panel
+  - `HUB_ADMIN_USUARIO` (opcional, por defecto `admin@christifideles.org`)
 
-## Administración (shell del servicio)
+## Panel web (`/panel`)
+- **Inicio:** consultas totales, pendientes, aprobadas, rechazadas, últimos 30 días y
+  semáforo de cada parroquia (consulta su `/api/health`).
+- **Parroquias:** registrar (la llave `INTEROP_SECRET` se muestra una sola vez),
+  suspender/activar, generar llave nueva, editar nombre y URL.
+- **Bitácora:** consultas por parroquia y estado. Nunca muestra DNI (ni su hash).
+- Seguridad: sesión firmada de 8 h (cookie HttpOnly, SameSite=Strict), límite de 5
+  intentos fallidos en 15 min, protección anti-CSRF y cabeceras CSP/no-frame.
+
+## Administración por consola (alternativa al panel)
 ```bash
 cd hub && pnpm instancia registrar <codigo> "<nombre>" https://<dominio>   # imprime INTEROP_SECRET una vez
 cd hub && pnpm instancia listar | rotar <codigo> | desactivar <codigo> | activar <codigo>
