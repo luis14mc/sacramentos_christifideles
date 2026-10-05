@@ -1,13 +1,15 @@
-# ChristiFideles — despliegue en Railway (servicio web + PostgreSQL plugin)
-# Docs: docs/RAILWAY_DEPLOYMENT.md
+# Rama `hub`: este archivo despliega el CENTRALIZADOR, no la app parroquial.
+# (Las parroquias despliegan desde `master`, cuyo railway.toml construye Next.js.)
+# En Railway basta con: Settings → Source → Branch = hub · Root Directory vacío.
+# Docs: hub/README.md
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "corepack enable && corepack prepare pnpm@10 --activate && pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm run build"
+buildCommand = "corepack enable && corepack prepare pnpm@10 --activate && cd hub && pnpm install --frozen-lockfile && pnpm exec prisma generate"
 
 [deploy]
-startCommand = "pnpm run start:railway"
+startCommand = "cd hub && pnpm start"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 120
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

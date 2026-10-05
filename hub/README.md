@@ -26,8 +26,9 @@ Trabajo nuevo del centralizador: ramas `feature/hub-*` que salen de `hub` y se
 mergean a `hub` (nunca a `master`).
 
 ## Despliegue en Railway
-- Source → Branch: `hub`
-- Config file: `hub/railway.toml` · Root Directory: vacío
+- Source → Branch: **`hub`** (imprescindible: con `master` se construye la app parroquial)
+- Root Directory: vacío. En esta rama el `railway.toml` de la raíz ya construye el
+  centralizador; no hace falta configurar "Railway config file".
 - Variables: `DATABASE_URL`, `HUB_CLAVE_MAESTRA` (`openssl rand -base64 32`, guardarla)
 
 ## Administración (shell del servicio)
