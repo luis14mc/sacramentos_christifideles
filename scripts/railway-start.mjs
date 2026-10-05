@@ -53,7 +53,13 @@ try {
 }
 
 // Admin general (misma cuenta en cada parroquia). Solo se crea si no existe.
-run('pnpm admin:general');
+// NO es crítico: si falla (p. ej. contraseña demasiado corta) solo se avisa y la
+// parroquia arranca igual. Nunca debe impedir que la app se encienda.
+try {
+  run('pnpm admin:general');
+} catch {
+  console.warn('⚠ No se pudo asegurar el admin general; la app arranca igual. Revisa ADMIN_GENERAL_PASSWORD (mín. 10 caracteres).');
+}
 
 const port = process.env.PORT || '3000';
 run(`pnpm exec next start -H 0.0.0.0 -p ${port}`);
