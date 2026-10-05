@@ -12,11 +12,14 @@ de consultas (DNI como hash SHA-256).
 | `master` | El software de cada parroquia (un servicio Railway por parroquia) |
 
 El contrato y la firma de interoperabilidad (`src/lib/interop/firma.ts` y
-`contrato.ts`) los usan **ambos lados**. Si cambian en `master`, hay que llevarlos
-a `hub`:
+`contrato.ts`) los usan **ambos lados**. Si cambian en `master`, se traen SOLO
+esos dos archivos (⚠️ **nunca** `git merge master` en `hub`: `master` no tiene la
+carpeta `hub/` y el merge la borraría):
 
 ```bash
-git checkout hub && git merge master
+git checkout hub
+git checkout origin/master -- src/lib/interop/firma.ts src/lib/interop/contrato.ts
+git commit -m "chore(hub): sincronizar contrato de interoperabilidad desde master"
 ```
 
 Trabajo nuevo del centralizador: ramas `feature/hub-*` que salen de `hub` y se
