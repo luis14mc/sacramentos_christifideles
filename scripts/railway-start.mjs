@@ -3,6 +3,8 @@
  * 1) aplica migraciones versionadas;
  * 2) aplica catálogos comunes (departamentos, municipios, roles…) en CADA arranque;
  * 3) inicializa parroquia y admin solo si no existen usuarios;
+ *    después asegura el admin general (admin@christifideles.org) si hay
+ *    ADMIN_GENERAL_PASSWORD;
  * 4) arranca Next.js en 0.0.0.0:PORT.
  */
 import { execSync } from 'node:child_process';
@@ -49,6 +51,9 @@ try {
 } finally {
   await prisma.$disconnect();
 }
+
+// Admin general (misma cuenta en cada parroquia). Solo se crea si no existe.
+run('pnpm admin:general');
 
 const port = process.env.PORT || '3000';
 run(`pnpm exec next start -H 0.0.0.0 -p ${port}`);

@@ -79,6 +79,7 @@ arranque. **No commitear secretos reales.**
 | `NEXTAUTH_URL` | URL pública de Railway (ver §8) | manual |
 | `NEXTAUTH_SECRET` | Secreto aleatorio de 32+ bytes (ver generación abajo) | manual |
 | `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` | credenciales del primer admin de **esta** parroquia (el seed corre solo si la BD no tiene usuarios) | manual |
+| `ADMIN_GENERAL_PASSWORD` | contraseña del admin general `admin@christifideles.org` (mín. 10). Se crea en cada parroquia al arrancar **solo si no existe**; después su contraseña se cambia desde el sistema. Emergencia: `ADMIN_EMAIL=... ADMIN_PASSWORD=... pnpm admin:crear` en la shell | manual |
 | `NODE_ENV` | `production` (lo fija Railway por defecto, pero confirmar) | automático |
 | `DEMO_ADMIN_PASSWORD` | contraseña del Super Admin demo (mín 8 caracteres) | manual |
 | `DEMO_SECRETARIO_PASSWORD` | contraseña del Secretario demo | manual |

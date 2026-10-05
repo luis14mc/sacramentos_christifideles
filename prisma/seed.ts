@@ -47,29 +47,20 @@ async function main() {
         data: { nombre: 'General', descripcion: 'Sector parroquial general' },
       });
 
-  const parishData = leerParroquiaDesdeEnv();
-  const parishExisting = await prisma.parroquia.findFirst({
-    where: { nombre: parishData.nombre },
-    orderBy: { id_parroquia: 'asc' },
-  });
-  const parish = parishExisting
-    ? await prisma.parroquia.update({
-        where: { id_parroquia: parishExisting.id_parroquia },
-        data: parishData,
-      })
-    : await prisma.parroquia.create({ data: parishData });
+  // Una instancia = una parroquia (docs/PLAN_MULTIPARROQUIA.md, D1). Si ya existe,
+  // se reutiliza tal cual: sus datos se administran en Configuración → Datos de la
+  // parroquia y las variables PARROQUIA_* solo sirven para el primer arranque.
+  const parishExisting = await prisma.parroquia.findFirst({ orderBy: { id_parroquia: 'asc' } });
+  const parish = parishExisting ?? (await prisma.parroquia.create({ data: leerParroquiaDesdeEnv() }));
   console.log('✓ Parroquia asegurada');
 
   await prisma.parroquiaConfig.upsert({
     where: { id_parroquia: parish.id_parroquia },
-    update: {
-      alias_liturgico: parishData.nombre,
-      tz: 'America/Tegucigalpa',
-      idioma: 'es',
-    },
+    // Si ya existe no se toca: se edita en Configuración → Datos de la parroquia.
+    update: {},
     create: {
       id_parroquia: parish.id_parroquia,
-      alias_liturgico: parishData.nombre,
+      alias_liturgico: parish.nombre,
       tz: 'America/Tegucigalpa',
       idioma: 'es',
       opciones: {},
@@ -85,14 +76,10 @@ async function main() {
     id_tipo_sector_parroquial: tipoSector.id_tipo_sector_parroquial,
     nombre: 'General',
     nombre_capilla: null,
-    direccion: parishData.direccion,
+    direccion: parish.direccion,
   };
-  const sector = sectorExisting
-    ? await prisma.sectorParroquial.update({
-      where: { id_sector_parroquial: sectorExisting.id_sector_parroquial },
-      data: sectorData,
-    })
-    : await prisma.sectorParroquial.create({ data: sectorData });
+  // El sector "General" se crea una vez; después se administra en Sectores y capillas.
+  const sector = sectorExisting ?? (await prisma.sectorParroquial.create({ data: sectorData }));
   console.log('✓ Configuración y sector asegurados');
 
   // Personas de QA con DNIs ficticios: nunca en producción (AGENTS.md regla 12).
