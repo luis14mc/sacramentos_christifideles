@@ -1,6 +1,8 @@
-# Hub de interoperabilidad — servicio Railway propio con su PostgreSQL propio.
-# En Railway: Settings → Config-as-code → "Railway config file" = hub/railway.toml
-# y dejar Root Directory VACÍO (el hub importa src/lib/interop/{firma,contrato}.ts).
+# Centralizador (hub) — servicio Railway propio con su PostgreSQL propio.
+# Se despliega desde la rama `hub` (las parroquias despliegan desde `master`).
+# En Railway: Settings → Source → Branch = hub
+#             Settings → Config-as-code → "Railway config file" = hub/railway.toml
+#             Root Directory VACÍO (el hub importa src/lib/interop/{firma,contrato}.ts).
 # Docs: docs/PLAN_MULTIPARROQUIA.md (Fase 4) y docs/RAILWAY_DEPLOYMENT.md §16.
 
 [build]
