@@ -1,17 +1,23 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 
 /**
  * Cifrado AES-256-GCM de los secretos HMAC de cada instancia.
  * Formato: base64(iv[12] | tag[16] | datos). Clave: HUB_CLAVE_MAESTRA (base64, 32 bytes).
  */
 
-function clave(): Buffer {
-  const raw = process.env.HUB_CLAVE_MAESTRA;
-  const buf = raw ? Buffer.from(raw, 'base64') : Buffer.alloc(0);
-  if (buf.length !== 32) {
-    throw new Error('HUB_CLAVE_MAESTRA debe ser una clave base64 de 32 bytes.');
+/**
+ * Clave AES de 32 bytes. Lo recomendado es `openssl rand -base64 32`; si el valor
+ * no es exactamente eso (p. ej. una frase), se deriva con SHA-256 para que el hub
+ * funcione igual. Solo falla si la variable falta o es demasiado corta.
+ */
+export function clave(): Buffer {
+  const raw = process.env.HUB_CLAVE_MAESTRA?.trim();
+  if (!raw || raw.length < 16) {
+    throw new Error('HUB_CLAVE_MAESTRA falta o es demasiado corta (usa `openssl rand -base64 32`).');
   }
-  return buf;
+  const b64 = Buffer.from(raw, 'base64');
+  if (b64.length === 32 && /^[A-Za-z0-9+/]+={0,2}$/.test(raw)) return b64;
+  return createHash('sha256').update(raw, 'utf8').digest();
 }
 
 export function cifrar(texto: string): string {

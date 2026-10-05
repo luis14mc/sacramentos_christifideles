@@ -190,8 +190,21 @@ export async function postParroquia(req: Request): Promise<Response> {
     return html(await vistaParroquias(mensajeSecreto('Parroquia registrada.', codigo, secreto)));
   } catch (e) {
     if (e instanceof ErrorValidacion) return html(await vistaParroquias({ tipo: 'error', html: esc(e.message) }), 400);
-    throw e;
+    return errorPanel(e);
   }
+}
+
+/** Fallo inesperado: se registra en el log y se muestra un aviso claro en el panel. */
+async function errorPanel(e: unknown): Promise<Response> {
+  const detalle = e instanceof Error ? e.message : String(e);
+  console.error('Error en panel del centralizador:', detalle);
+  return html(
+    await vistaParroquias({
+      tipo: 'error',
+      html: `No se pudo completar la operación: ${esc(detalle)}<br>Revisa las variables del hub (HUB_CLAVE_MAESTRA, DATABASE_URL) y el log del servicio.`,
+    }),
+    500
+  );
 }
 
 export async function postAccionParroquia(req: Request, codigo: string, accion: string): Promise<Response> {
@@ -219,7 +232,7 @@ export async function postAccionParroquia(req: Request, codigo: string, accion: 
     }
   } catch (e) {
     if (e instanceof ErrorValidacion) return html(await vistaParroquias({ tipo: 'error', html: esc(e.message) }), 400);
-    throw e;
+    return errorPanel(e);
   }
 }
 

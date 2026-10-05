@@ -144,3 +144,16 @@ describe('POST /api/solicitudes/:uuid/respuesta', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('clave maestra', () => {
+  it('acepta una frase (se deriva) además de base64 de 32 bytes', async () => {
+    const { clave } = await import('../src/cifrado');
+    const original = process.env.HUB_CLAVE_MAESTRA;
+    process.env.HUB_CLAVE_MAESTRA = 'una frase cualquiera suficientemente larga';
+    expect(clave().length).toBe(32);
+    expect(descifrar(cifrar('hola'))).toBe('hola');
+    process.env.HUB_CLAVE_MAESTRA = 'corta';
+    expect(() => clave()).toThrow(/demasiado corta/);
+    process.env.HUB_CLAVE_MAESTRA = original;
+  });
+});
