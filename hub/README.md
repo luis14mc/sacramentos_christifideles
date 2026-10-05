@@ -26,6 +26,10 @@ Trabajo nuevo del centralizador: ramas `feature/hub-*` que salen de `hub` y se
 mergean a `hub` (nunca a `master`).
 
 ## Despliegue en Railway
+> En esta rama, los scripts raíz `build`, `start` y `start:railway` del
+> `package.json` arrancan el centralizador (no la app parroquial). Así el servicio
+> levanta el hub aunque Railway tenga guardado un comando de inicio antiguo.
+
 - Source → Branch: **`hub`** (imprescindible: con `master` se construye la app parroquial)
 - Root Directory: vacío. En esta rama el `railway.toml` de la raíz ya construye el
   centralizador; no hace falta configurar "Railway config file".
