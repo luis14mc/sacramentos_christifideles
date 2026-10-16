@@ -1,0 +1,166 @@
+name: Respaldos automáticos PostgreSQL
+
+on:
+  schedule:
+    # 08:00 UTC = 02:00 Honduras (UTC-6, sin DST)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        base: [loarque, cerrogrande, hub]
+
+    steps:
+      - name: Validar secrets obligatorios
+        env:
+          BACKUP_DB_URL_LOARQUE: ${{ secrets.BACKUP_DB_URL_LOARQUE }}
+          BACKUP_DB_URL_CERROGRANDE: ${{ secrets.BACKUP_DB_URL_CERROGRANDE }}
+          BACKUP_DB_URL_HUB: ${{ secrets.BACKUP_DB_URL_HUB }}
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ACCESS_KEY: ${{ secrets.BACKUP_S3_ACCESS_KEY }}
+          BACKUP_S3_SECRET_KEY: ${{ secrets.BACKUP_S3_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in BACKUP_DB_URL_LOARQUE BACKUP_DB_URL_CERROGRANDE BACKUP_DB_URL_HUB \
+            BACKUP_AGE_PUBLIC_KEY BACKUP_S3_ENDPOINT BACKUP_S3_BUCKET \
+            BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Faltan secrets de GitHub Actions: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Resolver URL de base (${{ matrix.base }})
+        id: db
+        env:
+          BASE: ${{ matrix.base }}
+          BACKUP_DB_URL_LOARQUE: ${{ secrets.BACKUP_DB_URL_LOARQUE }}
+          BACKUP_DB_URL_CERROGRANDE: ${{ secrets.BACKUP_DB_URL_CERROGRANDE }}
+          BACKUP_DB_URL_HUB: ${{ secrets.BACKUP_DB_URL_HUB }}
+        run: |
+          set -euo pipefail
+          case "$BASE" in
+            loarque) url="$BACKUP_DB_URL_LOARQUE" ;;
+            cerrogrande) url="$BACKUP_DB_URL_CERROGRANDE" ;;
+            hub) url="$BACKUP_DB_URL_HUB" ;;
+            *) echo "Base desconocida: $BASE"; exit 1 ;;
+          esac
+          echo "::add-mask::$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Verificar AWS CLI preinstalado
+        run: |
+          set -euo pipefail
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "AWS CLI (aws) no está disponible en el runner; se esperaba AWS CLI v2 preinstalado en ubuntu-latest."
+            exit 1
+          fi
+          aws --version
+
+      - name: Instalar herramientas base (age, cliente PG bootstrap)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl ca-certificates gnupg lsb-release age
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-common
+          # Cliente bootstrap (compatible hacia adelante para SHOW server_version_num)
+          sudo apt-get install -y -qq postgresql-client-16
+
+      - name: Detectar versión del servidor e instalar cliente coincidente
+        id: pgver
+        env:
+          DATABASE_URL: ${{ steps.db.outputs.url }}
+        run: |
+          set -euo pipefail
+          version_num="$(psql "$DATABASE_URL" -tAc 'SHOW server_version_num' | tr -d '[:space:]')"
+          if [ -z "$version_num" ]; then
+            echo "No se pudo leer server_version_num del servidor PostgreSQL."
+            exit 1
+          fi
+          major=$((version_num / 10000))
+          echo "PostgreSQL server_version_num=${version_num} (major ${major})"
+          sudo apt-get install -y -qq "postgresql-client-${major}"
+          echo "major=${major}" >> "$GITHUB_OUTPUT"
+
+      - name: pg_dump, verificar tablas críticas y cifrar
+        id: dump
+        env:
+          BASE: ${{ matrix.base }}
+          DATABASE_URL: ${{ steps.db.outputs.url }}
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%d-%H%M)"
+          year="$(date -u +%Y)"
+          month="$(date -u +%m)"
+          dump_plain="/tmp/${BASE}-${stamp}.dump"
+          dump_age="/tmp/${BASE}-${stamp}.dump.age"
+
+          pg_dump "$DATABASE_URL" --format=custom --no-owner --no-acl --file="$dump_plain"
+          if [ ! -s "$dump_plain" ]; then
+            echo "El dump quedó vacío."
+            exit 1
+          fi
+
+          list_file="/tmp/${BASE}-${stamp}.list"
+          pg_restore --list "$dump_plain" > "$list_file"
+
+          if [ "$BASE" = hub ]; then
+            critical=(instancia solicitud)
+          else
+            critical=(persona bautismo primera_comunion confirmacion matrimonio numeradores usuario bitacora_crud)
+          fi
+
+          for table in "${critical[@]}"; do
+            if ! grep -qE "[[:space:]]public[[:space:]]+${table}([[:space:]]|;)" "$list_file"; then
+              echo "Tabla crítica ausente en el dump: ${table}"
+              exit 1
+            fi
+          done
+
+          printf '%s\n' "$BACKUP_AGE_PUBLIC_KEY" > /tmp/backup.age.pub
+          age -R /tmp/backup.age.pub -o "$dump_age" "$dump_plain"
+          rm -f "$dump_plain" /tmp/backup.age.pub "$list_file"
+
+          echo "stamp=${stamp}" >> "$GITHUB_OUTPUT"
+          echo "year=${year}" >> "$GITHUB_OUTPUT"
+          echo "month=${month}" >> "$GITHUB_OUTPUT"
+          echo "dump_age=${dump_age}" >> "$GITHUB_OUTPUT"
+          echo "object_key=${BASE}/${year}/${month}/${BASE}-${stamp}.dump.age" >> "$GITHUB_OUTPUT"
+
+      - name: Subir a R2 (S3-compatible)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: auto
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          DUMP_AGE: ${{ steps.dump.outputs.dump_age }}
+          OBJECT_KEY: ${{ steps.dump.outputs.object_key }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+          echo "::add-mask::$BACKUP_S3_ENDPOINT"
+          aws s3 cp "$DUMP_AGE" "s3://${BACKUP_S3_BUCKET}/${OBJECT_KEY}" \
+            --endpoint-url "$BACKUP_S3_ENDPOINT" \
+            --only-show-errors
+          rm -f "$DUMP_AGE"
+          echo "Respaldo subido: ${OBJECT_KEY} (sin URL en log)."
