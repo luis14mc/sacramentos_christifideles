@@ -38,15 +38,9 @@ export default function LoginPage() {
       }
 
       if (!session?.user?.id) {
-        const diagnosticResponse = await fetch('/api/auth/diagnostic', { cache: 'no-store' });
-        const diagnostic = diagnosticResponse.ok ? await diagnosticResponse.json() : null;
-        const hint =
-          diagnostic?.urlMatchesRequest === false
-            ? ' NEXTAUTH_URL no coincide con el dominio actual.'
-            : diagnostic?.secretConfigured === false
-              ? ' NEXTAUTH_SECRET no está configurado.'
-              : ' La sesión no pudo persistirse.';
-        setError(`El usuario fue validado, pero no se pudo crear la sesión.${hint}`);
+        setError(
+          'El usuario fue validado, pero no se pudo crear la sesión. Revise NEXTAUTH_URL y NEXTAUTH_SECRET en el servidor.',
+        );
         return;
       }
 
