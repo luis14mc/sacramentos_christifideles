@@ -1,0 +1,123 @@
+name: Monitoreo de salud
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar variables de monitoreo (repository variables)
+        env:
+          MONITOREO_URL_LOARQUE: ${{ vars.MONITOREO_URL_LOARQUE }}
+          MONITOREO_URL_CERROGRANDE: ${{ vars.MONITOREO_URL_CERROGRANDE }}
+          MONITOREO_URL_HUB: ${{ vars.MONITOREO_URL_HUB }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in MONITOREO_URL_LOARQUE MONITOREO_URL_CERROGRANDE MONITOREO_URL_HUB; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Faltan variables del repositorio: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Comprobar salud de los 3 servicios
+        id: check
+        env:
+          MONITOREO_URL_LOARQUE: ${{ vars.MONITOREO_URL_LOARQUE }}
+          MONITOREO_URL_CERROGRANDE: ${{ vars.MONITOREO_URL_CERROGRANDE }}
+          MONITOREO_URL_HUB: ${{ vars.MONITOREO_URL_HUB }}
+          ALERTA_WEBHOOK_URL: ${{ secrets.ALERTA_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          export TZ=America/Tegucigalpa
+          hora_hn="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+
+          if [ -n "${ALERTA_WEBHOOK_URL:-}" ]; then
+            echo "::add-mask::$ALERTA_WEBHOOK_URL"
+          fi
+
+          eval_one() {
+            local servicio="$1"
+            local base_url="$2"
+            local tipo="$3"
+            local base="${base_url%/}"
+            local tmp_body tmp_meta http_code body status db reason
+
+            tmp_body="$(mktemp)"
+            tmp_meta="$(mktemp)"
+
+            if ! curl -sS -m 10 -o "$tmp_body" -w '%{http_code}' "$base/api/health" > "$tmp_meta" 2>/dev/null; then
+              reason="timeout o error de red (>10 s)"
+              rm -f "$tmp_body" "$tmp_meta"
+              printf '%s' "$reason"
+              return 0
+            fi
+
+            http_code="$(tr -d '[:space:]' < "$tmp_meta")"
+            body="$(cat "$tmp_body")"
+            rm -f "$tmp_body" "$tmp_meta"
+
+            status="$(printf '%s' "$body" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status",""))' 2>/dev/null || true)"
+            db="$(printf '%s' "$body" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("database",""))' 2>/dev/null || true)"
+
+            if [ "$http_code" != "200" ]; then
+              reason="HTTP ${http_code}"
+            elif [ "$status" != "ok" ]; then
+              reason="status JSON \"${status:-?}\" (se esperaba ok)"
+            elif [ "$tipo" = "parroquia" ] && [ "$db" != "ok" ]; then
+              reason="database JSON \"${db:-?}\" (se esperaba ok en parroquia)"
+            else
+              reason=""
+            fi
+
+            printf '%s' "$reason"
+          }
+
+          check_service() {
+            local servicio="$1"
+            local base_url="$2"
+            local tipo="$3"
+            local reason retry_reason
+
+            reason="$(eval_one "$servicio" "$base_url" "$tipo")"
+            if [ -n "$reason" ]; then
+              sleep 30
+              retry_reason="$(eval_one "$servicio" "$base_url" "$tipo")"
+              if [ -n "$retry_reason" ]; then
+                failures+=("${servicio}|${retry_reason} (reintento tras 30 s)")
+              fi
+            fi
+          }
+
+          failures=()
+          check_service "Loarque" "$MONITOREO_URL_LOARQUE" "parroquia"
+          check_service "Cerro Grande" "$MONITOREO_URL_CERROGRANDE" "parroquia"
+          check_service "Hub" "$MONITOREO_URL_HUB" "hub"
+
+          if [ "${#failures[@]}" -eq 0 ]; then
+            echo "Monitoreo OK — ${hora_hn} (Honduras). Los 3 servicios respondieron bien."
+            exit 0
+          fi
+
+          summary="ChristiFideles monitoreo FALLÓ — ${hora_hn} (Honduras). "
+          for entry in "${failures[@]}"; do
+            svc="${entry%%|*}"
+            why="${entry#*|}"
+            msg_line="${svc} — ${why}"
+            summary+="${msg_line}; "
+            echo "$msg_line"
+          done
+
+          if [ -n "${ALERTA_WEBHOOK_URL:-}" ]; then
+            payload="$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1]}))' "$summary")"
+            curl -sS -m 15 -X POST -H 'Content-Type: application/json' -d "$payload" "$ALERTA_WEBHOOK_URL" >/dev/null || true
+          fi
+
+          exit 1
