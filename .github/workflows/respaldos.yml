@@ -58,11 +58,20 @@ jobs:
           echo "::add-mask::$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
-      - name: Instalar herramientas base (age, AWS CLI, cliente PG bootstrap)
+      - name: Verificar AWS CLI preinstalado
+        run: |
+          set -euo pipefail
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "AWS CLI (aws) no está disponible en el runner; se esperaba AWS CLI v2 preinstalado en ubuntu-latest."
+            exit 1
+          fi
+          aws --version
+
+      - name: Instalar herramientas base (age, cliente PG bootstrap)
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq curl ca-certificates gnupg lsb-release age awscli
+          sudo apt-get install -y -qq curl ca-certificates gnupg lsb-release age
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
             https://www.postgresql.org/media/keys/ACCC4CF8.asc

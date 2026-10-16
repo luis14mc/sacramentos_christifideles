@@ -34,12 +34,17 @@ for v in RESTORE_DATABASE_URL AGE_PRIVATE_KEY BACKUP_S3_ENDPOINT BACKUP_S3_BUCKE
 done
 
 normalize_url() {
-  # Compara host/db sin credenciales en log
+  # Compara host:puerto/ruta sin credenciales (Railway suele compartir host entre bases)
   python3 - "$1" <<'PY'
 import sys
 from urllib.parse import urlparse, urlunparse
 u = urlparse(sys.argv[1])
-print(urlunparse((u.scheme, u.hostname or '', u.path or '', '', '', '')))
+port = u.port
+if port is None and u.scheme in ("postgresql", "postgres"):
+    port = 5432
+host = u.hostname or ""
+netloc = f"{host}:{port}" if port else host
+print(urlunparse((u.scheme, netloc, u.path or "", "", "", "")))
 PY
 }
 
