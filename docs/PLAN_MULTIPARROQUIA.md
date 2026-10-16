@@ -55,7 +55,7 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ✅ `tests/instancia.test.ts`
 - ✅ Docs: `docs/RAILWAY_DEPLOYMENT.md` §3.1 y `.env.example`
 - ✅ `tests/instancia.test.ts` pasa contra la BD de test
-- ⬜ Crear los tres servicios en Railway (dos parroquias y el hub) siguiendo `docs/RAILWAY_DEPLOYMENT.md` §16 (lo hace el PO)
+- ✅ Tres servicios en Railway (dos parroquias y el hub) creados y conectados (2026-10-05)
 
 ### Fase 2 — Sacramentos en el módulo Personas · rama `feature/fase2-sacramentos-en-personas` (apilada sobre fase 1)
 - ✅ Resumen por persona sin vista SQL: `_count` de Prisma (`personaSacramentosCount`, `resumenSacramentos`, `whereSacramento` en `src/lib/persona.ts`). No requiere migración. Si con volumen real se vuelve lento, pasar a vista `v_persona_sacramentos`.
@@ -63,7 +63,7 @@ Leyenda: ✅ hecho · 🟡 en curso · ⬜ pendiente
 - ✅ Listado de personas: columna con insignias B / PC / C / M, filtro "Con / Sin <sacramento>" y botón al expediente
 - ✅ Detalle con línea de tiempo: ya existía en `/personas/[id]/expediente` (`src/lib/expediente.ts`)
 - ✅ Tests en `tests/personas.test.ts` (lógica pura validada; los de API siguen pendientes de `TEST_DATABASE_URL`)
-- ⬜ La búsqueda global (`/buscar`, `src/lib/busqueda.ts`) todavía no muestra insignias
+- ✅ `/buscar` se eliminó (PR #36); la búsqueda por DNI, libro y registro vive en cada sacramento
 - ⬜ Solo cuenta a la persona como sujeto principal (bautizado, comulgante, confirmado, cónyuge), no como padrino ni como padre o madre
 
 ### Fase 3 — Gestor de expedientes (escaneos) · **DIFERIDA A v2** (decisión del PO, 2026-09-24)
@@ -151,3 +151,4 @@ Parroquia A (solicita)          Hub central                 Parroquia B (respond
 | 2026-10-01 | Claude (Opus 5.5) | Decisión del PO: constancias **solo por molde**. Un PDF con campos se rellena; un PDF sin campos se usa como **hoja membretada** y el texto se escribe encima (`generarConstanciaMembretada`, columnas `con_campos`, `contenido` y `margen_superior`). Se quitó la pestaña "Texto simple"; sin molde activo se genera una constancia simple con logo. Logo de la parroquia guardado en BD (`parroquia_config.logo_archivo`, PNG/JPG ≤ 1 MB, validado por contenido). Sectores sin "tipo" (se asigna "General"). Personas: filtros simétricos y tabla sin cortes. `form-control` restaurado en `globals.css` (DaisyUI 5 lo eliminó). E2E: constancia membretada y con logo renderizadas y revisadas. 410/410 tests, 0 desbordes en 108 capturas. | `docs/christi_fidelis_bdd_pg_v3.sql` nunca tuvo la tabla `molde_constancia` (faltante anterior): alinear. La tabla `plantilla_constancia` queda sin UI (se conserva por datos). |
 | 2026-10-05 | Claude (Opus 5.5) | Admin general `admin@christifideles.org` creado en cada arranque si no existe (`pnpm admin:general`, contraseña en `ADMIN_GENERAL_PASSWORD`); `pnpm admin:crear` para emergencias. Fix seed: reutiliza la parroquia existente (antes creaba una segunda si cambiaba `PARROQUIA_NOMBRE`, caso real en Salvador del Mundo) y ya no pisa datos editados desde la UI (parroquia, alias, sector General). | Salvador del Mundo quedó sembrada con el nombre de Cristo Resucitado: corregirlo en Datos de la parroquia. |
 | 2026-10-05 | Claude (Opus 5.5) | Decisión del PO: el centralizador vive en la rama permanente `hub`; se quitó `hub/` de `master`. Railway: el servicio del hub despliega la rama `hub`. Los archivos compartidos (`src/lib/interop/firma.ts`, `contrato.ts`) se sincronizan con `git checkout origin/master -- <archivos>` en `hub`, **nunca** con `git merge master`. | Siguiente: panel web del centralizador (ramas `feature/hub-*` desde `hub`). |
+| 2026-10-05 | Claude (Opus 5.5) | Estado general documentado en `docs/ESTADO_PROYECTO_2026-10-05.md`: 3 servicios en producción y comunicación entre parroquias funcionando. Idea de consulta tipo chat con constancia emitida por la parroquia que tiene el libro: **en espera de decisión del PO**. | Ver §5 del documento de estado. |
