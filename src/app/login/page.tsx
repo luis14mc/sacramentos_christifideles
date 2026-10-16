@@ -39,7 +39,7 @@ export default function LoginPage() {
 
       if (!session?.user?.id) {
         setError(
-          'El usuario fue validado, pero no se pudo crear la sesión. Revise NEXTAUTH_URL y NEXTAUTH_SECRET en el servidor.',
+          'No se pudo iniciar la sesión. Intente de nuevo y, si el problema continúa, avise al administrador del sistema.',
         );
         return;
       }
