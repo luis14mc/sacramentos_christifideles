@@ -1,3 +1,6 @@
+> ⚠️ **Rama `hub` — centralizador.** Esta rama solo despliega el centralizador (`hub/`). Ver [`hub/README.md`](hub/README.md).
+> El resto de los archivos es una copia vieja de `master` que aquí no se usa: la documentación vigente del proyecto está en la rama **`master`** (`docs/README.md`).
+
 # 🏛️ ChristiFideles
 
 Sistema de registro de sacramentos para parroquias católicas. Aplicación web moderna, escalable y multi-tenant construida con **Next.js 15**, **TypeScript**, **Prisma** y **PostgreSQL**.
