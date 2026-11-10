@@ -8,6 +8,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). F
 - `molde_constancia` agregada al SQL de referencia.
 - Documentos vencidos movidos a `docs/archivo/`.
 
+### Seguridad
+- Eliminado `GET /api/auth/diagnostic`; la verificación de `NEXTAUTH_SECRET` queda en el log de arranque de Railway.
+
 ## [1.0.0-piloto] — 2026-10-15
 Primera versión en producción con dos parroquias y el centralizador.
 

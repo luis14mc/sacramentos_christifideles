@@ -22,7 +22,7 @@ Para el PO y el desarrollador de turno. Comandos de Railway en [RAILWAY_DEPLOYME
 |---|---|---|
 | Página no carga | Railway → estado del servicio y del deploy | Rollback al deploy anterior (§12) |
 | `/api/health` → 503 | Servicio Postgres de esa parroquia | Reiniciar Postgres; si está corrupto → §5 |
-| Login vuelve al formulario | `GET /api/auth/diagnostic` | Corregir `NEXTAUTH_URL` o `NEXTAUTH_SECRET` y redeploy |
+| Login vuelve al formulario | `NEXTAUTH_URL` y el aviso de `NEXTAUTH_SECRET` en el log de Railway | Corregir `NEXTAUTH_URL` o `NEXTAUTH_SECRET` y redeploy |
 | Usuario bloqueado | Esperar 15 min (o redeploy, que reinicia el contador) | — |
 | Deploy falla en migraciones | Log del arranque | No forzar; ver [MIGRATIONS_PRISMA.md](MIGRATIONS_PRISMA.md); rollback |
 | Consultas: "no configurada" | Variables `INTEROP_*` y `PARROQUIA_CODIGO` | Cargar variables y redeploy |

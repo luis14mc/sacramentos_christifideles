@@ -14,7 +14,6 @@ Generado a partir de `src/app/api/**/route.ts` el 2026-11-10. Todas las rutas so
 |---|---|---|
 | GET | `/api/health` | `{status, database}`; `503` si la base no responde. Healthcheck de Railway |
 | GET | `/api/instancia` | `{codigo, nombre, version}` de la instancia |
-| GET | `/api/auth/diagnostic` | Diagnóstico de NextAuth: si `NEXTAUTH_URL` coincide y si el secreto mide 32+ (`secretLengthOk`). No expone valores |
 | * | `/api/auth/[...nextauth]` | Login/logout (NextAuth) |
 
 ## Personas

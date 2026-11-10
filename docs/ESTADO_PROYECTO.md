@@ -40,7 +40,7 @@ Ver [`adr/`](adr/): base por parroquia (002), centralizador en `hub` (003), cons
 | 2 | Primera **restauración de prueba** de las 3 bases, anotada en el runbook | PO + dev | Pendiente |
 | 3 | **Prueba con una secretaria real** siguiendo el [guion](GUION_PRUEBA_PILOTO.md) | PO | Pendiente |
 | 4 | Salvador del Mundo: corregir el nombre en Datos de la parroquia y el email del admin | PO | Por confirmar |
-| 5 | `NEXTAUTH_SECRET` de 32+ caracteres en ambas parroquias (verificar con `GET /api/auth/diagnostic` → `secretLengthOk: true`) | PO | Por confirmar |
+| 5 | `NEXTAUTH_SECRET` de 32+ caracteres en ambas parroquias (verificar en el log de arranque de Railway que **NO** aparece el aviso "⚠ NEXTAUTH_SECRET tiene menos de 32 caracteres") | PO | Por confirmar |
 | 6 | Cargar en cada parroquia: nombre del párroco, logo y hoja membretada | PO | Por confirmar |
 | 7 | Guardar `HUB_CLAVE_MAESTRA` y la llave privada age fuera de Railway y de GitHub | PO | Por confirmar |
 | 8 | Capacitar a las secretarias con el [manual](MANUAL_USUARIO.md) | PO | Pendiente |
