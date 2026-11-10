@@ -61,5 +61,14 @@ try {
   console.warn('⚠ No se pudo asegurar el admin general; la app arranca igual. Revisa ADMIN_GENERAL_PASSWORD (mín. 10 caracteres).');
 }
 
+const nextAuthSecret = process.env.NEXTAUTH_SECRET?.trim() ?? '';
+if (nextAuthSecret.length > 0 && nextAuthSecret.length < 32) {
+  console.warn(
+    '⚠ NEXTAUTH_SECRET tiene menos de 32 caracteres; la sesión puede fallar. Configure un secreto más largo (sin imprimir el valor aquí).',
+  );
+} else if (nextAuthSecret.length === 0) {
+  console.warn('⚠ NEXTAUTH_SECRET no está configurado; la autenticación por sesión no funcionará correctamente.');
+}
+
 const port = process.env.PORT || '3000';
 run(`pnpm exec next start -H 0.0.0.0 -p ${port}`);

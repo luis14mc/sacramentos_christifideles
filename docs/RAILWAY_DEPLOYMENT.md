@@ -269,7 +269,7 @@ Railway mantiene historial de deployments. Para revertir a una versión anterior
 
 ## 13. Backup y restore básicos
 
-Ver `docs/DEMO_BACKUP_RESTORE.md` para el runbook completo. Resumen:
+Ver `docs/BACKUP_RESTORE_RUNBOOK.md` para el runbook completo (respaldos automáticos diarios cifrados en R2). Resumen:
 
 ```bash
 # Backup (exporta a archivo local)
@@ -317,16 +317,17 @@ Arquitectura: **tres servicios, tres PostgreSQL**. Ninguna base se comparte.
 |----------|--------|--------|----|
 | `cristo-resucitado` | raíz del repo | `railway.toml` | Postgres propio |
 | `salvador-del-mundo` | raíz del repo | `railway.toml` | Postgres propio |
-| `hub` | rama **`hub`** | `hub/railway.toml` (Root Directory **vacío**) | Postgres propio |
+| `hub` | rama **`hub`** | `railway.toml` de la raíz de esa rama (Root Directory **vacío**) | Postgres propio |
 
 ### 16.1 Hub (centralizador)
 El centralizador vive en la **rama `hub`** (no en `master`). Instrucciones completas
 en `hub/README.md` de esa rama. Resumen:
 1. Nuevo servicio desde el mismo repo → Settings → Source → **Branch = `hub`**.
-2. Config file: `hub/railway.toml` · Root Directory: vacío.
+2. Root Directory: vacío. En la rama `hub` el `railway.toml` de la raíz ya construye el centralizador; no hace falta "Railway config file".
 3. PostgreSQL propio para el hub.
-4. Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}` y `HUB_CLAVE_MAESTRA`
-   (`openssl rand -base64 32`, guardarla en lugar seguro).
+4. Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `HUB_CLAVE_MAESTRA`
+   (`openssl rand -base64 32`, guardarla fuera de Railway) y `HUB_ADMIN_PASSWORD`
+   (panel `/panel`, mín. 12 caracteres; usuario opcional `HUB_ADMIN_USUARIO`).
 5. Dominio público y comprobación: `GET https://<hub>/api/health` → `{"status":"ok"}`.
 
 ### 16.2 Registrar cada parroquia en el hub
@@ -369,6 +370,7 @@ Sin estas tres variables la parroquia funciona normalmente, pero `/consultas` mu
 ## Referencias
 
 - `docs/MIGRATIONS_PRISMA.md` — ciclo de migraciones y manejo de BD existente.
-- `docs/DEMO_GOLDEN_PATH.md` — flujos de demo.
-- `docs/DEMO_BACKUP_RESTORE.md` — backup/restore runbook.
-- `docs/STORAGE_AUDIT.md` — auditoría de almacenamiento (filesystem vs BYTEA).
+- `docs/ALTA_NUEVA_PARROQUIA.md` — alta de una parroquia nueva, paso a paso.
+- `docs/BACKUP_RESTORE_RUNBOOK.md` — respaldos y restauración.
+- `docs/RUNBOOK_INCIDENTES.md` — qué hacer si algo se cae.
+- Históricos (demo, auditoría de almacenamiento): `docs/archivo/`.
