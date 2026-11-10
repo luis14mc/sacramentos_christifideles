@@ -2,7 +2,7 @@
 
 **Rama:** `feature/constancias-moldes-pdf`
 **Sprint objetivo:** 6 (hardening) → 7 (staging)
-**Origen:** `docs/PLAN_ACCION_V1.md` §4bis.B
+**Origen:** `docs/archivo/PLAN_ACCION_V1.md` §4bis.B
 **Estado:** En curso
 
 ## Valor para usuario (secretaría parroquial)

@@ -36,35 +36,18 @@ La primera salida productiva debe validar al menos una parroquia operando de ext
 - Vercel para aplicación
 - Neon para PostgreSQL
 
-## Estado actual conocido
-Ya existen:
-- aplicación Next.js full-stack;
-- autenticación y middleware;
-- CRUD de usuarios;
-- CRUD de personas;
-- dashboard;
-- configuración y setup;
-- roles y permisos;
-- Prisma schema multi-tenant;
-- modelos de Bautismo, Primera Comunión, Confirmación y Matrimonio;
-- modelos de bitácora;
-- numeradores por parroquia y módulo;
-- plantillas de constancias;
-- catálogos territoriales y religiosos;
-- seeds de datos.
+## Estado actual conocido (2026-11-10)
+En producción desde octubre de 2026 (ver `docs/ESTADO_PROYECTO.md`):
+- una instancia y una base de datos **por parroquia** (Cristo Resucitado de Loarque y Salvador del Mundo de Cerro Grande);
+- centralizador (hub) en la rama `hub` que solo reenvía consultas entre parroquias;
+- personas con DNI obligatorio y expediente sacramental;
+- bautismo, primera comunión, confirmación y matrimonio con libros y numeración;
+- edición con justificación obligatoria y auditoría;
+- constancias PDF solo por molde (con campos o como hoja membretada);
+- consultas entre parroquias firmadas (HMAC) y con aprobación humana;
+- respaldos automáticos diarios cifrados (falta cargar secrets y probar restauración).
 
-Pendientes principales para v1:
-- estabilización técnica del código existente;
-- validación completa de aislamiento multi-tenant;
-- CRUD/API/UI funcional de sacramentos;
-- captura posterior de datos complementarios (no-DNI) faltantes, manteniendo el DNI siempre obligatorio;
-- libros/folios/numeración operativa;
-- generación de constancias PDF;
-- auditoría realmente conectada a operaciones;
-- estrategia de defunciones/registro funerario;
-- pruebas automatizadas y manuales;
-- staging y producción;
-- backups, observabilidad y runbook de recuperación.
+Pendientes para cerrar la v1: ver §5 de `docs/ESTADO_PROYECTO.md`.
 
 ## Principios del dominio
 1. Un registro sacramental es información histórica sensible y no debe tratarse como un CRUD desechable.

@@ -78,6 +78,7 @@ CREATE TABLE parroquia_config (
 );
 
 -- Plantillas de constancia por sacramento (HTML/Markdown con placeholders)
+-- LEGADO: sin UI desde 2026-10-01 (constancias solo por molde). Se conserva por datos existentes.
 DROP TABLE IF EXISTS plantilla_constancia CASCADE;
 CREATE TABLE plantilla_constancia (
   id BIGSERIAL PRIMARY KEY,
@@ -90,6 +91,38 @@ CREATE TABLE plantilla_constancia (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (id_parroquia, sacramento, nombre)
 );
+
+-- Moldes de constancia (PDF subido por la parroquia). Única vía de constancia en v1.
+-- con_campos = TRUE  -> PDF con AcroForm; mapa_campos = { campo_pdf: token }.
+-- con_campos = FALSE -> hoja membretada; se escribe `contenido` desde margen_superior.
+-- Espejo de prisma/migrations/20260923120000_molde_constancia,
+-- 20260923130000_molde_constancia_unique_activo y 20261001100000_molde_hoja_membretada.
+DROP TABLE IF EXISTS molde_constancia CASCADE;
+CREATE TABLE molde_constancia (
+  id BIGSERIAL PRIMARY KEY,
+  id_parroquia SMALLINT NOT NULL REFERENCES parroquia(id_parroquia) ON DELETE CASCADE ON UPDATE CASCADE,
+  sacramento TEXT NOT NULL,                 -- 'bautismo','primera_comunion','confirmacion','matrimonio'
+  tipo_constancia VARCHAR(50) NOT NULL,
+  nombre VARCHAR(100) NOT NULL,
+  archivo BYTEA NOT NULL,
+  archivo_nombre VARCHAR(255) NOT NULL,
+  archivo_mime VARCHAR(50) NOT NULL DEFAULT 'application/pdf',
+  archivo_bytes INTEGER NOT NULL,
+  mapa_campos JSONB NOT NULL DEFAULT '{}',
+  activo BOOLEAN NOT NULL DEFAULT FALSE,    -- POST = borrador; PUT = mapear + activar
+  con_campos BOOLEAN NOT NULL DEFAULT TRUE,
+  contenido TEXT,                           -- texto para hoja membretada
+  margen_superior SMALLINT NOT NULL DEFAULT 170
+    CONSTRAINT molde_constancia_margen_superior_chk CHECK (margen_superior BETWEEN 0 AND 600),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (id_parroquia, sacramento, tipo_constancia, nombre)
+);
+CREATE INDEX molde_constancia_activo_idx
+  ON molde_constancia(id_parroquia, sacramento, tipo_constancia, activo);
+-- Máximo un molde activo por (parroquia, sacramento, tipo).
+CREATE UNIQUE INDEX molde_constancia_un_activo
+  ON molde_constancia(id_parroquia, sacramento, tipo_constancia) WHERE activo = TRUE;
 
 -- Parametrización flexible por parroquia
 DROP TABLE IF EXISTS parroquia_parametro CASCADE;

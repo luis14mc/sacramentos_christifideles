@@ -269,7 +269,7 @@ Railway mantiene historial de deployments. Para revertir a una versión anterior
 
 ## 13. Backup y restore básicos
 
-Ver `docs/DEMO_BACKUP_RESTORE.md` para el runbook completo. Resumen:
+Ver `docs/BACKUP_RESTORE_RUNBOOK.md` para el runbook completo (respaldos automáticos diarios cifrados en R2). Resumen:
 
 ```bash
 # Backup (exporta a archivo local)
@@ -369,6 +369,7 @@ Sin estas tres variables la parroquia funciona normalmente, pero `/consultas` mu
 ## Referencias
 
 - `docs/MIGRATIONS_PRISMA.md` — ciclo de migraciones y manejo de BD existente.
-- `docs/DEMO_GOLDEN_PATH.md` — flujos de demo.
-- `docs/DEMO_BACKUP_RESTORE.md` — backup/restore runbook.
-- `docs/STORAGE_AUDIT.md` — auditoría de almacenamiento (filesystem vs BYTEA).
+- `docs/ALTA_NUEVA_PARROQUIA.md` — alta de una parroquia nueva, paso a paso.
+- `docs/BACKUP_RESTORE_RUNBOOK.md` — respaldos y restauración.
+- `docs/RUNBOOK_INCIDENTES.md` — qué hacer si algo se cae.
+- Históricos (demo, auditoría de almacenamiento): `docs/archivo/`.
