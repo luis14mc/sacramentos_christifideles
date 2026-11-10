@@ -6,9 +6,11 @@ Llevar ChristiFideles a una primera versión productiva utilizable por una secre
 ## Fuente de verdad
 - Repositorio oficial: `luis14mc/sacramentos_christifideles`
 - Rama estable: `master`
-- Rama de preparación de v1: `release/v1-planning`
+- Rama del centralizador: `hub` (nunca `git merge master` dentro de `hub`; ver `docs/adr/ADR-003-centralizador-en-rama-hub.md`)
+- Esquema de datos: `prisma/schema.prisma` + `prisma/migrations/` (el SQL `docs/christi_fidelis_bdd_pg_v3.sql` es referencia y se mantiene alineado)
 - Contexto funcional: `docs/PROJECT_CONTEXT.md`
-- Roadmap vigente: `docs/ROADMAP_V1.md`
+- Estado vigente y pendientes: `docs/ESTADO_PROYECTO.md`
+- Índice de documentación: `docs/README.md`
 - Iniciativa multiparroquia (instancias, expedientes, interoperabilidad): `docs/PLAN_MULTIPARROQUIA.md`. **Leer y actualizar su Estado y Bitácora en cada sesión.**
 
 ## Roles del equipo IA
@@ -23,7 +25,7 @@ Llevar ChristiFideles a una primera versión productiva utilizable por una secre
 - UX/UI: asegura que secretaría parroquial pueda operar con pocos clics y sin conocimiento técnico.
 
 ## Reglas obligatorias para toda IA
-1. Leer `AGENTS.md`, `docs/PROJECT_CONTEXT.md` y `docs/ROADMAP_V1.md` antes de proponer o modificar código.
+1. Leer `AGENTS.md`, `docs/PROJECT_CONTEXT.md` y `docs/ESTADO_PROYECTO.md` antes de proponer o modificar código.
 2. No cambiar el stack principal sin decisión explícita del Tech Lead/Scrum Master.
 3. Mantener Next.js 15 + TypeScript + Prisma + PostgreSQL + NextAuth + Tailwind 4 + DaisyUI.
 4. No introducir un backend separado en Express para v1.
@@ -71,7 +73,7 @@ Una historia está terminada cuando:
 - `feature/<modulo>-<descripcion>`
 - `fix/<modulo>-<descripcion>`
 - `chore/<descripcion>`
-- `release/v1-planning`
+- `docs/<descripcion>`
 
 ## Convención de commits
 Formato recomendado: `<tipo>(<modulo>): <descripcion>`

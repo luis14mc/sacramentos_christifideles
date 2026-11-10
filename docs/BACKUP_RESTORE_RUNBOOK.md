@@ -1,7 +1,9 @@
 # ChristiFidelis — Backup & Restore Runbook
 
 ## Objetivo
-Procedimiento reproducible para respaldar y restaurar PostgreSQL/Neon sin mezclar staging y producción.
+Procedimiento reproducible para respaldar y restaurar las bases PostgreSQL de producción (Railway: dos parroquias y el centralizador) sin mezclar entornos.
+
+> Actualizado 2026-11-10. Los respaldos automáticos (§ Respaldos automáticos) son el mecanismo principal; el respaldo lógico manual de abajo queda para emergencias o antes de una migración riesgosa.
 
 ## Reglas
 - Ejecutar siempre contra la URL del entorno correcto.
@@ -24,7 +26,7 @@ Verificar que el archivo exista y tenga tamaño mayor que cero.
 pg_restore --list christifidelis.dump > backup-contents.txt
 ```
 
-El listado debe incluir las tablas críticas: `persona`, sacramentos, `numeradores`, `plantilla_constancia`, usuarios y `bitacora_crud`.
+El listado debe incluir las tablas críticas: `persona`, sacramentos, `numeradores`, `molde_constancia`, `parroquia_config` (logo y párroco), `usuario`, `bitacora_crud` y `solicitud_interop`.
 
 ## Restore en base temporal/staging
 Crear una base vacía separada y definir `RESTORE_DATABASE_URL`.
@@ -44,8 +46,8 @@ No usar `--clean` contra producción sin un procedimiento de incidente aprobado.
 6. Abrir una Persona y un sacramento de cada módulo.
 7. Generar una constancia PDF.
 
-## Neon
-En staging se recomienda además habilitar el mecanismo de backup/restore disponible en Neon (branch/restore point según el plan contratado). El dump lógico sigue siendo útil para una prueba independiente de portabilidad.
+## Copias propias de Railway
+Railway puede tener sus propios respaldos del volumen según el plan contratado. **No** reemplazan a los respaldos cifrados en R2: son del mismo proveedor y no prueban que el dump sea restaurable en otro lado.
 
 ## Respaldos automáticos
 
@@ -111,5 +113,12 @@ age-keygen -o christifideles-backup.txt
 - **Parroquias:** `persona`, `bautismo`, `primera_comunion`, `confirmacion`, `matrimonio`, `numeradores`, `usuario`, `bitacora_crud`.
 - **Hub:** `instancia`, `solicitud`.
 
-## Estado Sprint 7
-La ejecución real de `pg_dump`/`pg_restore` contra Neon requiere credenciales de staging y herramientas PostgreSQL disponibles. Hasta ejecutarla con una base real de QA, la prueba de restore debe registrarse como `PENDING`, no `PASS`.
+## Registro de pruebas de restauración
+
+Anotar cada prueba aquí (una fila por prueba). Mientras no haya una fila **PASS** por base, el respaldo se considera **no verificado**.
+
+| Fecha | Base | Respaldo usado | Resultado | Quién | Notas |
+|---|---|---|---|---|---|
+| _pendiente_ | loarque | — | PENDING | PO | Requiere bucket R2 y secrets cargados |
+| _pendiente_ | cerrogrande | — | PENDING | PO | |
+| _pendiente_ | hub | — | PENDING | PO | |
