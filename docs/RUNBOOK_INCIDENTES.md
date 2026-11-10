@@ -15,7 +15,7 @@ Para el PO y el desarrollador de turno. Comandos de Railway en [RAILWAY_DEPLOYME
 - Panel del hub `/panel` → semáforo en verde.
 - GitHub → Actions → *Respaldos automáticos* → la corrida de la noche en verde para las 3 bases.
 
-**Recomendado (pendiente, tarea 13 del estado):** un monitor externo gratuito (por ejemplo UptimeRobot o Better Stack) que consulte las 3 URLs `/api/health` cada 5 minutos y avise por email o WhatsApp al PO. Activar también las notificaciones por email de GitHub Actions para los fallos del workflow de respaldos.
+**Monitoreo automático:** el workflow [`.github/workflows/monitoreo.yml`](../.github/workflows/monitoreo.yml) se ejecuta cada 15 minutos y también permite ejecución manual. Valida las variables `MONITOREO_URL_LOARQUE`, `MONITOREO_URL_CERROGRANDE` y `MONITOREO_URL_HUB`, consulta `/api/health` en los tres servicios, reintenta cada servicio después de 30 segundos si falla y marca el workflow como fallido cuando persiste el problema. Si existe el secret opcional `ALERTA_WEBHOOK_URL`, envía allí el resumen de la alerta. Crear las variables y el secret desde la configuración de Actions del repositorio.
 
 ## 3. Diagnóstico rápido
 | Síntoma | Revisar | Acción típica |

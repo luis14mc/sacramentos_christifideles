@@ -44,6 +44,7 @@ Ver [`adr/`](adr/): base por parroquia (002), centralizador en `hub` (003), cons
 | 6 | Cargar en cada parroquia: nombre del párroco, logo y hoja membretada | PO | Por confirmar |
 | 7 | Guardar `HUB_CLAVE_MAESTRA` y la llave privada age fuera de Railway y de GitHub | PO | Por confirmar |
 | 8 | Capacitar a las secretarias con el [manual](MANUAL_USUARIO.md) | PO | Pendiente |
+| 18 | Crear las variables de repositorio `MONITOREO_URL_LOARQUE`, `MONITOREO_URL_CERROGRANDE` y `MONITOREO_URL_HUB`; opcionalmente, el secret `ALERTA_WEBHOOK_URL` | PO | Pendiente |
 
 ### 🟡 Definiciones pendientes del PO
 | # | Tema | Estado |
@@ -56,7 +57,6 @@ Ver [`adr/`](adr/): base por parroquia (002), centralizador en `hub` (003), cons
 ### 🟢 Mejoras (no bloquean)
 | # | Tarea |
 |---|---|
-| 13 | Monitoreo: aviso si alguna parroquia o el centralizador se cae (ver [incidentes](RUNBOOK_INCIDENTES.md)) |
 | 14 | Contar padrinos y padres en el resumen de sacramentos de Personas |
 | 15 | Retirar el Postgres viejo del proyecto del centralizador, una vez respaldado |
 | 16 | Bloqueo de login persistente (hoy en memoria; se reinicia con cada deploy) |
@@ -64,6 +64,7 @@ Ver [`adr/`](adr/): base por parroquia (002), centralizador en `hub` (003), cons
 
 ### ✅ Cerrado desde el 5 de octubre
 - Respaldos automáticos implementados (PR #46, Cursor, 16-oct).
+- Tarea 13 — monitoreo automático implementado en `.github/workflows/monitoreo.yml` (PR #47, Cursor, 16-oct); falta que el PO configure las variables de repositorio.
 - `molde_constancia` agregada al SQL de referencia (10-nov).
 - Documentación actualizada y ordenada (10-nov).
 
@@ -73,7 +74,7 @@ Ver [`adr/`](adr/): base por parroquia (002), centralizador en `hub` (003), cons
 | Respaldos sin activar | Pérdida de datos reales | Tareas 1 y 2 antes de cargar datos reales |
 | Pérdida de `HUB_CLAVE_MAESTRA` | Re-registrar todas las parroquias | Guardarla fuera de Railway (tarea 7) |
 | Pérdida de la llave privada age | Respaldos ilegibles | Dos copias offline (tarea 7) |
-| Sin monitoreo | Una caída pasa desapercibida | Tarea 13; mientras tanto, revisar `/api/health` |
+| Workflow de monitoreo sin variables configuradas | Una caída pasa desapercibida | Crear `MONITOREO_URL_LOARQUE`, `MONITOREO_URL_CERROGRANDE` y `MONITOREO_URL_HUB`; opcionalmente `ALERTA_WEBHOOK_URL`; mientras tanto, revisar `/api/health` |
 | Un solo PO aprueba todo | Cuello de botella | Priorizar con esta tabla |
 
 ## 7. Dónde está cada cosa
