@@ -1,0 +1,101 @@
+name: Testing · seed de volumen
+
+# Exclusivo de la rama `testing`: valida que prisma/seed-testing.ts carga al
+# menos 100 registros por módulo, que es idempotente y que las pruebas pasan
+# con la base llena.
+on:
+  push:
+    branches:
+      - testing
+  workflow_dispatch:
+
+jobs:
+  seed-testing:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: christifideles_testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/christifideles_testing?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/christifideles_testing?schema=public
+      ALLOW_TESTING_SEED: "true"
+      # Solo para esta base efímera del runner.
+      TESTING_PASSWORD: ci-testing-password-0000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Seed base (catálogos, parroquia, admin)
+        run: NODE_ENV=test pnpm db:seed
+
+      - name: Seed de testing (1.ª corrida)
+        run: pnpm db:seed:testing
+
+      - name: Seed de testing (2.ª corrida, debe ser idempotente)
+        run: pnpm db:seed:testing
+
+      - name: Verificar volumen e idempotencia
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          q() { psql -h localhost -U postgres -d christifideles_testing -tAc "$1"; }
+          falla=0
+          revisar() {
+            local nombre="$1" sql="$2" minimo="$3" maximo="$4"
+            local n; n=$(q "$sql")
+            echo "$nombre: $n"
+            if [ "$n" -lt "$minimo" ] || [ "$n" -gt "$maximo" ]; then
+              echo "::error::$nombre = $n (esperado entre $minimo y $maximo)"; falla=1
+            fi
+          }
+          # Máximos = valor del seed + datos del seed base: una 2.ª corrida no debe duplicar.
+          revisar "Sectores QA"          "select count(*) from sector_parroquial where nombre like 'QA %'" 100 100
+          revisar "Personas"             "select count(*) from persona" 700 760
+          revisar "Clero"                "select count(*) from orden_sacerdotal" 100 100
+          revisar "Usuarios"             "select count(*) from usuario" 100 101
+          revisar "Bautismos"            "select count(*) from bautismo" 160 160
+          revisar "Primeras comuniones"  "select count(*) from primera_comunion" 130 130
+          revisar "Confirmaciones"       "select count(*) from confirmacion" 115 115
+          revisar "Matrimonios"          "select count(*) from matrimonio" 120 120
+          revisar "Párroco y vicario"    "select count(*) from parroquia_config where parroco_nombre is not null and vicario_nombre is not null" 1 1
+          exit $falla
+
+      - name: El seed se niega sin ALLOW_TESTING_SEED
+        run: |
+          if ALLOW_TESTING_SEED=false pnpm db:seed:testing; then
+            echo "::error::El seed corrió sin ALLOW_TESTING_SEED=true"; exit 1
+          fi
