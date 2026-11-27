@@ -639,6 +639,27 @@ async function fuentes(pdf: PDFDocument): Promise<Fuentes> {
   };
 }
 
+/** Margen superior por defecto al imprimir sobre el papel sellado de la Curia (puntos). */
+export const MARGEN_PAPEL_CURIA = 170;
+
+/**
+ * Certificación para imprimir sobre el papel sellado de la Curia: hoja carta en
+ * blanco, sin logo ni encabezado (el papel ya trae el membrete), con el texto
+ * a partir de `margenSuperior`.
+ */
+export async function generarConstanciaPapelCuria(
+  datos: ConstanciaData,
+  contenidoPlantilla: string,
+  margenSuperior: number = MARGEN_PAPEL_CURIA
+): Promise<Uint8Array> {
+  const cuerpo = renderPlantilla(contenidoPlantilla, construirTokens(datos));
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage(CARTA);
+  const f = await fuentes(pdf);
+  dibujarCuerpo(page, f, datos, contenidoPlantilla, cuerpo, page.getHeight() - margenSuperior);
+  return pdf.save();
+}
+
 /** Constancia sin molde: encabezado con logo y datos de la parroquia. */
 export async function generarConstanciaPdf(datos: ConstanciaData, contenidoPlantilla: string): Promise<Uint8Array> {
   const cuerpo = renderPlantilla(contenidoPlantilla, construirTokens(datos));

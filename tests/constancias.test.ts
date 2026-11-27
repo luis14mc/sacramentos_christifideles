@@ -119,6 +119,24 @@ describe('GET /api/constancias/[sacramento]/[id]', () => {
   });
 });
 
+describe('impresión en papel de la Curia', () => {
+  it('papel=curia -> 200 pdf y queda en la bitácora', async () => {
+    setSession(cat.parishA);
+    const res = await getConstancia(getReq('?papel=curia'), ctx('bautismo', idBautismo));
+    expect(res.status).toBe(200);
+    expect(await esPdf(res)).toBe(true);
+    const audit = await prisma.bitacoraCrud.findFirst({
+      where: { id_parroquia: cat.parishA, nombre_tabla: 'constancia' },
+      orderBy: { id_accion: 'desc' },
+    });
+    expect(audit?.new_values).toMatchObject({ papel: 'curia', fuente: 'papel_curia' });
+  });
+  it('papel inválido -> 400', async () => {
+    setSession(cat.parishA);
+    expect((await getConstancia(getReq('?papel=oficio'), ctx('bautismo', idBautismo))).status).toBe(400);
+  });
+});
+
 describe('firmante de la certificación (párroco o vicario)', () => {
   it('firmante inválido -> 400', async () => {
     setSession(cat.parishA);

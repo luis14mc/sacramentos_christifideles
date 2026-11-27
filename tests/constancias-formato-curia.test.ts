@@ -10,6 +10,7 @@ import {
   elegirFirmante,
   generarConstanciaPdf,
   generarConstanciaMembretada,
+  generarConstanciaPapelCuria,
   plantillaDefault,
   plantillaIncluyeDatosRegistrales,
   renderPlantilla,
@@ -221,5 +222,14 @@ describe('PDF de la certificación', () => {
     const salida = await generarConstanciaMembretada(await hoja.save(), largos, plantillaDefault('bautismo'), 170);
     const pdf = await PDFDocument.load(salida);
     expect(pdf.getPageCount()).toBe(1);
+  });
+});
+
+describe('impresión en papel de la Curia', () => {
+  it('hoja carta, una sola página', async () => {
+    const salida = await generarConstanciaPapelCuria(datos(), plantillaDefault('bautismo'));
+    const pdf = await PDFDocument.load(salida);
+    expect(pdf.getPageCount()).toBe(1);
+    expect(pdf.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
   });
 });
