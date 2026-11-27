@@ -1,7 +1,7 @@
-# Especificación: certificaciones con el formato de la Curia (v1.1)
+# Especificación: certificaciones con el formato de la Curia (v1.0)
 
 **PO:** Luis Martinez · **Redactó:** Claude (PO) · **Fecha:** 27-nov-2026
-**Rama:** `feature/constancias-formato-curia` (desde `master`). **Estado:** H1–H3 implementadas; H4–H5 pendientes (v1.2). Nada de esto entra en la v1.0.
+**Rama:** `feature/constancias-formato-curia` (desde `master`). **Estado:** H1–H3 implementadas y **incluidas en la v1.0 por decisión del PO (27-nov-2026)**; H4–H5 pendientes (v1.2).
 
 Moldes Word de referencia: `docs/moldes-constancias/`.
 
