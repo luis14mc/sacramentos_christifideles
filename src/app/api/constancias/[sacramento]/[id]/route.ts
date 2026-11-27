@@ -8,10 +8,12 @@ import {
   esSacramentoConstancia,
   cargarDatosConstancia,
   construirTokens,
+  elegirFirmante,
   obtenerPlantilla,
   generarConstanciaMembretada,
   plantillaDefault,
   generarConstanciaPdf,
+  generarConstanciaPapelCuria,
 } from '@/lib/constancias';
 import {
   TIPOS_CONSTANCIA,
@@ -58,16 +60,50 @@ export async function GET(
       );
     }
 
-    // Se leen todos los datos del servidor; el cliente solo indica sacramento, id y tipo.
+    // papel=curia: sin encabezado, para imprimir sobre el papel sellado de la Curia.
+    const papel = (new URL(req.url).searchParams.get('papel') ?? 'blanco').trim();
+    if (papel !== 'blanco' && papel !== 'curia') {
+      return NextResponse.json({ error: 'papel inválido; valores permitidos: blanco, curia' }, { status: 400 });
+    }
+
+    const firmanteSolicitado = (new URL(req.url).searchParams.get('firmante') ?? 'parroco').trim();
+    if (firmanteSolicitado !== 'parroco' && firmanteSolicitado !== 'vicario') {
+      return NextResponse.json(
+        { error: 'firmante inválido; valores permitidos: parroco, vicario' },
+        { status: 400 }
+      );
+    }
+
+    // Se leen todos los datos del servidor; el cliente solo indica sacramento, id, tipo y firmante.
     const datos = await cargarDatosConstancia(parishId, sacramento, idRegistro);
     if (!datos) {
       return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 });
     }
 
+    // Firma el párroco o el vicario parroquial; nunca el usuario que emite.
+    const eleccion = elegirFirmante(datos, firmanteSolicitado);
+    if (!eleccion.ok) {
+      return NextResponse.json({ error: eleccion.error }, { status: 409 });
+    }
+    datos.firmante = eleccion.firmante;
+
     let pdf: Uint8Array;
-    let fuente: 'molde' | 'membrete' | 'plantilla';
+    let fuente: 'molde' | 'membrete' | 'plantilla' | 'papel_curia';
     const molde = await obtenerMoldeActivo(parishId, sacramento, tipoSolicitado);
-    if (molde?.con_campos) {
+    if (papel === 'curia') {
+      // Se respeta el texto y el margen de la hoja membretada si la parroquia la configuró;
+      // los moldes con campos tienen su propio diseño, así que se usa el texto estándar.
+      const contenido =
+        molde && !molde.con_campos
+          ? molde.contenido?.trim() || plantillaDefault(sacramento)
+          : await obtenerPlantilla(parishId, sacramento);
+      pdf = await generarConstanciaPapelCuria(
+        datos,
+        contenido,
+        molde && !molde.con_campos ? molde.margen_superior : undefined
+      );
+      fuente = 'papel_curia';
+    } else if (molde?.con_campos) {
       pdf = await renderMoldePdf(molde.archivo, molde.mapa_campos, construirTokens(datos));
       fuente = 'molde';
     } else if (molde) {
@@ -94,7 +130,15 @@ export async function GET(
           accion: 'R',
           nombre_tabla: 'constancia',
           id_tabla_afectado: idRegistro,
-          new_values: { sacramento, id: datos.id, tipo: tipoSolicitado, fuente },
+          new_values: {
+            sacramento,
+            id: datos.id,
+            tipo: tipoSolicitado,
+            fuente,
+            papel,
+            firmante: eleccion.firmante.cargo,
+            firmante_nombre: eleccion.firmante.nombre,
+          },
           actor_ip: actorIp,
           user_agent: userAgent,
         },

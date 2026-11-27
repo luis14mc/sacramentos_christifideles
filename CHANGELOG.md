@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Fechas en hora de Honduras. Números de PR de `luis14mc/sacramentos_christifideles`.
 
 ## [Sin publicar]
+### Agregado
+- Certificaciones con el formato de la Arquidiócesis de Tegucigalpa: título "Certificación de …", transcripción literal de la partida (libro, folio, número, padres, padrinos, lugar y fecha de nacimiento), fechas en letras, "Es conforme al original", cierre con la ciudad de la parroquia y observaciones (nota marginal). Tamaño carta.
+- Firma del párroco o del vicario parroquial: nuevo campo "Vicario parroquial" en Datos de la parroquia, elección al emitir y registro en la bitácora. Sin firmante configurado no se emiten certificaciones (409).
+- Botón **Imprimir en papel de la Curia**: genera la certificación sin encabezado (el papel sellado ya trae el membrete), con el texto desde 170 pt (o el margen de la hoja membretada configurada) y abre el diálogo de impresión. Parámetro `?papel=curia`; queda en la bitácora.
+- Nuevos datos para moldes y hojas membretadas: `folio`, `fecha_sacramento_letras`, `persona.lugar_nacimiento`, `persona.fecha_nacimiento_letras`, `persona.filiacion`, padres, padrinos, `parroquia.ciudad`, `emision.*`, `firmante.*`, `observaciones`.
+- Moldes Word unificados de las 8 constancias eclesiales en `docs/moldes-constancias/` y especificación en `docs/ESPEC_CONSTANCIAS_FORMATO_CURIA.md`.
+
+### Base de datos
+- Migración `20261127120000_vicario_nombre`: columna opcional `parroquia_config.vicario_nombre`.
+
 ### Documentación
 - Documentación completa y ordenada: README nuevo, índice `docs/README.md`, estado vigente `docs/ESTADO_PROYECTO.md`, manual de usuario, guion de prueba piloto, alta de parroquia nueva, privacidad de datos, referencia de API, contrato de interoperabilidad, runbook de incidentes, ADR-002 a 006.
 - `molde_constancia` agregada al SQL de referencia.

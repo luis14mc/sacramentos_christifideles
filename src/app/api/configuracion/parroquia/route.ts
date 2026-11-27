@@ -59,12 +59,13 @@ export async function GET() {
     if (!parroquia) return NextResponse.json({ error: 'Parroquia no encontrada' }, { status: 404 });
     const config = await prisma.parroquiaConfig.findUnique({
       where: { id_parroquia: parishId },
-      select: { alias_liturgico: true, parroco_nombre: true, logo_mime: true },
+      select: { alias_liturgico: true, parroco_nombre: true, vicario_nombre: true, logo_mime: true },
     });
     return NextResponse.json(jsonSafe({
       ...parroquia,
       alias_liturgico: config?.alias_liturgico ?? null,
       parroco_nombre: config?.parroco_nombre ?? null,
+      vicario_nombre: config?.vicario_nombre ?? null,
       tiene_logo: !!config?.logo_mime,
     }));
   } catch (error) {
@@ -100,6 +101,8 @@ export async function PUT(req: NextRequest) {
     if (!aliasRes.ok) return badRequest(aliasRes.error);
     const parrocoRes = trimOrNull(data.parroco_nombre, MAX_PARROCO);
     if (!parrocoRes.ok) return badRequest(parrocoRes.error);
+    const vicarioRes = trimOrNull(data.vicario_nombre, MAX_PARROCO);
+    if (!vicarioRes.ok) return badRequest(vicarioRes.error);
 
     const userId = BigInt(session.user.id);
     const { actorIp, userAgent } = contextoAuditoria(req);
@@ -114,7 +117,7 @@ export async function PUT(req: NextRequest) {
       }
       const configPrevia = await tx.parroquiaConfig.findUnique({
         where: { id_parroquia: parishId },
-        select: { alias_liturgico: true, parroco_nombre: true },
+        select: { alias_liturgico: true, parroco_nombre: true, vicario_nombre: true },
       });
 
       const parroquiaActualizada = await tx.parroquia.update({
@@ -128,11 +131,17 @@ export async function PUT(req: NextRequest) {
       });
       const configActualizada = await tx.parroquiaConfig.upsert({
         where: { id_parroquia: parishId },
-        update: { alias_liturgico: aliasRes.value, parroco_nombre: parrocoRes.value },
+        update: {
+          alias_liturgico: aliasRes.value,
+          parroco_nombre: parrocoRes.value,
+          // Compatibilidad: si el cliente no envía el campo, se conserva el valor actual.
+          ...(data.vicario_nombre !== undefined ? { vicario_nombre: vicarioRes.value } : {}),
+        },
         create: {
           id_parroquia: parishId,
           alias_liturgico: aliasRes.value,
           parroco_nombre: parrocoRes.value,
+          vicario_nombre: vicarioRes.value,
         },
       });
 
@@ -143,6 +152,7 @@ export async function PUT(req: NextRequest) {
         email: previa.email,
         alias_liturgico: configPrevia?.alias_liturgico ?? null,
         parroco_nombre: configPrevia?.parroco_nombre ?? null,
+        vicario_nombre: configPrevia?.vicario_nombre ?? null,
       }) as import('@prisma/client').Prisma.InputJsonValue;
       const newValues = jsonSafe({
         nombre: parroquiaActualizada.nombre,
@@ -151,6 +161,7 @@ export async function PUT(req: NextRequest) {
         email: parroquiaActualizada.email,
         alias_liturgico: configActualizada.alias_liturgico,
         parroco_nombre: configActualizada.parroco_nombre,
+        vicario_nombre: configActualizada.vicario_nombre,
       }) as import('@prisma/client').Prisma.InputJsonValue;
 
       await registrarBitacora(tx, {
@@ -173,6 +184,7 @@ export async function PUT(req: NextRequest) {
         email: parroquiaActualizada.email,
         alias_liturgico: configActualizada.alias_liturgico,
         parroco_nombre: configActualizada.parroco_nombre,
+        vicario_nombre: configActualizada.vicario_nombre,
       };
     });
 

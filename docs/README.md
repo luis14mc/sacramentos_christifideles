@@ -6,6 +6,7 @@ Actualizado: 2026-11-10. Si un documento no está aquí, está en [`archivo/`](a
 | Documento | Para quién | Qué contiene |
 |---|---|---|
 | [ESTADO_PROYECTO.md](ESTADO_PROYECTO.md) | Todos | Qué está en producción, qué falta, riesgos |
+| [ESPEC_CONSTANCIAS_FORMATO_CURIA.md](ESPEC_CONSTANCIAS_FORMATO_CURIA.md) | Devs, PO | Certificaciones con el formato de la Arquidiócesis; moldes Word en `moldes-constancias/` |
 | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | Todos | Visión, usuarios, reglas del dominio |
 | [PLAN_MULTIPARROQUIA.md](PLAN_MULTIPARROQUIA.md) | Desarrollo | Plan vivo y bitácora de cada sesión |
 | [../AGENTS.md](../AGENTS.md) | Agentes IA | Reglas de trabajo, ramas, Definition of Done |

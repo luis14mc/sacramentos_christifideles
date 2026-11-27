@@ -20,8 +20,8 @@ function setSession(parishId: number | null, rol = 'administrador') {
   if (parishId === null) mockGetServerSession.mockResolvedValue(null);
   else mockGetServerSession.mockResolvedValue({ user: { id: '1', parishId: String(parishId), rol } });
 }
-function getReq(): NextRequest {
-  return new Request('http://t/api/constancias') as unknown as NextRequest;
+function getReq(query = ''): NextRequest {
+  return new Request(`http://t/api/constancias${query}`) as unknown as NextRequest;
 }
 function ctx(sacramento: string, id: string) {
   return { params: Promise.resolve({ sacramento, id }) };
@@ -29,6 +29,8 @@ function ctx(sacramento: string, id: string) {
 
 beforeAll(async () => {
   cat = await setupCatalogo();
+  // Las certificaciones exigen un firmante (párroco o vicario) configurado.
+  await prisma.parroquiaConfig.create({ data: { id_parroquia: cat.parishA, parroco_nombre: 'Pbro. Juan López' } });
   for (const dni of Object.values(A)) await seedPersona(cat.parishA, dni, cat.sectorA, cat.ordenId);
   await seedSacerdote(cat.parishA, SAC, cat.rangoId, cat.ordenId, cat.sectorA);
   const b = await prisma.bautismo.create({
@@ -114,6 +116,56 @@ describe('GET /api/constancias/[sacramento]/[id]', () => {
   it('funciona sin logo/sello configurado -> 200', async () => {
     setSession(cat.parishA);
     expect((await getConstancia(getReq(), ctx('bautismo', idBautismo))).status).toBe(200);
+  });
+});
+
+describe('impresión en papel de la Curia', () => {
+  it('papel=curia -> 200 pdf y queda en la bitácora', async () => {
+    setSession(cat.parishA);
+    const res = await getConstancia(getReq('?papel=curia'), ctx('bautismo', idBautismo));
+    expect(res.status).toBe(200);
+    expect(await esPdf(res)).toBe(true);
+    const audit = await prisma.bitacoraCrud.findFirst({
+      where: { id_parroquia: cat.parishA, nombre_tabla: 'constancia' },
+      orderBy: { id_accion: 'desc' },
+    });
+    expect(audit?.new_values).toMatchObject({ papel: 'curia', fuente: 'papel_curia' });
+  });
+  it('papel inválido -> 400', async () => {
+    setSession(cat.parishA);
+    expect((await getConstancia(getReq('?papel=oficio'), ctx('bautismo', idBautismo))).status).toBe(400);
+  });
+});
+
+describe('firmante de la certificación (párroco o vicario)', () => {
+  it('firmante inválido -> 400', async () => {
+    setSession(cat.parishA);
+    expect((await getConstancia(getReq('?firmante=secretaria'), ctx('bautismo', idBautismo))).status).toBe(400);
+  });
+  it('vicario sin configurar -> 409', async () => {
+    setSession(cat.parishA);
+    const res = await getConstancia(getReq('?firmante=vicario'), ctx('bautismo', idBautismo));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/vicario/i);
+  });
+  it('vicario configurado -> 200 y queda en la bitácora', async () => {
+    await prisma.parroquiaConfig.update({ where: { id_parroquia: cat.parishA }, data: { vicario_nombre: 'Pbro. Pedro Ruiz' } });
+    setSession(cat.parishA);
+    const res = await getConstancia(getReq('?firmante=vicario'), ctx('bautismo', idBautismo));
+    expect(res.status).toBe(200);
+    const audit = await prisma.bitacoraCrud.findFirst({
+      where: { id_parroquia: cat.parishA, nombre_tabla: 'constancia' },
+      orderBy: { id_accion: 'desc' },
+    });
+    expect(audit?.new_values).toMatchObject({ firmante: 'Vicario parroquial', firmante_nombre: 'Pbro. Pedro Ruiz' });
+  });
+  it('sin párroco configurado -> 409 con mensaje claro', async () => {
+    await prisma.parroquiaConfig.update({ where: { id_parroquia: cat.parishA }, data: { parroco_nombre: null } });
+    setSession(cat.parishA);
+    const res = await getConstancia(getReq(), ctx('bautismo', idBautismo));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/Configure el párroco/);
+    await prisma.parroquiaConfig.update({ where: { id_parroquia: cat.parishA }, data: { parroco_nombre: 'Pbro. Juan López' } });
   });
 });
 

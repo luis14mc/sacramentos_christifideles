@@ -48,22 +48,44 @@ const TOKENS: { value: string; label: string }[] = [
   { value: 'persona.nombres', label: 'Persona (nombres)' },
   { value: 'persona.apellidos', label: 'Persona (apellidos)' },
   { value: 'persona.dni', label: 'Persona (DNI)' },
+  { value: 'persona.lugar_nacimiento', label: 'Persona (lugar de nacimiento)' },
+  { value: 'persona.fecha_nacimiento_letras', label: 'Persona (fecha de nacimiento en letras)' },
+  { value: 'persona.hijo_a', label: 'Persona (hijo / hija)' },
+  { value: 'persona.filiacion', label: 'Persona (", hijo(a) de … y de …")' },
+  { value: 'padre.nombre_completo', label: 'Padre (nombre completo)' },
+  { value: 'madre.nombre_completo', label: 'Madre (nombre completo)' },
+  { value: 'padrino.nombre_completo', label: 'Padrino (nombre completo)' },
+  { value: 'madrina.nombre_completo', label: 'Madrina (nombre completo)' },
+  { value: 'padrinos.nombres', label: 'Padrinos ("A y B")' },
+  { value: 'padrinos.texto', label: 'Padrinos ("Padrinos: A y B.")' },
   { value: 'conyuge.nombre_completo', label: 'Cónyuge (nombre completo)' },
   { value: 'conyuge.dni', label: 'Cónyuge (DNI)' },
   { value: 'parroquia.nombre', label: 'Parroquia (nombre)' },
   { value: 'parroquia.alias', label: 'Parroquia (alias litúrgico)' },
   { value: 'parroquia.parroco', label: 'Parroquia (párroco)' },
+  { value: 'parroquia.vicario', label: 'Parroquia (vicario parroquial)' },
+  { value: 'parroquia.ciudad', label: 'Parroquia (ciudad)' },
   { value: 'parroquia.direccion', label: 'Parroquia (dirección)' },
   { value: 'parroquia.telefono', label: 'Parroquia (teléfono)' },
   { value: 'fecha_sacramento', label: 'Fecha del sacramento' },
+  { value: 'fecha_sacramento_letras', label: 'Fecha del sacramento en letras' },
   { value: 'libro', label: 'Libro' },
+  { value: 'folio', label: 'Folio' },
   { value: 'pagina', label: 'Página' },
   { value: 'registro', label: 'Registro' },
   { value: 'acta', label: 'Acta' },
   { value: 'sacerdote.nombre', label: 'Sacerdote (nombre)' },
   { value: 'ministro.nombre', label: 'Ministro (nombre)' },
   { value: 'nota_marginal', label: 'Nota marginal' },
+  { value: 'observaciones', label: 'Observaciones (nota marginal o "Ninguna")' },
   { value: 'fecha_emision', label: 'Fecha de emisión' },
+  { value: 'emision.fecha_texto', label: 'Emisión ("a los … días del mes de … de …")' },
+  { value: 'emision.dia', label: 'Emisión (día)' },
+  { value: 'emision.dia_letras', label: 'Emisión (día en letras)' },
+  { value: 'emision.mes', label: 'Emisión (mes)' },
+  { value: 'emision.anio', label: 'Emisión (año)' },
+  { value: 'firmante.nombre', label: 'Firmante (nombre)' },
+  { value: 'firmante.cargo', label: 'Firmante (Párroco / Vicario parroquial)' },
 ];
 
 function bytesHumano(n: number) {
@@ -434,10 +456,12 @@ function SubirMoldeForm({ onSubido }: SubirMoldeFormProps) {
   );
 }
 
+// Si el texto queda vacío se usa el formato de la Arquidiócesis de Tegucigalpa
+// (plantillaDefault en src/lib/constancias.ts).
 const TEXTO_EJEMPLO =
-  'Hace constar que {{persona.nombre_completo}} (DNI {{persona.dni}}) recibió el sacramento ' +
-  'el {{fecha_sacramento}}, ante el ministro {{ministro.nombre}}, quedando registrado en el ' +
-  'libro {{libro}}, página {{pagina}}, registro {{registro}}.';
+  'Que en el Libro de Bautismos No. {{libro}}, Folio {{folio}}, Número {{registro}}, se encuentra ' +
+  'la partida que literalmente dice: «El día {{fecha_sacramento_letras}}, el Rev. P. {{ministro.nombre}} ' +
+  'bautizó solemnemente a {{persona.nombre_completo}}{{persona.filiacion}}.»';
 
 /**
  * Texto y margen de una hoja membretada. El texto admite los mismos datos
@@ -503,7 +527,7 @@ function MembreteEditor({
           className="textarea textarea-bordered min-h-32 w-full"
           value={contenido}
           maxLength={4000}
-          placeholder={`Si lo dejas vacío se usa el texto estándar. Ejemplo:\n${TEXTO_EJEMPLO}`}
+          placeholder={`Si lo dejas vacío se usa el formato de la Arquidiócesis de Tegucigalpa. Ejemplo:\n${TEXTO_EJEMPLO}`}
           onChange={(e) => setContenido(e.target.value)}
         />
       </label>
