@@ -8,6 +8,7 @@ import {
   esSacramentoConstancia,
   cargarDatosConstancia,
   construirTokens,
+  elegirFirmante,
   obtenerPlantilla,
   generarConstanciaMembretada,
   plantillaDefault,
@@ -58,11 +59,26 @@ export async function GET(
       );
     }
 
-    // Se leen todos los datos del servidor; el cliente solo indica sacramento, id y tipo.
+    const firmanteSolicitado = (new URL(req.url).searchParams.get('firmante') ?? 'parroco').trim();
+    if (firmanteSolicitado !== 'parroco' && firmanteSolicitado !== 'vicario') {
+      return NextResponse.json(
+        { error: 'firmante inválido; valores permitidos: parroco, vicario' },
+        { status: 400 }
+      );
+    }
+
+    // Se leen todos los datos del servidor; el cliente solo indica sacramento, id, tipo y firmante.
     const datos = await cargarDatosConstancia(parishId, sacramento, idRegistro);
     if (!datos) {
       return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 });
     }
+
+    // Firma el párroco o el vicario parroquial; nunca el usuario que emite.
+    const eleccion = elegirFirmante(datos, firmanteSolicitado);
+    if (!eleccion.ok) {
+      return NextResponse.json({ error: eleccion.error }, { status: 409 });
+    }
+    datos.firmante = eleccion.firmante;
 
     let pdf: Uint8Array;
     let fuente: 'molde' | 'membrete' | 'plantilla';
@@ -94,7 +110,14 @@ export async function GET(
           accion: 'R',
           nombre_tabla: 'constancia',
           id_tabla_afectado: idRegistro,
-          new_values: { sacramento, id: datos.id, tipo: tipoSolicitado, fuente },
+          new_values: {
+            sacramento,
+            id: datos.id,
+            tipo: tipoSolicitado,
+            fuente,
+            firmante: eleccion.firmante.cargo,
+            firmante_nombre: eleccion.firmante.nombre,
+          },
           actor_ip: actorIp,
           user_agent: userAgent,
         },

@@ -66,6 +66,7 @@ CREATE TABLE parroquia_config (
   id_parroquia SMALLINT PRIMARY KEY REFERENCES parroquia(id_parroquia) ON DELETE CASCADE,
   alias_liturgico VARCHAR(150),
   parroco_nombre VARCHAR(150),            -- párroco que firma las constancias (token {{parroquia.parroco}})
+  vicario_nombre VARCHAR(150),            -- vicario parroquial; puede firmar en lugar del párroco
   logo_url TEXT,
   logo_archivo BYTEA,                -- logo PNG/JPEG (máx. 1 MB)
   logo_mime VARCHAR(50),

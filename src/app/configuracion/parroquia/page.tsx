@@ -16,6 +16,7 @@ interface ParroquiaData {
   email: string | null;
   alias_liturgico: string | null;
   parroco_nombre: string | null;
+  vicario_nombre: string | null;
   tiene_logo: boolean;
 }
 
@@ -26,6 +27,7 @@ interface FormState {
   email: string;
   alias_liturgico: string;
   parroco_nombre: string;
+  vicario_nombre: string;
 }
 
 function toForm(d: ParroquiaData): FormState {
@@ -36,6 +38,7 @@ function toForm(d: ParroquiaData): FormState {
     email: d.email ?? '',
     alias_liturgico: d.alias_liturgico ?? '',
     parroco_nombre: d.parroco_nombre ?? '',
+    vicario_nombre: d.vicario_nombre ?? '',
   };
 }
 
@@ -120,8 +123,8 @@ export default function ConfiguracionParroquiaPage() {
 
         <PageCard>
           <p className="text-sm text-base-content/70">
-            Estos valores aparecen en el encabezado de cada constancia. El nombre del párroco
-            se incluye como <code className="text-xs">{`{{parroquia.parroco}}`}</code> en plantillas y moldes.
+            Estos valores aparecen en el encabezado de cada constancia. Las certificaciones las firma
+            el párroco o, en su defecto, el vicario parroquial; al emitir se elige quién firma.
           </p>
         </PageCard>
 
@@ -196,11 +199,21 @@ export default function ConfiguracionParroquiaPage() {
                   />
                 </label>
                 <label className="form-control md:col-span-2">
-                  <span className="label-text">Nombre del párroco (firma constancias)</span>
+                  <span className="label-text">Nombre del párroco (firma las certificaciones)</span>
                   <input
                     className="input input-bordered"
                     value={form.parroco_nombre}
                     onChange={(e) => setForm({ ...form, parroco_nombre: e.target.value })}
+                    maxLength={150}
+                    readOnly={!puedeGestionar}
+                  />
+                </label>
+                <label className="form-control md:col-span-2">
+                  <span className="label-text">Nombre del vicario parroquial (opcional; puede firmar en lugar del párroco)</span>
+                  <input
+                    className="input input-bordered"
+                    value={form.vicario_nombre}
+                    onChange={(e) => setForm({ ...form, vicario_nombre: e.target.value })}
                     maxLength={150}
                     readOnly={!puedeGestionar}
                   />
